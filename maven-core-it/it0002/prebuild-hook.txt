@@ -1,1 +1,0 @@
-rm ${localRepository}/maven/jars/maven-it-support-1.0.jar
