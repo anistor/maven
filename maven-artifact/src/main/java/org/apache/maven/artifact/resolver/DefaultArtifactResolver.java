@@ -4,6 +4,7 @@ import org.apache.maven.artifact.AbstractArtifactComponent;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.manager.WagonManager;
 import org.apache.maven.artifact.metadata.ArtifactMetadataSource;
+import org.apache.maven.artifact.metadata.ArtifactMetadataRetrievalException;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.wagon.TransferFailedException;
 
@@ -14,12 +15,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-// ArtifactSourceReader to ArtifactMetadataReader
-// Possibly give the resolver the metadata reader
-// resolver.setMetadataReader( foo )
-// resolver.setRepositories( Set )
-// resolveTransitively instead of parameter
 
 public class DefaultArtifactResolver
     extends AbstractArtifactComponent
@@ -55,32 +50,37 @@ public class DefaultArtifactResolver
         }
         catch ( TransferFailedException e )
         {
-            throw new ArtifactResolutionException( artifactNotFound( artifact,
-                                                                     remoteRepositories,
-                                                                     localRepository ), e );
+            throw new ArtifactResolutionException( artifactNotFound( artifact, remoteRepositories ), e );
         }
 
         return artifact;
     }
 
-    private String artifactNotFound( Artifact artifact,
-                                     Set remoteRepositories,
-                                     ArtifactRepository localRepository )
+    private String LS = System.getProperty( "line.separator" );
+
+    private String artifactNotFound( Artifact artifact, Set remoteRepositories )
     {
         StringBuffer sb = new StringBuffer();
 
         sb.append( "The artifact is not present locally as:" )
-            .append( "\n" )
+            .append( LS )
+            .append( LS )
             .append( artifact.getPath() )
-            .append( "\n" )
+            .append( LS )
+            .append( LS )
             .append( "or in any of the specified remote repositories:" )
-            .append( "\n" );
+            .append( LS )
+            .append( LS );
 
         for ( Iterator i = remoteRepositories.iterator(); i.hasNext(); )
         {
             ArtifactRepository remoteRepository = (ArtifactRepository) i.next();
 
             sb.append( remoteRepository.getUrl() );
+            if ( i.hasNext() )
+            {
+                sb.append( ", " );
+            }
         }
 
         return sb.toString();
@@ -115,24 +115,26 @@ public class DefaultArtifactResolver
                                                          ArtifactMetadataSource source )
         throws ArtifactResolutionException
     {
+        ArtifactResolutionResult artifactResolutionResult;
+
         try
         {
-            ArtifactResolutionResult artifactResolutionResult = collect( artifacts,
-                                                                         localRepository,
-                                                                         remoteRepositories,
-                                                                         source );
-
-            for ( Iterator i = artifactResolutionResult.getArtifacts().values().iterator(); i.hasNext(); )
-            {
-                resolve( (Artifact) i.next(), remoteRepositories, localRepository );
-            }
-
-            return artifactResolutionResult;
+            artifactResolutionResult = collect( artifacts,
+                                                localRepository,
+                                                remoteRepositories,
+                                                source );
         }
-        catch ( ArtifactCollectionException e )
+        catch ( TransitiveArtifactResolutionException e )
         {
-            throw new ArtifactResolutionException( "Error while resolving transitive dependencies: ", e );
+            throw new ArtifactResolutionException( "Error transitively resolving artifacts: ", e );
         }
+
+        for ( Iterator i = artifactResolutionResult.getArtifacts().values().iterator(); i.hasNext(); )
+        {
+            resolve( (Artifact) i.next(), remoteRepositories, localRepository );
+        }
+
+        return artifactResolutionResult;
     }
 
     public ArtifactResolutionResult resolveTransitively( Artifact artifact,
@@ -157,7 +159,7 @@ public class DefaultArtifactResolver
                                              ArtifactRepository localRepository,
                                              Set remoteRepositories,
                                              ArtifactMetadataSource source )
-        throws ArtifactCollectionException
+        throws TransitiveArtifactResolutionException
     {
         ArtifactResolutionResult result = new ArtifactResolutionResult();
 
@@ -187,13 +189,7 @@ public class DefaultArtifactResolver
 
                     if ( !newVersion.equals( knownVersion ) )
                     {
-                        /*
-                        getLogger().warn( "Version conflict: " + id + ", " +
-                                          "using version: " + knownArtifact.getVersion() + ", " +
-                                          "found version: " + newArtifact.getVersion() );
-
                         addConflict( result, knownArtifact, newArtifact );
-                        */
                     }
                 }
                 else
@@ -207,9 +203,9 @@ public class DefaultArtifactResolver
                     {
                         referencedDependencies = source.retrieve( newArtifact );
                     }
-                    catch ( Exception e )
+                    catch ( ArtifactMetadataRetrievalException e )
                     {
-                        throw new ArtifactCollectionException( "Problem building project: ", e );
+                        throw new TransitiveArtifactResolutionException( "Error retrieving metadata: ", e );
                     }
 
                     // the pom for given dependency exisit we will add it to the queue

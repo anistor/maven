@@ -24,9 +24,11 @@ import java.util.Iterator;
 import java.util.List;
 
 /**
- * @author <a href="mailto:jason@maven.org">Jason van Zyl</a>
- * @version $Id$
- * @todo generate this with modello to keep it in sync with changes in the model.
+ * @author <a href="mailto:jason@maven.org">Jason van Zyl </a>
+ * @version $Id: DefaultModelInheritanceAssembler.java,v 1.4 2004/08/23 20:24:54
+ *          jdcasey Exp $
+ * @todo generate this with modello to keep it in sync with changes in the
+ *       model.
  */
 public class DefaultModelInheritanceAssembler
     implements ModelInheritanceAssembler
@@ -81,7 +83,6 @@ public class DefaultModelInheritanceAssembler
             child.setUrl( parent.getUrl() );
         }
 
-        
         // ----------------------------------------------------------------------
         // Distribution
         // ----------------------------------------------------------------------
@@ -152,12 +153,28 @@ public class DefaultModelInheritanceAssembler
         }
         else
         {
-            // The build has been set but we want to step in here and fill in values
+            // The build has been set but we want to step in here and fill in
+            // values
             // that have not been set by the child.
 
             if ( child.getBuild().getDirectory() == null )
             {
                 child.getBuild().setDirectory( parent.getBuild().getDirectory() );
+            }
+
+            if ( child.getBuild().getSourceDirectory() == null )
+            {
+                child.getBuild().setSourceDirectory( parent.getBuild().getSourceDirectory() );
+            }
+
+            if ( child.getBuild().getUnitTestSourceDirectory() == null )
+            {
+                child.getBuild().setUnitTestSourceDirectory( parent.getBuild().getUnitTestSourceDirectory() );
+            }
+
+            if ( child.getBuild().getAspectSourceDirectory() == null )
+            {
+                child.getBuild().setAspectSourceDirectory( parent.getBuild().getAspectSourceDirectory() );
             }
 
             if ( child.getBuild().getOutput() == null )
@@ -170,6 +187,12 @@ public class DefaultModelInheritanceAssembler
                 child.getBuild().setTestOutput( parent.getBuild().getTestOutput() );
             }
 
+            List resources = child.getBuild().getResources();
+            if ( resources == null || resources.isEmpty() )
+            {
+                child.getBuild().setResources( parent.getBuild().getResources() );
+            }
+
             if ( child.getBuild().getUnitTest() == null )
             {
                 child.getBuild().setUnitTest( parent.getBuild().getUnitTest() );
@@ -180,10 +203,16 @@ public class DefaultModelInheritanceAssembler
                 {
                     child.getBuild().getUnitTest().setIncludes( parent.getBuild().getUnitTest().getIncludes() );
                 }
-                
+
                 if ( child.getBuild().getUnitTest().getExcludes().size() == 0 )
                 {
                     child.getBuild().getUnitTest().setExcludes( parent.getBuild().getUnitTest().getExcludes() );
+                }
+
+                List testResources = child.getBuild().getUnitTest().getResources();
+                if ( testResources == null || testResources.isEmpty() )
+                {
+                    child.getBuild().getUnitTest().setResources( parent.getBuild().getUnitTest().getResources() );
                 }
             }
         }
@@ -199,7 +228,7 @@ public class DefaultModelInheritanceAssembler
 
         }
 
-        //Repositories :: aggreagte
+        // Repositories :: aggregate
         List parentRepositories = parent.getRepositories();
 
         List childRepositories = child.getRepositories();

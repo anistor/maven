@@ -20,7 +20,7 @@ public class SurefirePlugin
 
         surefireBooter.addClassPathUrl( new File( mavenRepoLocal, "junit/jars/junit-3.8.1.jar" ).getPath() );
 
-        surefireBooter.addClassPathUrl( new File( mavenRepoLocal, "surefire/jars/surefire-1.1.jar" ).getPath() );
+        surefireBooter.addClassPathUrl( new File( mavenRepoLocal, "surefire/jars/surefire-1.2-SNAPSHOT.jar" ).getPath() );
 
         surefireBooter.addClassPathUrl( new File( classesDirectory ).getPath() );
 
@@ -31,7 +31,7 @@ public class SurefirePlugin
             surefireBooter.addClassPathUrl( classpathElements[i] );
         }
 
-        surefireBooter.addReport( "org.codehaus.surefire.report.ConsoleReport" );
+        surefireBooter.addReport( "org.codehaus.surefire.report.ConsoleReporter" );
 
         return surefireBooter.run();
     }

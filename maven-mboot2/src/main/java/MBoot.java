@@ -9,16 +9,16 @@ import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
-import java.io.StringWriter;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Properties;
+import java.util.Date;
 
 public class MBoot
 {
@@ -39,6 +39,59 @@ public class MBoot
     // maven-plugins
 
     // ----------------------------------------------------------------------
+    //
+    // ----------------------------------------------------------------------
+    
+    String[] deps = new String[]
+    {
+        "junit/jars/junit-3.8.1.jar",
+        "surefire/jars/surefire-booter-1.2-SNAPSHOT.jar",
+        "surefire/jars/surefire-1.2-SNAPSHOT.jar",
+        "modello/jars/modello-1.0-SNAPSHOT.jar",
+        "xpp3/jars/xpp3-1.1.3.3.jar",
+        "xstream/jars/xstream-1.0-SNAPSHOT.jar",
+        "qdox/jars/qdox-1.2.jar",
+        "maven/jars/wagon-http-lightweight-1.0-alpha-1-SNAPSHOT.jar"
+    };
+
+    String[] plexusDeps = new String[]
+    {
+        "classworlds/jars/classworlds-1.1-SNAPSHOT.jar",
+        //"plexus/jars/plexus-0.17.jar",
+        "plexus/jars/plexus-0.17-SNAPSHOT.jar",
+        //"plexus/jars/plexus-artifact-container-1.0-alpha-1-SNAPSHOT.jar",
+        "xpp3/jars/xpp3-1.1.3.3.jar",
+        "xstream/jars/xstream-1.0-SNAPSHOT.jar",
+        //"maven/jars/maven-artifact-2.0-SNAPSHOT.jar",
+        //"maven/jars/wagon-api-1.0-alpha-1-SNAPSHOT.jar",
+        //"maven/jars/wagon-http-lightweight-1.0-alpha-1-SNAPSHOT.jar"
+    };
+
+    String[] builds = new String[]
+    {
+        "maven-model",
+        "maven-plugin",
+        "maven-plugin-tools",
+        "maven-artifact",
+        // "maven-1.x-integration",
+        "maven-core",
+        "maven-core-it-verifier"
+    };
+
+    String[] pluginBuilds = new String[]
+    {
+        "maven-plugins/maven-clean-plugin",
+        "maven-plugins/maven-compiler-plugin",
+        "maven-plugins/maven-install-plugin",
+        "maven-plugins/maven-jar-plugin",
+        "maven-plugins/maven-plugin-plugin",
+        "maven-plugins/maven-pom-plugin",
+        "maven-plugins/maven-resources-plugin",
+        "maven-plugins/maven-surefire-plugin"
+    };
+
+
+    // ----------------------------------------------------------------------
     // Standard locations for resources in Maven projects.
     // ----------------------------------------------------------------------
 
@@ -50,13 +103,13 @@ public class MBoot
 
     private static final String TEST_RESOURCES = "src/test/resources";
 
-    private static final String CLASSES = "target/classes";
-
-    private static final String TEST_CLASSES = "target/test-classes";
-
     private static final String BUILD_DIR = "target";
 
-    private static final String GENERATED_SOURCES = "target/generated-sources";
+    private static final String CLASSES = BUILD_DIR + "/classes";
+
+    private static final String TEST_CLASSES = BUILD_DIR + "/test-classes";
+
+    private static final String GENERATED_SOURCES = BUILD_DIR + "/generated-sources";
 
     // ----------------------------------------------------------------------
     // Per-session entities which we can reuse while building many projects.
@@ -66,13 +119,13 @@ public class MBoot
 
     private ModelReader reader;
 
-    private Properties properties;
-
     private String repoLocal;
 
     private List mbootDependencies;
 
     private List coreDeps;
+
+    private boolean online = true;
 
     // ----------------------------------------------------------------------
     //
@@ -89,9 +142,64 @@ public class MBoot
     public void run( String[] args )
         throws Exception
     {
-        properties = loadProperties( new File( System.getProperty( "user.home" ), "build.properties" ) );
+        File userPomFile = new File( System.getProperty( "user.home" ), ".m2/override.xml" );
 
-        downloader = new ArtifactDownloader( properties );
+        reader = new ModelReader();
+
+        if ( userPomFile.exists() && !reader.parse( userPomFile ) )
+        {
+            System.err.println( "Error reading user POM file" );
+
+            System.exit( 1 );
+        }
+
+        String mavenRepoLocal = System.getProperty( "maven.repo.local", reader.getLocal().getRepository() );
+
+        if ( mavenRepoLocal == null )
+        {
+            System.out.println( "You must have a ~/.m2/override.xml file and must contain the following entries:" );
+            System.out.println( "<local>" );
+            System.out.println( "  <repository>/path/to/m2/repository</repository> (required)" );
+            System.out.println( "  <online>true</online> (optional)" );
+            System.out.println( "</local>" );
+            System.out.println();
+            System.out.println( "Alternatively, you can specify -Dmaven.repo.local=/path/to/m2/repository" );
+
+            System.exit( 1 );
+        }
+
+        String mavenHome = null;
+
+        if ( args.length == 1 )
+        {
+            mavenHome = args[0];
+        }
+        else
+        {
+            mavenHome = System.getProperty( "maven.home" );
+
+            if ( mavenHome == null )
+            {
+                mavenHome = new File( System.getProperty( "user.home" ), "m2" ).getAbsolutePath();
+            }
+        }
+
+        File dist = new File( mavenHome );
+
+        System.out.println( "Maven installation directory: " + dist );
+
+        Date fullStop;
+
+        Date fullStart = new Date();
+
+        String onlineProperty = System.getProperty( "maven.online", reader.getLocal().getOnline() );
+
+        if ( onlineProperty != null && onlineProperty.equals( "false" ) )
+        {
+            online = false;
+        }
+
+        downloader = new ArtifactDownloader( mavenRepoLocal, reader.getRemoteRepositories() );
 
         repoLocal = downloader.getMavenRepoLocal().getPath();
 
@@ -99,157 +207,178 @@ public class MBoot
 
         String basedir = System.getProperty( "user.dir" );
 
-        checkMBootDeps();
+        mbootDependencies = Arrays.asList( deps );
 
-        File instructions = new File( basedir, "mboot.txt" );
-
-        if ( instructions.exists() )
+        if ( online )
         {
-            FileInputStream is = new FileInputStream( instructions );
+            checkMBootDeps();
+        }
 
-            StringWriter w = new StringWriter();
+        // Install maven-components POM
+        installPomFile( repoLocal, new File( basedir, "pom.xml" ) );
 
-            IOUtil.copy( is, w );
+        // Install plugin-parent POM
+        installPomFile( repoLocal, new File( basedir, "maven-plugins/pom.xml" ) );
 
-            String[] deps = StringUtils.split( w.toString(), "\n" );
+        createToolsClassLoader();
 
-            for ( int i = 0; i < deps.length; i++ )
+        for ( int i = 0; i < builds.length; i++ )
+        {
+            String directory = new File( basedir, builds[i] ).getAbsolutePath();
+
+            System.out.println( "Building project in " + directory + " ..." );
+
+            System.out.println( "--------------------------------------------------------------------" );
+
+            System.setProperty( "basedir", directory );
+
+            buildProject( directory );
+
+            if ( reader.artifactId.equals( "maven-core" ) )
             {
-                String directory = new File( basedir, deps[i] ).getAbsolutePath();
-
-                System.out.println( "Building project in " + directory + " ..." );
-
-                System.out.println( "--------------------------------------------------------------------" );
-
-                System.setProperty( "basedir", directory );
-
-                buildProject( directory );
-
-                if ( reader.artifactId.equals( "maven-core" ) )
-                {
-                    coreDeps = reader.getDependencies();
-                }
-
-                reader.reset();
-
-                System.out.println( "--------------------------------------------------------------------" );
+                coreDeps = reader.getDependencies();
             }
 
-            // build the installation
+            reader.reset();
 
-            String mavenHome;
+            System.out.println( "--------------------------------------------------------------------" );
+        }
 
-            if ( args.length == 1 )
+        cl.addURL( new File( repoLocal, "maven/jars/maven-plugin-2.0-SNAPSHOT.jar" ).toURL() );
+
+        cl.addURL( new File( repoLocal, "maven/jars/maven-plugin-tools-2.0-SNAPSHOT.jar" ).toURL() );
+
+
+        for ( int i = 0; i < pluginBuilds.length; i++ )
+        {
+            String directory = new File( basedir, pluginBuilds[i] ).getAbsolutePath();
+
+            System.out.println( "Building project in " + directory + " ..." );
+
+            System.out.println( "--------------------------------------------------------------------" );
+
+            System.setProperty( "basedir", directory );
+
+            buildProject( directory );
+
+            reader.reset();
+
+            System.out.println( "--------------------------------------------------------------------" );
+        }
+
+
+        // build the installation
+
+        FileUtils.deleteDirectory( dist );
+
+        // ----------------------------------------------------------------------
+        // bin
+        // ----------------------------------------------------------------------
+
+        String bin = new File( dist, "bin" ).getAbsolutePath();
+
+        FileUtils.mkdir( new File( bin ).getPath() );
+
+        FileUtils.copyFileToDirectory( new File( basedir, "maven-core/src/bin/m2" ).getAbsolutePath(), bin );
+
+        FileUtils.copyFileToDirectory( new File( basedir, "maven-core/src/bin/m2.bat" ).getAbsolutePath(), bin );
+
+        FileUtils.copyFileToDirectory( new File( basedir, "maven-core/src/bin/classworlds.conf" ).getAbsolutePath(), bin );
+
+        if ( Os.isFamily( "unix" ) )
+        {
+            Commandline cli = new Commandline();
+
+            cli.setExecutable( "chmod" );
+
+            cli.createArgument().setValue( "+x" );
+
+            cli.createArgument().setValue( new File( dist, "bin/m2" ).getAbsolutePath() );
+
+            cli.execute();
+        }
+
+        // ----------------------------------------------------------------------
+        // core
+        // ----------------------------------------------------------------------
+
+        String core = new File( dist, "core" ).getAbsolutePath();
+
+        FileUtils.mkdir( new File( core ).getPath() );
+
+        for ( int i = 0; i < plexusDeps.length; i++ )
+        {
+            FileUtils.copyFileToDirectory( repoLocal + "/" + plexusDeps[i], core );
+        }
+
+        // ----------------------------------------------------------------------
+        // lib
+        // ----------------------------------------------------------------------
+
+        String lib = new File( dist, "lib" ).getAbsolutePath();
+
+        FileUtils.mkdir( new File( lib ).getPath() );
+
+        for ( Iterator i = coreDeps.iterator(); i.hasNext(); )
+        {
+            Dependency d = (Dependency) i.next();
+
+            if ( d.getArtifactId().equals( "classworlds" ) ||
+                 d.artifactId.equals( "plexus" ) ||
+                 d.artifactId.equals( "xstream" ) ||
+                 d.artifactId.equals( "xpp3" ) ||
+                 d.artifactId.equals( "junit" ) )// ||
+                 //d.artifactId.equals( "wagon-api" ) ||
+                 //d.artifactId.equals( "plexus-artifact-container" ) ||
+                 //d.artifactId.equals( "maven-artifact" ) )
             {
-                mavenHome = args[0];
-            }
-            else
-            {
-                mavenHome = System.getProperty( "M2_HOME" );
-
-                System.out.println( "mavenHome = " + mavenHome );
-
-                if ( mavenHome == null )
-                {
-                    mavenHome = new File( System.getProperty( "user.home" ), "m2" ).getAbsolutePath();
-                }
+                continue;
             }
 
-            File dist = new File( mavenHome );
+            FileUtils.copyFileToDirectory( repoLocal + "/" + getArtifactPath( d, "/" ), lib );
+        }
 
-            FileUtils.deleteDirectory( dist );
+        // Copy maven itself
 
-            // ----------------------------------------------------------------------
-            // bin
-            // ----------------------------------------------------------------------
+        FileUtils.copyFileToDirectory( repoLocal + "/maven/jars/maven-core-2.0-SNAPSHOT.jar", lib );
 
-            String bin = new File( dist, "bin" ).getAbsolutePath();
+        System.out.println();
 
-            FileUtils.mkdir( new File( bin ).getPath() );
+        System.out.println( "Maven2 is installed in " + dist.getAbsolutePath() );
 
-            FileUtils.copyFileToDirectory( new File( basedir, "maven-core/src/bin/m2" ).getAbsolutePath(), bin );
+        System.out.println( "--------------------------------------------------------------------" );
 
-            FileUtils.copyFileToDirectory( new File( basedir, "maven-core/src/bin/m2.bat" ).getAbsolutePath(), bin );
+        System.out.println();
 
-            FileUtils.copyFileToDirectory( new File( basedir, "maven-core/src/bin/classworlds.conf" ).getAbsolutePath(), bin );
+        fullStop = new Date();
 
-            if ( Os.isFamily( "unix" ) )
-            {
-                Commandline cli = new Commandline();
+        stats( fullStart, fullStop );
+    }
 
-                cli.setExecutable( "chmod" );
+    protected static String formatTime( long ms )
+    {
+        long secs = ms / 1000;
 
-                cli.createArgument().setValue( "+x" );
+        long min = secs / 60;
+        secs = secs % 60;
 
-                cli.createArgument().setValue( new File( dist, "bin/m2" ).getAbsolutePath() );
-
-                cli.execute();
-            }
-
-            // ----------------------------------------------------------------------
-            // core
-            // ----------------------------------------------------------------------
-
-            String core = new File( dist, "core" ).getAbsolutePath();
-
-            FileUtils.mkdir( new File( core ).getPath() );
-
-            FileUtils.copyFileToDirectory( repoLocal + "/classworlds/jars/classworlds-1.1-SNAPSHOT.jar", core );
-
-            FileUtils.copyFileToDirectory( repoLocal + "/plexus/jars/plexus-0.14-SNAPSHOT.jar", core );
-
-            FileUtils.copyFileToDirectory( repoLocal + "/xpp3/jars/xpp3-1.1.3.3.jar", core );
-
-            FileUtils.copyFileToDirectory( repoLocal + "/xstream/jars/xstream-1.0-SNAPSHOT.jar", core );
-
-            // ----------------------------------------------------------------------
-            // lib
-            // ----------------------------------------------------------------------
-
-            String lib = new File( dist, "lib" ).getAbsolutePath();
-
-            FileUtils.mkdir( new File( lib ).getPath() );
-
-            for ( Iterator i = coreDeps.iterator(); i.hasNext(); )
-            {
-                Dependency d = (Dependency) i.next();
-
-                if ( d.getArtifactId().equals( "classworlds" ) ||
-                    d.artifactId.equals( "plexus" ) ||
-                    d.artifactId.equals( "xstream" ) ||
-                    d.artifactId.equals( "xpp3" ) )
-                {
-                    continue;
-                }
-
-                FileUtils.copyFileToDirectory( repoLocal + "/" + getArtifactPath( d, "/" ), lib );
-            }
-
-            // Copy maven itself
-
-            FileUtils.copyFileToDirectory( repoLocal + "/maven/jars/maven-core-2.0-SNAPSHOT.jar", lib );
-
-            // ----------------------------------------------------------------------
-            // plugins
-            // ----------------------------------------------------------------------
-
-            String plugins = new File( dist, "plugins" ).getAbsolutePath();
-
-            FileUtils.mkdir( new File( plugins ).getPath() );
-
-            List libs = FileUtils.getFiles( new File( basedir, "maven-plugins" ), "**/target/*.jar", null );
-
-            for ( Iterator i = libs.iterator(); i.hasNext(); )
-            {
-                File f = (File) i.next();
-
-                FileUtils.copyFileToDirectory( f.getAbsolutePath(), plugins );
-            }
+        if ( min > 0 )
+        {
+            return min + " minutes " + secs + " seconds";
         }
         else
         {
-            buildProject( basedir );
+            return secs + " seconds";
         }
+    }
+
+    private void stats( Date fullStart, Date fullStop )
+    {
+        long fullDiff = fullStop.getTime() - fullStart.getTime();
+
+        System.out.println( "Total time: " + formatTime( fullDiff ) );
+
+        System.out.println( "Finished at: " + fullStop );
     }
 
     public void buildProject( String basedir )
@@ -278,15 +407,23 @@ public class MBoot
 
         String generatedSources = new File( basedir, GENERATED_SOURCES ).getAbsolutePath();
 
-        String buildDir = new File( basedir, BUILD_DIR ).getAbsolutePath();
+        File buildDirFile = new File( basedir, BUILD_DIR );
+        String buildDir = buildDirFile.getAbsolutePath();
+
+        // clean
+        System.out.println( "Cleaning " + buildDirFile + "..." );
+        FileUtils.forceDelete( buildDirFile );
 
         // ----------------------------------------------------------------------
         // Download deps
         // ----------------------------------------------------------------------
 
-        System.out.println( "Downloading dependencies ..." );
+        if ( online )
+        {
+            System.out.println( "Downloading dependencies ..." );
 
-        downloadDependencies( reader.getDependencies() );
+            downloadDependencies( reader.getDependencies() );
+        }
 
         // ----------------------------------------------------------------------
         // Generating sources
@@ -298,20 +435,20 @@ public class MBoot
         {
             System.out.println( "Model exists!" );
 
-            File generatedSourcesDirectory = new File( basedir, "target/generated-sources" );
+            File generatedSourcesDirectory = new File( basedir, GENERATED_SOURCES );
 
             if ( !generatedSourcesDirectory.exists() )
             {
                 generatedSourcesDirectory.mkdirs();
             }
 
-            generateSources( model.getAbsolutePath(), "java", generatedSourcesDirectory.getAbsolutePath(), "4.0.0", "false" );
+            generateSources( model.getAbsolutePath(), "java", generatedSources, "4.0.0", "false" );
 
-            generateSources( model.getAbsolutePath(), "java", generatedSourcesDirectory.getAbsolutePath(), "3.0.0", "true" );
+            generateSources( model.getAbsolutePath(), "java", generatedSources, "3.0.0", "true" );
 
-            generateSources( model.getAbsolutePath(), "xpp3", generatedSourcesDirectory.getAbsolutePath(), "4.0.0", "false" );
+            generateSources( model.getAbsolutePath(), "xpp3", generatedSources, "4.0.0", "false" );
 
-            generateSources( model.getAbsolutePath(), "xpp3", generatedSourcesDirectory.getAbsolutePath(), "3.0.0", "true" );
+            generateSources( model.getAbsolutePath(), "xpp3", generatedSources, "3.0.0", "true" );
         }
 
         // ----------------------------------------------------------------------
@@ -356,7 +493,19 @@ public class MBoot
 
         System.out.println( "Compiling test sources ..." );
 
-        compile( reader.getDependencies(), testSources, testClasses, basedir + "/target/classes", null );
+        List testDependencies = reader.getDependencies();
+
+        Dependency junitDep = new Dependency();
+
+        junitDep.setGroupId( "junit" );
+
+        junitDep.setArtifactId( "junit" );
+
+        junitDep.setVersion( "3.8.1" );
+
+        testDependencies.add( junitDep );
+
+        compile( testDependencies, testSources, testClasses, classes, null );
 
         // ----------------------------------------------------------------------
         // Test resources
@@ -380,23 +529,41 @@ public class MBoot
 
         installPom( basedir, repoLocal );
 
-        installJar( basedir, repoLocal );
+        if ( !reader.artifactId.equals( "maven-plugin" ) && reader.artifactId.endsWith( "plugin" ) )
+        {
+            installPlugin( basedir, repoLocal );
+        }
+        else
+        {
+            installJar( basedir, repoLocal );
+        }
     }
 
-    private void generatePluginDescriptor( String sourceDirectory, String outputDirectory, String pom )
+    IsolatedClassLoader cl;
+
+    private void createToolsClassLoader()
         throws Exception
     {
-        IsolatedClassLoader cl = new IsolatedClassLoader();
+        cl = new IsolatedClassLoader();
 
         for ( Iterator i = mbootDependencies.iterator(); i.hasNext(); )
         {
             String dependency = (String) i.next();
 
             File f = new File( repoLocal, dependency );
+            if ( !f.exists() )
+            {
+                throw new FileNotFoundException( "Missing dependency: " + dependency + 
+                    ( !online ? "; run again online" : "; there was a problem downloading it earlier" ) );
+            }
 
             cl.addURL( f.toURL() );
         }
+    }
 
+    private void generatePluginDescriptor( String sourceDirectory, String outputDirectory, String pom )
+        throws Exception
+    {
         Class c = cl.loadClass( "org.apache.maven.plugin.generator.PluginDescriptorGenerator" );
 
         Object generator = c.newInstance();
@@ -409,17 +576,6 @@ public class MBoot
     private void generateSources( String model, String mode, String dir, String modelVersion, String packageWithVersion )
         throws Exception
     {
-        IsolatedClassLoader cl = new IsolatedClassLoader();
-
-        for ( Iterator i = mbootDependencies.iterator(); i.hasNext(); )
-        {
-            String dependency = (String) i.next();
-
-            File f = new File( repoLocal, dependency );
-
-            cl.addURL( f.toURL() );
-        }
-
         Class c = cl.loadClass( "org.codehaus.modello.Modello" );
 
         Object generator = c.newInstance();
@@ -442,16 +598,6 @@ public class MBoot
     {
         System.out.println( "Checking for MBoot's dependencies ..." );
 
-        InputStream is = MBoot.class.getClassLoader().getResourceAsStream( "mboot.deps" );
-
-        StringWriter w = new StringWriter();
-
-        IOUtil.copy( is, w );
-
-        String[] deps = StringUtils.split( w.toString(), "\n" );
-
-        mbootDependencies = Arrays.asList( deps );
-
         downloader.downloadDependencies( mbootDependencies );
     }
 
@@ -467,6 +613,31 @@ public class MBoot
         jarMojo.execute( new File( classes ), buildDir, artifactId + "-" + version );
     }
 
+    private void installPomFile( String repoLocal, File pomIn )
+        throws Exception
+    {
+        if ( !reader.parse( pomIn ) )
+        {
+            System.err.println( "Could not parse pom.xml" );
+
+            System.exit( 1 );
+        }
+
+        String artifactId = reader.artifactId;
+
+        String version = reader.version;
+
+        String groupId = reader.groupId;
+
+        File pom = new File( repoLocal, "/" + groupId + "/poms/" + artifactId + "-" + version + ".pom" );
+
+        System.out.println( "Installing POM: " + pom );
+
+        FileUtils.copyFile( pomIn, pom );
+
+        reader.reset();
+    }
+
     private void installPom( String basedir, String repoLocal )
         throws Exception
     {
@@ -476,8 +647,11 @@ public class MBoot
 
         String groupId = reader.groupId;
 
-        FileUtils.copyFile( new File( basedir, "pom.xml" ),
-                            new File( repoLocal, "/" + groupId + "/poms/" + artifactId + "-" + version + ".pom" ) );
+        File pom = new File( repoLocal, "/" + groupId + "/poms/" + artifactId + "-" + version + ".pom" );
+
+        System.out.println( "Installing POM: " + pom );
+
+        FileUtils.copyFile( new File( basedir, "pom.xml" ), pom );
     }
 
     private void installJar( String basedir, String repoLocal )
@@ -489,8 +663,27 @@ public class MBoot
 
         String groupId = reader.groupId;
 
-        FileUtils.copyFile( new File( basedir, BUILD_DIR + "/" + artifactId + "-" + version + ".jar" ),
-                            new File( repoLocal, "/" + groupId + "/jars/" + artifactId + "-" + version + ".jar" ) );
+        File jar = new File( repoLocal, "/" + groupId + "/jars/" + artifactId + "-" + version + ".jar" );
+
+        System.out.println( "Installing JAR: " + jar );
+
+        FileUtils.copyFile( new File( basedir, BUILD_DIR + "/" + artifactId + "-" + version + ".jar" ), jar );
+    }
+
+    private void installPlugin( String basedir, String repoLocal )
+        throws Exception
+    {
+        String artifactId = reader.artifactId;
+
+        String version = reader.version;
+
+        String groupId = reader.groupId;
+
+        File jar = new File( repoLocal, "/" + groupId + "/plugins/" + artifactId + "-" + version + ".jar" );
+
+        System.out.println( "Installing Plugin: " + jar );
+
+        FileUtils.copyFile( new File( basedir, BUILD_DIR + "/" + artifactId + "-" + version + ".jar" ), jar );
     }
 
     private void runTests( String basedir, String classes, String testClasses )
@@ -504,7 +697,16 @@ public class MBoot
 
         if ( reader.getUnitTests() != null )
         {
-            includes = reader.getUnitTests().getIncludes();
+            if ( reader.getUnitTests().getIncludes().size() != 0 )
+            {
+                includes = reader.getUnitTests().getIncludes();
+            }
+            else
+            {
+                includes = new ArrayList();
+
+                includes.add( "**/*Test.java" );
+            }
 
             excludes = reader.getUnitTests().getExcludes();
         }
@@ -519,8 +721,12 @@ public class MBoot
             excludes.add( "**/*Abstract*.java" );
         }
 
-        testRunner.execute( repoLocal, basedir, classes, testClasses, includes, excludes, classpath( reader.getDependencies(), null ) );
+        boolean success = testRunner.execute( repoLocal, basedir, classes, testClasses, includes, excludes, classpath( reader.getDependencies(), null ) );
 
+        if ( !success )
+        {
+            throw new Exception ( "Tests error" );
+        }
     }
 
     // ----------------------------------------------------------------------
@@ -603,6 +809,11 @@ public class MBoot
             {
                 System.out.println( i.next() );
             }
+
+            if ( errors.size() > 0 )
+            {
+                throw new Exception( "Compilation error." );
+            }
         }
     }
 
@@ -644,53 +855,6 @@ public class MBoot
         return d.getArtifactDirectory() + pathSeparator + "jars" + pathSeparator + d.getArtifact();
     }
 
-    private Properties loadProperties( File file )
-    {
-        try
-        {
-            return loadProperties( new FileInputStream( file ) );
-        }
-        catch ( Exception e )
-        {
-            // ignore
-        }
-
-        return new Properties();
-    }
-
-    private static Properties loadProperties( InputStream is )
-    {
-        Properties properties = new Properties();
-
-        try
-        {
-            if ( is != null )
-            {
-                properties.load( is );
-            }
-        }
-        catch ( IOException e )
-        {
-            // ignore
-        }
-        finally
-        {
-            try
-            {
-                if ( is != null )
-                {
-                    is.close();
-                }
-            }
-            catch ( IOException e )
-            {
-                // ignore
-            }
-        }
-
-        return properties;
-    }
-
     class ModelReader
         extends DefaultHandler
     {
@@ -710,7 +874,11 @@ public class MBoot
 
         private List dependencies = new ArrayList();
 
+        private List remoteRepositories = new ArrayList();
+
         private UnitTests unitTests;
+
+        private Local local = new Local();
 
         private List resources = new ArrayList();
 
@@ -724,9 +892,13 @@ public class MBoot
 
         private boolean insideDependency = false;
 
+        private boolean insideLocal = false;
+
         private boolean insideUnitTest = false;
 
         private boolean insideResource = false;
+
+        private boolean insideRepository = false;
 
         private StringBuffer bodyText = new StringBuffer();
 
@@ -735,6 +907,11 @@ public class MBoot
         public void reset()
         {
             dependencies = new ArrayList();
+        }
+
+        public List getRemoteRepositories()
+        {
+            return remoteRepositories;
         }
 
         public List getDependencies()
@@ -750,6 +927,11 @@ public class MBoot
         public List getResources()
         {
             return resources;
+        }
+
+        public Local getLocal()
+        {
+            return local;
         }
 
         public boolean parse( File file )
@@ -781,6 +963,14 @@ public class MBoot
             if ( rawName.equals( "parent" ) )
             {
                 insideParent = true;
+            }
+            else if ( rawName.equals( "repository" ) && !insideLocal )
+            {
+                insideRepository = true;
+            }
+            else if ( rawName.equals( "local" ) )
+            {
+                insideLocal = true;
             }
             else if ( rawName.equals( "unitTest" ) )
             {
@@ -851,6 +1041,10 @@ public class MBoot
                 resources.addAll( p.getResources() );
 
                 insideParent = false;
+            }
+            else if ( rawName.equals( "local" ) )
+            {
+                insideLocal = false;
             }
             else if ( rawName.equals( "unitTest" ) )
             {
@@ -962,6 +1156,24 @@ public class MBoot
             else if ( rawName.equals( "type" ) )
             {
                 type = getBodyText();
+            }
+            else if ( rawName.equals( "repository" ) )
+            {
+                if ( insideLocal )
+                {
+                    local.repository = getBodyText();
+                }
+                else 
+                {
+                    insideRepository = false;
+                }
+            }
+            else if ( insideRepository )
+            {
+                if ( rawName.equals( "url" ) )
+                {
+                    remoteRepositories.add( getBodyText() );
+                }
             }
 
             bodyText = new StringBuffer();
@@ -1249,5 +1461,33 @@ public class MBoot
         {
             this.filtering = filtering;
         }
+    }
+
+    public static class Local
+        implements Serializable
+    {
+        private String repository;
+
+        private String online;
+
+        public String getRepository()
+        {
+            return this.repository;
+        }
+
+        public void setRepository( String repository )
+        {
+            this.repository = repository;
+        }   
+    
+        public String getOnline()
+        {
+            return this.online;
+        }
+
+        public void setOnline( String online )
+        {
+            this.online = online;
+        }   
     }
 }

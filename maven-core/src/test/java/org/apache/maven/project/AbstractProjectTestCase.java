@@ -2,7 +2,6 @@ package org.apache.maven.project;
 
 import org.apache.maven.MavenTestCase;
 import org.apache.maven.artifact.repository.ArtifactRepository;
-import org.codehaus.plexus.util.FileUtils;
 
 import java.io.File;
 
@@ -32,59 +31,21 @@ public class AbstractProjectTestCase
         return localRepository;
     }
 
-    public void initLocalRepository()
-    {
-        File tempLocalRepository = new File( getBasedir(), "target/temp-repo-local" );
-        
-        // delete 
-        try
-        {
-            FileUtils.deleteDirectory( tempLocalRepository );
-        }
-        catch ( Exception e )
-        {
-            System.out.println( "Could not delete the remaining from previous tests!! Test will continue anyway " );
-
-        }
-
-        tempLocalRepository.mkdirs();
-
-        System.out.println( "Created temporary local repository: " + tempLocalRepository );
-
-        System.setProperty( "maven.repo.local", tempLocalRepository.getPath() );
-    }
-
-    protected MavenProject buildProject( File f, ArtifactRepository localRepository, boolean followTransitiveDeps  )
+    protected MavenProject buildProject( File f, boolean followTransitiveDeps )
        throws Exception
     {
         MavenProject project;
 
-        project = projectBuilder.build( f, localRepository, followTransitiveDeps );
+        project = projectBuilder.build( f, followTransitiveDeps );
 
         assertNotNull( "Project is null", project );
 
         return project;
     }
 
-    protected MavenProject buildProject( File f, ArtifactRepository localRepository )
+    protected MavenProject buildProject( File f )
         throws Exception
     {
-        return buildProject( f, localRepository, false );
-    }
-
-    protected void initRemoteRepositories( MavenProject project )
-    {
-        //we will remove ibiblio
-        project.getRepositories().clear();
-
-        File repo_1 = new File( getBasedir(), "target/test-classes/remote-repo-1" );
-
-        File repo_2 = new File( getBasedir(), "target/test-classes/remote-repo-2" );
-
-        project.addRepository( "file://" + repo_1.getPath() );
-
-        project.addRepository( "file://" + repo_2.getPath() );
-
-        assertEquals( 2, project.getRepositories().size() );
+        return buildProject( f, false );
     }
 }

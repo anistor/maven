@@ -31,12 +31,14 @@ import org.apache.maven.wagon.authorization.AuthorizationException;
 import org.apache.maven.wagon.observers.ChecksumObserver;
 import org.codehaus.plexus.PlexusConstants;
 import org.codehaus.plexus.PlexusContainer;
+import org.codehaus.plexus.util.FileUtils;
 import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
 import org.codehaus.plexus.context.Context;
 import org.codehaus.plexus.context.ContextException;
 import org.codehaus.plexus.personality.plexus.lifecycle.phase.Contextualizable;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Iterator;
 import java.util.Set;
 
@@ -124,6 +126,9 @@ public class DefaultWagonManager
      * If we won't plug validation process here the question is what we can do afterwards?
      * We don't know from which ArtifactRepository artifact was fetched and where we should restart.
      * We should be also fetching md5 sums and such from the same exact directory then artifacts
+     * <p/>
+     * @todo probably all exceptions should just be logged and continue
+     * @todo is the exception for warnings logged at debug level correct?
      */
     public void get( Artifact artifact, File destination, Set repositories )
         throws TransferFailedException
@@ -134,7 +139,7 @@ public class DefaultWagonManager
 
         try
         {
-            temp = File.createTempFile( "wagon", "tmp" );
+            temp = new File( destination + ".tmp" );
 
             temp.deleteOnExit();
         }
@@ -149,7 +154,6 @@ public class DefaultWagonManager
 
             try
             {
-
                 Wagon wagon = getWagon( repository.getProtocol() );
 
                 // ----------------------------------------------------------------------
@@ -165,12 +169,17 @@ public class DefaultWagonManager
 
                 wagon.get( path( artifact ), temp );
 
-                transfered = true;
-
                 wagon.disconnect();
 
                 releaseWagon( wagon );
 
+            }
+            catch ( ResourceDoesNotExistException e )
+            {
+                // This one we will eat when looking through remote repositories
+                // because we want to cycle through them all before squawking.
+
+                continue;
             }
             catch ( UnsupportedProtocolException e )
             {
@@ -188,31 +197,46 @@ public class DefaultWagonManager
             {
                 throw new TransferFailedException( "Authorization failed: ", e );
             }
-            catch ( ResourceDoesNotExistException e )
+            catch ( TransferFailedException e )
             {
-                throw new TransferFailedException( "Resource doesn't exist: ", e );
+                getLogger().warn( "Failure getting artifact from repository '" + repository + "': " + e );
+                getLogger().debug( "Stack trace", e );
+                continue;
             }
             catch ( Exception e )
             {
                 throw new TransferFailedException( "Release of wagon failed: ", e );
             }
-        }
 
-        if ( transfered )
-        {
             if ( !destination.getParentFile().exists() )
             {
                 destination.getParentFile().mkdirs();
             }
 
-            transfered = temp.renameTo( destination );
+            // The temporary file is named destination + ".tmp" and is done this way to ensure
+            // that the temporary file is in the same file system as the destination because the
+            // File.renameTo operation doesn't really work across file systems. So we will attempt
+            // to do a File.renameTo for efficiency and atomicity, if this fails then we will use
+            // a brute force copy and delete the temporary file.
+
+            if ( !temp.renameTo( destination ) )
+            {
+                try
+                {
+                    FileUtils.copyFile( temp, destination );
+
+                    temp.delete();
+                }
+                catch ( IOException e )
+                {
+                    throw new TransferFailedException( "Error copying temporary file to the final destination: ", e );
+                }
+            }
 
             return;
         }
-        else
-        {
-            temp.delete();
-        }
+
+        throw new TransferFailedException( "Unable to download the artifact from any repository" );
     }
 
     public void contextualize( Context context )

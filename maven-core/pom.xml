@@ -15,6 +15,11 @@
   <package>org.apache.maven</package>
   <logo>/images/maven.gif</logo>
   <dependencies>
+    <dependency>
+      <groupId>plexus</groupId>
+      <artifactId>plexus-artifact-container</artifactId>
+      <version>1.0-alpha-1-SNAPSHOT</version>
+    </dependency>
     <!-- maven component -->
     <dependency>
       <groupId>maven</groupId>
@@ -47,22 +52,21 @@
       <artifactId>ognl</artifactId>
       <version>2.5.1</version>
     </dependency>
-    <!-- Used to support maven.xml script and goal decorating in general. -->
-    <dependency>
-      <groupId>marmalade</groupId>
-      <artifactId>marmalade-core</artifactId>
-      <version>0.1</version>
-    </dependency>
-    <dependency>
-      <groupId>marmalade</groupId>
-      <artifactId>marmalade-el-ognl</artifactId>
-      <version>0.1</version>
-    </dependency>
-    <!-- Wagon -->
     <dependency>
       <groupId>maven</groupId>
       <artifactId>wagon-api</artifactId>
-      <version>0.9-SNAPSHOT</version>
-    </dependency>
+      <version>1.0-alpha-1-SNAPSHOT</version>
+    </dependency>    
+    <dependency>
+      <groupId>maven</groupId>
+      <artifactId>wagon-http-lightweight</artifactId>
+      <version>1.0-alpha-1-SNAPSHOT</version>
+    </dependency>        
   </dependencies>
+  <distributionManagement>
+    <site>
+      <id>website</id>
+      <url>scp://www.apache.org//www/maven.apache.org/m2</url>
+    </site>
+  </distributionManagement>
 </project>

@@ -1,21 +1,22 @@
 #!/bin/sh
 
-home=`pwd`
+# This process assumes that maven-core-it-verifier has been built.
 
-cp=`pwd`/../maven-core-it-verifier/target/maven-core-it-verifier-1.0.jar
+cp=../maven-core-it-verifier/target/maven-core-it-verifier-1.0.jar
+
 verifier=org.apache.maven.it.Verifier
 
-integration_tests=`cat integration-tests.txt`
+# TODO: need a consistent way to discover M2_HOME across this, bootstrap and m2 itself, as well as have a sensible
+# default, and a way to override. There must be only one way.
+# I like the idea of using the one in the path, or using -Dmaven.home to override
+# The m2 shell script should not care what installation it is in - it should use the installation defined on the
+# command line
 
-for integration_test in $integration_tests
-do
-  echo "Running integration test $integration_test ..."
-  
-  (
-    cd $integration_test
-   
-    m2 clean jar
-    
-    java -cp $cp $verifier `pwd`
-  )
-done
+jvm_args="$@"
+
+if [ ! -z "$M2_HOME" ]; then
+  jvm_args="$jvm_args -Dmaven.home=$M2_HOME"
+fi
+
+java $jvm_args -cp "$cp" $verifier
+

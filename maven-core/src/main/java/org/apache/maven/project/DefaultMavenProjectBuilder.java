@@ -17,6 +17,7 @@ package org.apache.maven.project;
  */
 
 import org.apache.maven.artifact.Artifact;
+import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.artifact.MavenMetadataSource;
 import org.apache.maven.artifact.factory.ArtifactFactory;
 import org.apache.maven.artifact.repository.ArtifactRepository;
@@ -35,8 +36,6 @@ import org.apache.maven.project.validation.ModelValidator;
 import org.apache.maven.repository.RepositoryUtils;
 import org.codehaus.plexus.logging.AbstractLogEnabled;
 import org.codehaus.plexus.personality.plexus.lifecycle.phase.Initializable;
-import org.codehaus.plexus.util.CollectionUtils;
-import org.codehaus.plexus.util.PropertyUtils;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.dag.DAG;
 import org.codehaus.plexus.util.dag.TopologicalSorter;
@@ -54,15 +53,12 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Set;
 
 public class DefaultMavenProjectBuilder
     extends AbstractLogEnabled
     implements MavenProjectBuilder, Initializable
 {
-    public static final String MAVEN_PROPERTIES = "maven.properties";
-
     private ArtifactResolver artifactResolver;
 
     private ArtifactFactory artifactFactory;
@@ -87,37 +83,94 @@ public class DefaultMavenProjectBuilder
         modelReader = new MavenXpp3Reader();
     }
 
-    public MavenProject build( File projectDescriptor, ArtifactRepository localRepository )
+    public MavenProject build( File projectDescriptor )
         throws ProjectBuildingException
     {
-        return build( projectDescriptor, localRepository, false );
+        return build( projectDescriptor, false );
     }
 
-    public MavenProject build( File projectDescriptor, ArtifactRepository localRepository, boolean resolveDependencies )
+    /** @todo can we move the super model reading to the initialize method? what about the user/site? Is it reused?
+     *  @todo this is still not completely faithful to the "always override" method of the user POM: there is potential for settings not to be used in some rare circumstances. Some restructuring is necessary.
+     *  @todo we should be passing in some more configuration here so that maven home local can be used for user properties. Then, the new stuff should be unit tested.
+     *  @todo the user model bit overwriting the super model seems a bit gross, but is needed so that any repositories given take affect
+     */
+    public MavenProject build( File projectDescriptor, boolean resolveDependencies )
         throws ProjectBuildingException
     {
+        String localRepositoryValue = null;
+
         try
         {
-            superModel = modelReader.read( new InputStreamReader( DefaultMavenProjectBuilder.class.getResourceAsStream( "pom.xml" ) ) );
+            // TODO: rename to super-pom.xml so it is not used by the reactor
+            superModel = modelReader.read( new InputStreamReader( DefaultMavenProjectBuilder.class.getResourceAsStream( "pom-4.0.0.xml" ) ) );
+
+            Model userModel = null;
+            // TODO: use maven home local instead of user.home/.m2
+            File userModelFile = new File( System.getProperty( "user.home" ) + "/.m2", "override.xml" );
+            if ( userModelFile.exists() )
+            {
+                userModel = modelReader.read( new FileReader( userModelFile ) );
+                if ( userModel.getParent() != null )
+                {
+                    throw new ProjectBuildingException( "Inheritence not supported in the user override POM" );
+                }
+
+                if ( userModel.getLocal() != null && userModel.getLocal().getRepository() != null )
+                {
+                    localRepositoryValue = userModel.getLocal().getRepository();
+                }
+                superModel.getRepositories().addAll( userModel.getRepositories() );
+            }
+
+            if ( localRepositoryValue == null && superModel.getLocal() != null && superModel.getLocal().getRepository() != null )
+            {
+                localRepositoryValue = superModel.getLocal().getRepository();
+            }
+
+            // TODO: systemProperty in modello will make this redundant
+            localRepositoryValue = System.getProperty( "maven.repo.local", localRepositoryValue );
+
+            ArtifactRepository localRepository = null;
+            if ( localRepositoryValue != null )
+            {
+                localRepository = RepositoryUtils.localRepositoryToWagonRepository( localRepositoryValue );
+            }
+            else
+            {
+                throw new ProjectBuildingException( "A local repository must be specified" );
+            }
 
             LinkedList lineage = new LinkedList();
 
-            MavenProject project = assembleLineage( projectDescriptor, localRepository, lineage );
+            MavenProject project = assembleLineage( projectDescriptor,
+                                                    localRepository, 
+                                                    lineage, 
+                                                    superModel.getRepositories() );
 
-            // I think we will need to move this into the assembleLineage method in order to
-            // have access to any repositories set in any of the models. Otherwise we don't
-            // have the information required to to retrieve parent poms.
+            Model previous = superModel;
 
-            modelInheritanceAssembler.assembleModelInheritance( ( (MavenProject) lineage.get( 0 ) ).getModel(), superModel );
-
-            for ( int i = 1; i < lineage.size(); i++ )
+            for ( Iterator i = lineage.iterator(); i.hasNext(); )
             {
-                modelInheritanceAssembler.assembleModelInheritance( ( (MavenProject) lineage.get( i ) ).getModel(),
-                                                                    ( (MavenProject) lineage.get( i - 1 ) ).getModel() );
+                Model current = ( (MavenProject) i.next() ).getModel();
+                modelInheritanceAssembler.assembleModelInheritance( current, previous );
+                previous = current;
             }
 
+            if ( userModel != null )
+            {
+                modelInheritanceAssembler.assembleModelInheritance( userModel, previous );
+
+                MavenProject parent = project;
+                project = new MavenProject( userModel );
+                project.setFile( parent.getFile() );
+                project.setParent( parent );
+                project.setType( previous.getType() );
+            }
+
+            project.setLocalRepository( localRepository );
             project.setArtifacts( artifactFactory.createArtifacts( project.getDependencies(), localRepository ) );
 
+            // @todo this should be in the super POM when interpolation works
             setupMavenFinalName( project );
 
             // ----------------------------------------------------------------------
@@ -165,11 +218,12 @@ public class DefaultMavenProjectBuilder
         }
     }
 
-    private MavenProject assembleLineage( File projectDescriptor, ArtifactRepository localRepository, LinkedList lineage )
+    private MavenProject assembleLineage( File projectDescriptor, 
+                                          ArtifactRepository localRepository, 
+                                          LinkedList lineage,
+                                          List remoteRepositories )
         throws Exception
     {
-        Map properties = createProjectProperties( projectDescriptor.getParentFile() );
-
         Model model = readModel( projectDescriptor );
 
         MavenProject project = new MavenProject( model );
@@ -197,27 +251,33 @@ public class DefaultMavenProjectBuilder
 
             //!! (**)
             // ----------------------------------------------------------------------
-            // Do the have the necessary information to actually find the parent
+            // Do we have the necessary information to actually find the parent
             // POMs here?? I don't think so ... Say only one remote repository is
             // specified and that is ibiblio then this model that we just read doesn't
             // have any repository information ... I think we might have to inherit
             // as we go in order to do this.
             // ----------------------------------------------------------------------
 
+            remoteRepositories.addAll( model.getRepositories() );
+
             File parentPom = findParentModel( parentModel,
-                                              RepositoryUtils.mavenToWagon( model.getRepositories() ),
+                                              RepositoryUtils.mavenToWagon( remoteRepositories ),
                                               localRepository );
 
-            MavenProject parent = assembleLineage( parentPom, localRepository, lineage );
+            MavenProject parent = assembleLineage( parentPom, localRepository, lineage, remoteRepositories );
 
             project.setParent( parent );
         }
 
-        project.setProperties( properties );
-
-        project.setFile( projectDescriptor );
-
         return project;
+    }
+
+    private void setupMavenFinalName( MavenProject project )
+    {
+        if ( project.getModel().getBuild().getFinalName() == null )
+        {
+            project.getModel().getBuild().setFinalName( project.getArtifactId() + "-" + project.getVersion() );
+        }
     }
 
     private Model readModel( File projectDescriptor )
@@ -254,17 +314,10 @@ public class DefaultMavenProjectBuilder
     private File findParentModel( Parent parent, Set remoteRepositories, ArtifactRepository localRepository )
         throws ProjectBuildingException
     {
-        Dependency dependency = new Dependency();
-
-        dependency.setGroupId( parent.getGroupId() );
-
-        dependency.setArtifactId( parent.getArtifactId() );
-
-        dependency.setVersion( parent.getVersion() );
-
-        dependency.setType( "pom" );
-
-        Artifact artifact = artifactFactory.createArtifact( dependency, localRepository );
+        Artifact artifact = new DefaultArtifact( parent.getGroupId(), 
+                                                 parent.getArtifactId(),
+                                                 parent.getVersion(),
+                                                 "pom" );
 
         try
         {
@@ -272,63 +325,14 @@ public class DefaultMavenProjectBuilder
         }
         catch ( ArtifactResolutionException e )
         {
-            throw new ProjectBuildingException( "Missing parent POM: ", e );
-
+            // @todo use parent.toString() if modello could generate it, or specify in a code segment
+            throw new ProjectBuildingException( "Missing parent POM: " + 
+                parent.getGroupId() + ":" + 
+                parent.getArtifactId() + "-" + 
+                parent.getVersion(), e );
         }
 
         return artifact.getFile();
-    }
-
-    private void setupMavenFinalName( MavenProject project )
-    {
-        String mavenFinalName = project.getProperty( "maven.final.name" );
-
-        if ( mavenFinalName == null || mavenFinalName.indexOf( "${" ) >= 0 )
-        {
-            project.setProperty( "maven.final.name", project.getArtifactId() + "-" + project.getVersion() );
-        }
-    }
-
-    private Map createProjectProperties( File descriptorDirectory )
-    {
-        File f;
-
-        Properties systemProperties = System.getProperties();
-
-        f = new File( System.getProperty( "user.home" ), MAVEN_PROPERTIES );
-
-        Properties mavenProperties = PropertyUtils.loadProperties( f );
-
-        // project build properties
-        Properties userOverridesMavenProperties = null;
-
-        if ( descriptorDirectory != null )
-        {
-            f = new File( descriptorDirectory, MAVEN_PROPERTIES );
-
-            userOverridesMavenProperties = PropertyUtils.loadProperties( f );
-        }
-
-        Map result = CollectionUtils.mergeMaps( new Map[]
-        {
-            systemProperties,
-            mavenProperties,
-            userOverridesMavenProperties,
-        } );
-
-        // Set the basedir value in the context.
-        result.put( "basedir", descriptorDirectory.getAbsolutePath() );
-
-        for ( Iterator i = result.keySet().iterator(); i.hasNext(); )
-        {
-            String key = (String) i.next();
-
-            String value = (String) result.get( key );
-
-            result.put( key, StringUtils.interpolate( value, result ) );
-        }
-
-        return result;
     }
 
     private Model interpolateModel( Model model, Map map )
@@ -347,19 +351,17 @@ public class DefaultMavenProjectBuilder
         return writer.toString();
     }
 
-    // ----------------------------------------------------------------------
-    //
-    // 1. collect all the vertices for the projects that we want to build.
-    //
-    // 2. iterate through the deps of each project and if that dep is within
-    //    the set of projects we want to build then add an edge, otherwise throw
-    //    the edge away because that dependency is not within the set of projects
-    //    we are trying to build. we assume a closed set.
-    //
-    // 3. do a topo sort on the graph that remains.
-    //
-    // ----------------------------------------------------------------------
-
+    /**
+     * Sort a list of projects.
+     * <ul>
+     *  <li>collect all the vertices for the projects that we want to build.</li>
+     *  <li>iterate through the deps of each project and if that dep is within
+     *    the set of projects we want to build then add an edge, otherwise throw
+     *    the edge away because that dependency is not within the set of projects
+     *    we are trying to build. we assume a closed set.</li>
+     *  <li>do a topo sort on the graph that remains.</li>
+     * </ul>
+     */
     public List getSortedProjects( List projects )
         throws Exception
     {

@@ -16,9 +16,8 @@ package org.apache.maven;
  * limitations under the License.
  */
 
-import org.apache.maven.artifact.repository.ArtifactRepository;
+import org.apache.maven.lifecycle.goal.GoalNotFoundException;
 import org.apache.maven.plugin.descriptor.MojoDescriptor;
-import org.apache.maven.plugin.descriptor.PluginDescriptor;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.ProjectBuildingException;
 
@@ -33,6 +32,8 @@ import java.util.Map;
 public interface Maven
 {
     static String ROLE = Maven.class.getName();
+    
+    static String DEFAULT_MODEL_VERSION = "4.0.0";
 
     // ----------------------------------------------------------------------
     // Execution
@@ -70,13 +71,9 @@ public interface Maven
 
     String getMavenHome();
 
-    // ----------------------------------------------------------------------
-    // Maven local repository
-    // ----------------------------------------------------------------------
+    void setMavenHomeLocal( String mavenHomeLocal );
 
-    void setLocalRepository( String localRepository );
-
-    ArtifactRepository getLocalRepository();
+    String getMavenHomeLocal();
 
     // ----------------------------------------------------------------------
     // Maven project handling
@@ -84,11 +81,4 @@ public interface Maven
 
     MavenProject getProject( File project )
         throws ProjectBuildingException;
-
-    // ----------------------------------------------------------------------
-    //
-    // ----------------------------------------------------------------------
-
-    void booty()
-        throws Exception;
 }

@@ -18,7 +18,7 @@ package org.apache.maven.plugin;
 
 import ognl.Ognl;
 import ognl.OgnlException;
-import org.apache.maven.lifecycle.MavenLifecycleContext;
+import org.apache.maven.lifecycle.goal.MavenGoalExecutionContext;
 import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
 
 /**
@@ -27,7 +27,7 @@ import org.codehaus.plexus.component.repository.exception.ComponentLookupExcepti
  */
 public class OgnlProjectValueExtractor
 {
-    public static Object evaluate( String expression, MavenLifecycleContext context )
+    public static Object evaluate( String expression, MavenGoalExecutionContext context )
     {
         Object value = null;
 
@@ -44,9 +44,19 @@ public class OgnlProjectValueExtractor
                 // do nothing
             }
         }
-        else if ( expression.equals( "#localRepository") )
+        else if ( expression.equals( "#localRepository" ) )
         {
-            value = context.getLocalRepository();
+            value = context.getSession().getLocalRepository();
+        }
+        else if ( expression.equals( "#maven.repo.local" ) )
+        {
+            // TODO: remove this alias: but note that it is a string instead of an ArtifactRepository
+            value = context.getSession().getLocalRepository().getUrl().substring( "file://".length() );
+        }
+        else if ( expression.equals( "#maven.final.name" ) )
+        {
+            // TODO: remove this alias
+            value = context.getProject().getModel().getBuild().getFinalName();
         }
         else if ( expression.equals( "#project" ) )
         {
@@ -71,30 +81,36 @@ public class OgnlProjectValueExtractor
             catch ( OgnlException e )
             {
                 // do nothing
+                e.printStackTrace(); // TODO: should log? should ignore as previously?
             }
         }
         else if ( expression.equals( "#basedir" ) )
         {
             value = context.getProject().getFile().getParentFile().getAbsolutePath();
         }
-        else if ( expression.startsWith( "#" ) )
+        else if ( expression.startsWith( "#basedir" ) )
         {
-            expression = expression.substring( 1 );
-
             int pathSeparator = expression.indexOf( "/" );
 
             if ( pathSeparator > 0 )
             {
-                value = context.getProject().getProperty( expression.substring( 0, pathSeparator ) )
+                value = context.getProject().getFile().getParentFile().getAbsolutePath()
                     + expression.substring( pathSeparator );
             }
             else
             {
-                value = context.getProject().getProperty( expression );
+                new Exception( "Got expression '" + expression + "' that was not recognised" ).printStackTrace();
             }
-
         }
+        else if ( expression.startsWith( "#" ) )
+        {
+            // We will attempt to get nab a system property as a way to specify a
+            // parameter to a plugins. My particular case here is allowing the surefire
+            // plugin to run a single test so I want to specify that class on the cli
+            // as a parameter.
 
+            value = System.getProperty( expression.substring( 1 ) );
+        }
 
         // If we strike out we'll just use the expression which allows
         // people to use hardcoded values if they wish.
@@ -107,3 +123,4 @@ public class OgnlProjectValueExtractor
         return value;
     }
 }
+

@@ -17,7 +17,9 @@ package org.apache.maven.project;
  */
 
 import org.apache.maven.artifact.Artifact;
+import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.model.Build;
+import org.apache.maven.model.CiManagement;
 import org.apache.maven.model.Contributor;
 import org.apache.maven.model.Developer;
 import org.apache.maven.model.DistributionManagement;
@@ -26,15 +28,14 @@ import org.apache.maven.model.License;
 import org.apache.maven.model.MailingList;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.Organization;
-import org.apache.maven.model.Repository;
 import org.apache.maven.model.Scm;
+import org.apache.maven.repository.RepositoryUtils;
 import org.codehaus.plexus.util.StringUtils;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -62,7 +63,7 @@ public class MavenProject
 
     private Set artifacts;
 
-    private Map properties;
+    private ArtifactRepository wagonLocalRepository;
 
     public MavenProject( Model model )
     {
@@ -348,6 +349,16 @@ public class MavenProject
         model.setIssueManagement( issueManagement );
     }
 
+    public CiManagement getCiManagement()
+    {
+        return model.getCiManagement();
+    }
+
+    public void setCiManagement( CiManagement ciManagement )
+    {
+        model.setCiManagement( ciManagement );
+    }
+
     public IssueManagement getIssueManagement()
     {
         return model.getIssueManagement();
@@ -498,95 +509,29 @@ public class MavenProject
         return artifacts;
     }
 
-    public void setProperty( String key, String value )
-    {
-        getProperties().put( key, value );
-    }
-
-    public void setProperties( Map properties )
-    {
-        this.properties = properties;
-    }
-
-    public Map getProperties()
-    {
-        return properties;
-    }
-
-    public String getProperty( String key )
-    {
-        String property = (String) properties.get( key );
-
-        if ( property == null && hasParent() )
-        {
-            property = getParent().getProperty( key );
-        }
-
-        return property;
-    }
-
-    /**
-     * Convert a <code>String</code> property to a
-     * <code>Boolean</code> based on its contents.  It would be nice
-     * if Jelly would deal with this automatically.
-     *
-     * @param key The property key to lookup and convert.
-     * @return The boolean value of the property if convertiable,
-     *         otherwise <code>Boolean.FALSE</code>.
-     */
-    public boolean getBooleanProperty( String key )
-    {
-        String value = getProperty( key );
-
-        if ( "true".equalsIgnoreCase( value )
-            || "on".equalsIgnoreCase( value )
-            || "1".equals( value ) )
-        {
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * @return
-     * @todo create something like MavenContants class and put "maven.repo.local"
-     * @todo In fact I am not sure if this object should be used for accessing the information
-     * where maven local repository is. There should be only one local repository and it
-     * should be shared between all projects. Probably we can have a component like
-     * MavenEnvinromnent which will contain all behavioral settings shared between projects.
-     * This component can read on the startup ${user.home}/build.properties file
-     * <p/>
-     * <p/>
-     * there
-     */
-    public String getLocalRepository()
-    {
-        return getProperty( "maven.repo.local" );
-    }
-
-    public void setLocalRepository( String path )
-    {
-        properties.put( "maven.repo.local", path );
-    }
-
     public List getRepositories()
     {
         return model.getRepositories();
     }
 
-    public void addRepository( Repository repository )
+    public String getLocalRepositoryPath()
     {
-        model.getRepositories().add( repository );
+        return getLocalRepository().getBasedir();
     }
 
-    public void addRepository( String url )
+    public ArtifactRepository getLocalRepository()
     {
-        Repository repository = new Repository();
+        if ( wagonLocalRepository == null && model.getLocal() != null && model.getLocal().getRepository() != null )
+        {
+            wagonLocalRepository = RepositoryUtils.localRepositoryToWagonRepository( model.getLocal().getRepository() );
+        }
 
-        repository.setUrl( url );
+        return wagonLocalRepository;
+    }
 
-        addRepository( repository );
+    public void setLocalRepository( ArtifactRepository repository )
+    {
+        this.wagonLocalRepository = repository;
     }
 }
 

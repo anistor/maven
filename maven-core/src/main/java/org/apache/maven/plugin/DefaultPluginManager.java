@@ -1,19 +1,14 @@
 package org.apache.maven.plugin;
 
 /*
- * Copyright 2001-2004 The Apache Software Foundation.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright 2001-2004 The Apache Software Foundation. Licensed under the Apache
+ * License, Version 2.0 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0 Unless required by applicable law
+ * or agreed to in writing, software distributed under the License is
+ * distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the specific language
+ * governing permissions and limitations under the License.
  */
 
 import org.apache.maven.artifact.Artifact;
@@ -25,8 +20,8 @@ import org.apache.maven.artifact.resolver.ArtifactResolver;
 import org.apache.maven.plugin.descriptor.MojoDescriptor;
 import org.apache.maven.plugin.descriptor.PluginDescriptor;
 import org.apache.maven.plugin.descriptor.PluginDescriptorBuilder;
+import org.codehaus.plexus.ArtifactEnabledContainer;
 import org.codehaus.plexus.PlexusConstants;
-import org.codehaus.plexus.PlexusContainer;
 import org.codehaus.plexus.component.discovery.ComponentDiscoveryEvent;
 import org.codehaus.plexus.component.discovery.ComponentDiscoveryListener;
 import org.codehaus.plexus.component.repository.ComponentSetDescriptor;
@@ -62,7 +57,7 @@ public class DefaultPluginManager
 
     protected ArtifactHandlerManager artifactHandlerManager;
 
-    protected PlexusContainer container;
+    protected ArtifactEnabledContainer container;
 
     protected PluginDescriptorBuilder pluginDescriptorBuilder;
 
@@ -110,8 +105,7 @@ public class DefaultPluginManager
 
     private Set pluginsInProcess = new HashSet();
 
-    public void processPluginDescriptor( MavenPluginDescriptor mavenPluginDescriptor )
-        throws CycleDetectedException
+    public void processPluginDescriptor( MavenPluginDescriptor mavenPluginDescriptor ) throws CycleDetectedException
     {
         if ( pluginsInProcess.contains( mavenPluginDescriptor.getPluginId() ) )
         {
@@ -151,8 +145,7 @@ public class DefaultPluginManager
         }
     }
 
-    private boolean processEdge( String mojoId, String prereq )
-        throws CycleDetectedException
+    private boolean processEdge( String mojoId, String prereq ) throws CycleDetectedException
     {
         dag.addEdge( mojoId, prereq );
 
@@ -190,7 +183,7 @@ public class DefaultPluginManager
     {
         ComponentSetDescriptor componentSetDescriptor = event.getComponentSetDescriptor();
 
-        if ( !( componentSetDescriptor instanceof MavenPluginDescriptor ) )
+        if ( !(componentSetDescriptor instanceof MavenPluginDescriptor) )
         {
             return;
         }
@@ -213,7 +206,7 @@ public class DefaultPluginManager
 
     public boolean isPluginInstalled( String pluginId )
     {
-        return ( pluginDescriptors.get( pluginId ) != null );
+        return pluginDescriptors.containsKey( pluginId );
     }
 
     private String getPluginId( String goalName )
@@ -226,16 +219,14 @@ public class DefaultPluginManager
         return goalName;
     }
 
-    public void verifyPluginForGoal( String goalName )
-        throws Exception
+    public void verifyPluginForGoal( String goalName ) throws Exception
     {
         String pluginId = getPluginId( goalName );
 
         if ( !isPluginInstalled( pluginId ) )
         {
-            System.out.println( pluginId + " is not installed. Now installing into " + localRepository.getBasedir() + " ..." );
-
-            //!! This is entirely crappy. We need a better naming for plugin artifact ids and
+            //!! This is entirely crappy. We need a better naming for plugin
+            // artifact ids and
             //   we definitely need better version extraction support.
 
             String artifactId = "maven-" + pluginId + "-plugin";
@@ -245,60 +236,65 @@ public class DefaultPluginManager
             Artifact pluginArtifact = new DefaultArtifact( "maven", artifactId, version, "plugin", "jar" );
 
             addPlugin( pluginArtifact );
+
+            // Now, we need to resolve the plugins for this goal's prereqs.
+            MojoDescriptor mojoDescriptor = getMojoDescriptor( goalName );
+
+            List prereqs = mojoDescriptor.getPrereqs();
+
+            if ( prereqs != null )
+            {
+                for ( Iterator it = prereqs.iterator(); it.hasNext(); )
+                {
+                    String prereq = (String) it.next();
+
+                    verifyPluginForGoal( prereq );
+                }
+            }
         }
     }
 
     public void addPlugin( Artifact pluginArtifact )
         throws Exception
     {
-        System.out.println( "adding plugin " + pluginArtifact );
-
         artifactResolver = (ArtifactResolver) container.lookup( ArtifactResolver.ROLE );
 
-        MavenMetadataSource sr = new MavenMetadataSource( remotePluginRepositories,
-                                                          localRepository,
-                                                          artifactResolver );
+        MavenMetadataSource sr = new MavenMetadataSource( remotePluginRepositories, localRepository, artifactResolver );
 
-        String[] excludes = new String[]
-        {
-            "maven-core",
-            "maven-artifact",
-            "maven-model",
-            "maven-plugin",
-        };
+        // TODO: needs to be configurable
+        String[] excludes = new String[] { "maven-core", "maven-artifact", "maven-model", "maven-plugin", "plexus",
+            "xstream", "xpp3", "classworlds", "ognl" };
 
-        container.addComponent( pluginArtifact,
-                                artifactResolver,
-                                remotePluginRepositories,
-                                localRepository,
-                                sr,
-                                excludes );
+        container.addComponent( pluginArtifact, artifactResolver, remotePluginRepositories, localRepository, sr,
+            excludes );
     }
 
     public void contextualize( Context context )
         throws ContextException
     {
-        container = (PlexusContainer) context.get( PlexusConstants.PLEXUS_KEY );
+        container = (ArtifactEnabledContainer) context.get( PlexusConstants.PLEXUS_KEY );
     }
 
     public void initialize()
         throws Exception
     {
-        //!! move this to be configurable from the Maven component
+        // TODO: move this to be configurable from the Maven component
         remotePluginRepositories = new HashSet();
 
+        // TODO: needs to be configured from the POM element
         remotePluginRepositories.add( new ArtifactRepository( "plugin-repository", "http://www.ibiblio.org/maven" ) );
     }
 
+    // TODO: is this needed or can it be found from the session?
     public ArtifactRepository getLocalRepository()
     {
         return localRepository;
     }
 
+    // TODO: is this needed or can it be found from the session? It is currently set from the session
     public void setLocalRepository( ArtifactRepository localRepository )
     {
         this.localRepository = localRepository;
     }
 }
-
 

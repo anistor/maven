@@ -16,16 +16,16 @@ package org.apache.maven;
  * limitations under the License.
  */
 
-import org.apache.maven.artifact.repository.ArtifactRepository;
-import org.apache.maven.lifecycle.MavenLifecycleContext;
-import org.apache.maven.lifecycle.MavenLifecycleManager;
+import org.apache.maven.lifecycle.goal.GoalNotFoundException;
+import org.apache.maven.lifecycle.session.MavenSession;
+import org.apache.maven.lifecycle.session.MavenSessionPhaseManager;
 import org.apache.maven.plugin.PluginManager;
 import org.apache.maven.plugin.descriptor.MojoDescriptor;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.MavenProjectBuilder;
 import org.apache.maven.project.ProjectBuildingException;
+import org.codehaus.plexus.ArtifactEnabledContainer;
 import org.codehaus.plexus.PlexusConstants;
-import org.codehaus.plexus.PlexusContainer;
 import org.codehaus.plexus.context.Context;
 import org.codehaus.plexus.context.ContextException;
 import org.codehaus.plexus.i18n.I18N;
@@ -46,11 +46,11 @@ public class DefaultMaven
     extends AbstractLogEnabled
     implements Maven, Contextualizable
 {
-    private PlexusContainer container;
+    private ArtifactEnabledContainer container;
 
     private String mavenHome;
 
-    private String localRepository;
+    private String mavenHomeLocal;
 
     private boolean logResults = true;
 
@@ -60,7 +60,7 @@ public class DefaultMaven
 
     private PluginManager pluginManager;
 
-    private MavenLifecycleManager lifecycleManager;
+    private MavenSessionPhaseManager lifecycleManager;
 
     private MavenProjectBuilder projectBuilder;
 
@@ -69,21 +69,21 @@ public class DefaultMaven
     // ----------------------------------------------------------------------
     // Project execution
     // ----------------------------------------------------------------------
-
-    public ExecutionResponse execute( List goals )
-        throws GoalNotFoundException
+  
+    /** @todo probable need to do getProject( null ) here instead - but no project doesn't seem supported just yet, 
+        at least from the CLI. */
+    public ExecutionResponse execute( List goals ) throws GoalNotFoundException
     {
         return execute( (MavenProject) null, goals );
     }
 
-    public ExecutionResponse execute( File projectFile, List goals )
-        throws ProjectBuildingException, GoalNotFoundException
+    public ExecutionResponse execute( File projectFile, List goals ) throws ProjectBuildingException,
+        GoalNotFoundException
     {
         return execute( getProject( projectFile ), goals );
     }
 
-    public ExecutionResponse execute( MavenProject project, List goals )
-        throws GoalNotFoundException
+    public ExecutionResponse execute( MavenProject project, List goals ) throws GoalNotFoundException
     {
         Date fullStop;
 
@@ -91,63 +91,41 @@ public class DefaultMaven
 
         ExecutionResponse response = new ExecutionResponse();
 
-        for ( Iterator iterator = goals.iterator(); iterator.hasNext(); )
+        pluginManager.setLocalRepository( project.getLocalRepository() );
+
+        MavenSession session = new MavenSession( container,
+                                                 pluginManager,
+                                                 project,
+                                                 project.getLocalRepository(),
+                                                 goals );
+
+        try
         {
-            String goal = (String) iterator.next();
+            response = lifecycleManager.execute( session );
+        }
+        catch ( Exception e )
+        {
+            response.setException( e );
 
-            /*
-
-            //!! This needs to be thrown later because we may need to download the plugin first
-
-            if ( !getMojoDescriptors().containsKey( goal ) )
+            if ( logResults )
             {
-                throw new GoalNotFoundException( goal );
+                line();
+
+                getLogger().error( "BUILD ERROR" );
+
+                line();
+
+                getLogger().error( "Cause: ", e );
+
+                line();
+
+                stats( fullStart, new Date() );
+
+                line();
             }
-            */
 
-            MavenLifecycleContext context;
-
-            try
-            {
-                //!! we may not know anything about the plugin at this point.
-
-                context = new MavenLifecycleContext( container,
-                                                     project,
-                                                     getMojoDescriptor( goal ),
-                                                     getLocalRepository() );
-
-                context.setGoalName( goal );
-
-                lifecycleManager.execute( context );
-
-                if ( context.isExecutionFailure() )
-                {
-                    response.setExecutionFailure( context.getMojoDescriptor().getId(), context.getFailureResponse() );
-
-                    break;
-                }
-            }
-            catch ( Exception e )
-            {
-                response.setException( e );
-
-                if ( logResults )
-                {
-                    line();
-
-                    getLogger().error( "BUILD ERROR" );
-
-                    line();
-
-                    getLogger().error( "Cause: ", e );
-
-                    line();
-
-                    stats( fullStart, new Date() );
-
-                    line();
-                }
-            }
+            // An exception is a failure
+            return response;
         }
 
         fullStop = new Date();
@@ -205,7 +183,8 @@ public class DefaultMaven
 
         Runtime r = Runtime.getRuntime();
 
-        getLogger().info( "Final Memory: " + ((r.totalMemory() - r.freeMemory()) / mb) + "M/" + (r.totalMemory() / mb) + "M");
+        getLogger().info(
+            "Final Memory: " + ((r.totalMemory() - r.freeMemory()) / mb) + "M/" + (r.totalMemory() / mb) + "M" );
 
     }
 
@@ -218,8 +197,8 @@ public class DefaultMaven
     // Reactor execution
     // ----------------------------------------------------------------------
 
-    public ExecutionResponse executeReactor( String goals, String includes, String excludes )
-        throws ReactorException, GoalNotFoundException
+    public ExecutionResponse executeReactor( String goals, String includes, String excludes ) throws ReactorException,
+        GoalNotFoundException
     {
         List projects = new ArrayList();
 
@@ -233,7 +212,7 @@ public class DefaultMaven
             {
                 File f = (File) iterator.next();
 
-                MavenProject project = projectBuilder.build( f, getLocalRepository() );
+                MavenProject project = projectBuilder.build( f );
 
                 projects.add( project );
             }
@@ -299,8 +278,7 @@ public class DefaultMaven
     // Project building
     // ----------------------------------------------------------------------
 
-    public MavenProject getProject( File project )
-        throws ProjectBuildingException
+    public MavenProject getProject( File project ) throws ProjectBuildingException
     {
         if ( project.exists() )
         {
@@ -310,15 +288,14 @@ public class DefaultMaven
             }
         }
 
-        return projectBuilder.build( project, getLocalRepository() );
+        return projectBuilder.build( project );
     }
 
     // ----------------------------------------------------------------------
     // Reactor
     // ----------------------------------------------------------------------
 
-    public List getSortedProjects( List projects )
-        throws Exception
+    public List getSortedProjects( List projects ) throws Exception
     {
         return projectBuilder.getSortedProjects( projects );
     }
@@ -337,35 +314,23 @@ public class DefaultMaven
         return mavenHome;
     }
 
-    // ----------------------------------------------------------------------
-    // Maven local repository
-    // ----------------------------------------------------------------------
-
-    public void setLocalRepository( String localRepository )
+    public void setMavenHomeLocal( String mavenHomeLocal )
     {
-        this.localRepository = localRepository;
+        this.mavenHomeLocal = mavenHomeLocal;
     }
 
-    private ArtifactRepository wagonLocalRepository;
-
-    public ArtifactRepository getLocalRepository()
+    public String getMavenHomeLocal()
     {
-        if ( wagonLocalRepository == null )
-        {
-            wagonLocalRepository = new ArtifactRepository( "local", "file://" + localRepository );
-        }
-
-        return wagonLocalRepository;
+        return mavenHomeLocal;
     }
 
     // ----------------------------------------------------------------------
     // Lifecylce Management
     // ----------------------------------------------------------------------
 
-    public void contextualize( Context context )
-        throws ContextException
+    public void contextualize( Context context ) throws ContextException
     {
-        container = (PlexusContainer) context.get( PlexusConstants.PLEXUS_KEY );
+        container = (ArtifactEnabledContainer) context.get( PlexusConstants.PLEXUS_KEY );
     }
 
     // ----------------------------------------------------------------------
@@ -388,15 +353,5 @@ public class DefaultMaven
         {
             return secs + " seconds";
         }
-    }
-
-    // ----------------------------------------------------------------------
-    //
-    // ----------------------------------------------------------------------
-
-    public void booty()
-        throws Exception
-    {
-        pluginManager.setLocalRepository( getLocalRepository() );
     }
 }

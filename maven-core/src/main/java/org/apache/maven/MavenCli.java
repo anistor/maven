@@ -25,6 +25,7 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
 import org.apache.maven.plugin.descriptor.MojoDescriptor;
 import org.codehaus.classworlds.ClassWorld;
+import org.codehaus.plexus.embed.ArtifactEnabledEmbedder;
 import org.codehaus.plexus.embed.Embedder;
 import org.codehaus.plexus.util.StringUtils;
 
@@ -44,7 +45,7 @@ public class MavenCli
 
     public static final String POMv4 = "pom.xml";
 
-    public static void main( String[] args, ClassWorld classWorld )
+    public static int main( String[] args, ClassWorld classWorld )
         throws Exception
     {
         CLIManager cliManager = new CLIManager();
@@ -55,17 +56,15 @@ public class MavenCli
 
         //---
 
-        Embedder embedder = new Embedder();       
+        ArtifactEnabledEmbedder embedder = new ArtifactEnabledEmbedder();       
 
         embedder.start( classWorld );
 
         Maven maven = (Maven) embedder.lookup( Maven.ROLE );
 
-        maven.setMavenHome( findMavenHome() );
+        maven.setMavenHome( System.getProperty( "maven.home" ) );
 
-        maven.setLocalRepository( findLocalRepository() );
-
-        maven.booty();
+        maven.setMavenHomeLocal( System.getProperty( "maven.home.local", System.getProperty( "user.home" ) + "/.m2" ) );
 
         //---
 
@@ -86,7 +85,7 @@ public class MavenCli
         {
             cliManager.displayHelp();
 
-            return;
+            return 0;
         }
 
         if ( commandLine.hasOption( CLIManager.VERSION ) )
@@ -95,9 +94,13 @@ public class MavenCli
             // Take this info from generated piece of meta data which uses
             // the POM itself as the source. We don't want to get into the same
             // bullshit of manually updating some constant in the source.
+            // [Brett] My thoughts on this (something I long ago slated for m1), is to store the pom in
+            //  META-INF or something similar for a jar, and then read that back. maven-model being so
+            //  trim makes that more of a reality. The other alternative is simply to store that info in
+            //  the manifest in plain text and read that back.
             System.out.println( "Maven version: " );
 
-            return;
+            return 0;
         }
 
         if ( commandLine.hasOption( CLIManager.LIST_GOALS ) )
@@ -113,7 +116,7 @@ public class MavenCli
                 System.out.println( "    " + goal.getId() );
             }
 
-            return;
+            return 0;
         }
 
         ExecutionResponse response = null;
@@ -149,45 +152,16 @@ public class MavenCli
         {
             response = maven.execute( projectFile, commandLine.getArgList() );
         }
-    }
 
-    // ----------------------------------------------------------------------
-    // Local repository
-    // ----------------------------------------------------------------------
-
-    private static String findLocalRepository()
-        throws Exception
-    {
-        Properties properties = new Properties();
-
-        properties.load( new FileInputStream( new File( System.getProperty( "user.home" ), "maven.properties" ) ) );
-
-        for ( Iterator i = properties.keySet().iterator(); i.hasNext(); )
+        // @todo we may wish for more types of error codes - perhaps letting the response define them?
+        if ( response.isExecutionFailure() )
         {
-            String key = (String) i.next();
-
-            properties.setProperty( key, StringUtils.interpolate( properties.getProperty( key ), System.getProperties() ) );
+            return 1;
         }
-
-        String localRepository = properties.getProperty( MavenConstants.MAVEN_REPO_LOCAL );
-
-        if ( localRepository == null )
+        else
         {
-            throw new Exception( "Missing 'maven.repo.local' from ~/maven.properties." );
+            return 0;
         }
-
-        return localRepository;
-    }
-
-    // ----------------------------------------------------------------------
-    // Maven home
-    // ----------------------------------------------------------------------
-
-    private static String findMavenHome()
-    {
-        String mavenHome = System.getProperty( "maven.home" );
-
-        return mavenHome;
     }
 
     // ----------------------------------------------------------------------
@@ -207,15 +181,6 @@ public class MavenCli
         else
         {
             System.setProperty( MavenConstants.DEBUG_ON, "false" );
-        }
-
-        if ( commandLine.hasOption( CLIManager.WORK_OFFLINE ) )
-        {
-            System.setProperty( MavenConstants.WORK_OFFLINE, "true" );
-        }
-        else
-        {
-            System.setProperty( MavenConstants.WORK_OFFLINE, "false" );
         }
 
         if ( commandLine.hasOption( CLIManager.SET_SYSTEM_PROPERTY ) )

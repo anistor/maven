@@ -61,13 +61,13 @@ public class SurefireBooter
 
         Object batteryExecutor = batteryExecutorClass.newInstance();
 
-        Method run = batteryExecutorClass.getMethod( "run", new Class[] { List.class, List.class, ClassLoader.class } );
+        Method run = batteryExecutorClass.getMethod( "run", new Class[] { List.class, List.class, ClassLoader.class, String.class } );
 
         ClassLoader oldContextClassLoader = Thread.currentThread().getContextClassLoader();
 
         Thread.currentThread().setContextClassLoader( surefireClassLoader );
 
-        Boolean result = (Boolean) run.invoke( batteryExecutor, new Object[]{ reports, batteries, surefireClassLoader } );
+        Boolean result = (Boolean) run.invoke( batteryExecutor, new Object[]{ reports, batteries, surefireClassLoader, "dummy" } );
 
         Thread.currentThread().setContextClassLoader( oldContextClassLoader );
 
@@ -157,7 +157,7 @@ public class SurefireBooter
 
         surefireBooter.addClassPathUrl( new File( mavenRepoLocal, "junit/jars/junit-3.8.1.jar" ).getPath() );
 
-        surefireBooter.addClassPathUrl( new File( mavenRepoLocal, "surefire/jars/surefire-1.1.jar" ).getPath() );
+        surefireBooter.addClassPathUrl( new File( mavenRepoLocal, "surefire/jars/surefire-1.2-SNAPSHOT.jar" ).getPath() );
 
         surefireBooter.addClassPathUrl( new File( basedir, "target/classes/" ).getPath() );
 

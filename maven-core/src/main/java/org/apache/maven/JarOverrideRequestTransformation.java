@@ -17,11 +17,8 @@ package org.apache.maven;
  */
 
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.artifact.request.ArtifactRequestTransformation;
-import org.apache.maven.project.MavenProject;
-import org.codehaus.plexus.util.StringUtils;
 
 import java.util.Map;
 import java.util.Set;
@@ -35,6 +32,7 @@ public class JarOverrideRequestTransformation
                                Map parameters )
         throws Exception
     {
+/* TODO: need an override in the POM
         MavenProject project = (MavenProject) parameters.get( "project" );
 
         boolean mavenJarOverride = project.getBooleanProperty( "maven.jar.override" );
@@ -49,7 +47,7 @@ public class JarOverrideRequestTransformation
                                                                 artifact.getType() );
             return transformedArtifact;
         }
-
+*/
         return artifact;
     }
 }
