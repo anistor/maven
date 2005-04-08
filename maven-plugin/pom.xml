@@ -2,12 +2,11 @@
   <parent>
     <artifactId>maven</artifactId>
     <groupId>org.apache.maven</groupId>
-    <version>2.0-SNAPSHOT</version>
+    <version>2.0-alpha-1</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>maven-plugin</artifactId>
   <name>Maven Plugin</name>
-  <version>2.0-SNAPSHOT</version>
   <dependencies>
     <!-- TODO: can we avoid this dependency so that it is not propogated to Mojo implementors?
          Maybe split plugin-api from the descriptor builder? -->
@@ -19,7 +18,7 @@
     <dependency>
       <groupId>org.apache.maven</groupId>
       <artifactId>maven-monitor</artifactId>
-      <version>2.0-SNAPSHOT</version>
+      <version>2.0-alpha-1</version>
     </dependency>
 
     <!-- TODO: shouldn't be needed - separate plugin test case -->
