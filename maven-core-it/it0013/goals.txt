@@ -1,3 +1,0 @@
-plugin:descriptor
-install
-it0013:it0013
