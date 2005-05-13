@@ -1,0 +1,19 @@
+<project>
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <artifactId>maven-plugin-parent</artifactId>
+    <groupId>org.apache.maven.plugins</groupId>
+    <version>2.0-alpha-2</version>
+  </parent>
+  <artifactId>maven-ant-plugin</artifactId>
+  <version>2.0-alpha-1</version>
+  <packaging>maven-plugin</packaging>
+  <name>Maven Ant Plugin</name>
+  <dependencies>
+    <dependency>
+      <groupId>org.apache.maven</groupId>
+      <artifactId>maven-project</artifactId>
+      <version>2.0-alpha-2</version>
+    </dependency>
+  </dependencies>
+</project>
