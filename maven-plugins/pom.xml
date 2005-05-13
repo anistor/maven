@@ -1,0 +1,103 @@
+<project>
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>org.apache.maven.plugins</groupId>
+  <artifactId>maven-plugin-parent</artifactId>
+  <packaging>pom</packaging>
+  <version>2.0-alpha-2</version>
+  <name>Maven Plugins</name>
+  <description>Maven plugin parent</description>
+  <url>http://maven.apache.org/maven2/</url>
+  <issueManagement>
+    <system>jira</system>
+    <url>http://jira.codehaus.org/browse/MNG</url>
+  </issueManagement>
+  <developers>
+    <developer>
+      <id>jvanzyl</id>
+      <name>Jason van Zyl</name>
+      <email>jason@maven.org</email>
+      <organization>Maven</organization>
+      <roles>
+        <role>Architect</role>
+        <role>Release Manager</role>
+      </roles>
+    </developer>
+    <developer>
+      <id>brett</id>
+      <name>Brett Porter</name>
+      <email>brett@apache.org</email>
+      <organization>ASF</organization>
+      <roles>
+        <role>Java Developer</role>
+        <role>PMC Member</role>
+      </roles>
+      <timezone>+10</timezone>
+    </developer>
+    <developer>
+      <id>evenisse</id>
+      <name>Emmanuel Venisse</name>
+      <email>evenisse@apache.org</email>
+      <organization>ASF</organization>
+      <roles>
+        <role>Java Developer</role>
+      </roles>
+    </developer>
+  </developers>
+  <dependencies>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>3.8.1</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.maven</groupId>
+      <artifactId>maven-plugin-api</artifactId>
+      <version>2.0-alpha-2</version>
+    </dependency>
+  </dependencies>
+  <organization>
+    <name>Apache Software Foundation</name>
+    <url>http://www.apache.org/</url>
+  </organization>
+  <distributionManagement>
+    <repository>
+      <id>repo1</id>
+      <name>Maven Central Repository</name>
+<!-- Waiting for RELEASE files to be mirrored
+      <url>scp://repo1.maven.org/home/projects/maven/repository-staging/to-ibiblio/maven</url>
+      <layout>legacy</layout>
+-->
+      <url>scp://repo1.maven.org/home/projects/maven/repository-staging/to-ibiblio/maven2</url>
+    </repository>
+    <site>
+      <id>website</id>
+      <url>scp://minotaur.apache.org/www/maven.apache.org/maven2/plugins/</url>
+    </site>
+  </distributionManagement>
+  <modules>
+    <!-- Due to CL bug, assembly must be first -->
+    <module>maven-assembly-plugin</module>
+    <module>maven-ant-plugin</module>
+    <module>maven-clean-plugin</module>
+    <module>maven-compiler-plugin</module>
+    <module>maven-deploy-plugin</module>
+    <module>maven-eclipse-plugin</module>
+    <module>maven-ejb-plugin</module>
+    <module>maven-idea-plugin</module>
+    <module>maven-install-plugin</module>
+    <module>maven-jar-plugin</module>
+    <module>maven-plugin-plugin</module>
+    <module>maven-resources-plugin</module>
+    <module>maven-site-plugin</module>
+    <module>maven-source-plugin</module>
+    <module>maven-surefire-plugin</module>
+    <module>maven-war-plugin</module>
+    <module>maven-verifier-plugin</module>
+  </modules>
+  <scm>
+    <connection>scm:svn:http://svn.apache.org/repos/asf/maven/components/trunk/maven-plugins/</connection>
+    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/maven/components/trunk/maven-plugins/</developerConnection>
+    <url>http://svn.apache.org/viewcvs.cgi/maven/components/maven-plugins/</url>
+  </scm>
+</project>
