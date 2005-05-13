@@ -1,0 +1,45 @@
+<plexus>
+  <component-discoverer-manager implementation="org.codehaus.plexus.component.discovery.DefaultComponentDiscovererManager">
+    <listeners>
+      <listener implementation="org.codehaus.plexus.component.discovery.DiscoveryListenerDescriptor">
+        <role>org.apache.maven.plugin.PluginManager</role>
+      </listener>
+    </listeners>
+    <component-discoverers>
+      <component-discoverer implementation="org.apache.maven.plugin.MavenPluginDiscoverer"/>
+    </component-discoverers>
+  </component-discoverer-manager>
+  <!-- component-factory-manager implementation="org.codehaus.plexus.component.factory.DefaultComponentFactoryManager">
+    <component-factories>
+      <component-factory implementation="org.codehaus.plexus.component.factory.marmalade.MarmaladeClasspathComponentFactory">
+        <id>marmalade</id>
+      </component-factory>
+    </component-factories>
+  </component-factory-manager -->
+  <components>
+    <component>
+      <role>org.apache.maven.plugin.PluginManager</role>
+      <implementation>org.apache.maven.plugin.DefaultPluginManager</implementation>
+      <requirements>
+        <requirement>
+          <role>org.apache.maven.project.path.PathTranslator</role>
+        </requirement>
+        <requirement>
+          <role>org.apache.maven.artifact.factory.ArtifactFactory</role>
+        </requirement>
+      </requirements>
+    </component>
+
+    <!-- Duplicated from Maven core as it is used in the plugin manager -->
+    <component>
+      <role>org.apache.maven.project.path.PathTranslator</role>
+      <implementation>org.apache.maven.project.path.DefaultPathTranslator</implementation>
+    </component>
+
+    <!-- Duplicated from Maven artifact as it is used in the plugin manager -->
+    <component>
+      <role>org.apache.maven.artifact.factory.ArtifactFactory</role>
+      <implementation>org.apache.maven.artifact.factory.DefaultArtifactFactory</implementation>
+    </component>
+  </components>
+</plexus>

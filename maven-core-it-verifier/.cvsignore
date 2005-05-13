@@ -1,0 +1,10 @@
+*~
+*.log
+target
+*.ipr
+*.iws
+*.iml
+dist
+target
+.classpath
+.project
