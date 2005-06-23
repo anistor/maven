@@ -1,10 +1,13 @@
-<model>
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project>
   <parent>
     <artifactId>maven-plugin-parent</artifactId>
     <groupId>org.apache.maven.plugins</groupId>
     <version>2.0-alpha-3</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
+  <groupId>org.apache.maven.plugins</groupId>
   <artifactId>maven-archetype-plugin</artifactId>
   <packaging>maven-plugin</packaging>
   <name>Maven Archetype Plugin</name>
@@ -21,4 +24,4 @@
       <version>1.0-alpha-2</version>
     </dependency>
   </dependencies>
-</model>
+</project>
