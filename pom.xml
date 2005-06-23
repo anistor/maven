@@ -1,10 +1,13 @@
-<model>
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project>
   <parent>
     <artifactId>maven-archetype</artifactId>
     <groupId>org.apache.maven</groupId>
     <version>1.0-alpha-1</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
+  <groupId>org.apache.maven</groupId>
   <artifactId>maven-archetype-core</artifactId>
   <packaging>jar</packaging>
   <version>1.0-alpha-2</version>
@@ -42,4 +45,4 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
-</model>
+</project>
