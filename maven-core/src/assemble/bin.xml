@@ -44,6 +44,7 @@
       </includes>
       <excludes>
         <exclude>maven-core-*-sources.jar</exclude>
+        <exclude>maven-core-*-javadoc.jar</exclude>
       </excludes>
     </fileSet>
   </fileSets>
