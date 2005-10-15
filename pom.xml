@@ -8,10 +8,7 @@
   <artifactId>maven-site-plugin</artifactId>
   <packaging>maven-plugin</packaging>
   <name>Maven Site plugin</name>
-  <version>2.0-beta-3-SNAPSHOT</version>
-  <prerequisites>
-    <maven>2.0</maven>
-  </prerequisites>
+  <version>2.0-beta-3</version>
   <developers>
     <developer>
       <id>vsiveton</id>
@@ -32,26 +29,16 @@
     <dependency>
       <groupId>org.codehaus.plexus</groupId>
       <artifactId>plexus-site-renderer</artifactId>
-      <version>1.0-alpha-3-SNAPSHOT</version>
-      <exclusions>
-        <exclusion>
-          <groupId>plexus</groupId>
-          <artifactId>plexus-container-default</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>plexus</groupId>
-          <artifactId>plexus-utils</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.codehaus.plexus</groupId>
-      <artifactId>plexus-utils</artifactId>
+      <version>1.0-alpha-3</version>
     </dependency>
     <dependency>
       <groupId>org.apache.maven.reporting</groupId>
       <artifactId>maven-reporting-api</artifactId>
       <version>2.0</version>
+    </dependency>
+    <dependency>
+      <groupId>org.codehaus.plexus</groupId>
+      <artifactId>plexus-utils</artifactId>
     </dependency>
   </dependencies>
 </project>
