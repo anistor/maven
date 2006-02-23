@@ -16,7 +16,8 @@ package org.apache.maven.embedder;
  * limitations under the License.
  */
 
-import org.apache.maven.BuildFailureException;
+import org.apache.maven.Maven;
+import org.apache.maven.SettingsConfigurationException;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.factory.ArtifactFactory;
 import org.apache.maven.artifact.manager.WagonManager;
@@ -27,9 +28,9 @@ import org.apache.maven.artifact.repository.layout.ArtifactRepositoryLayout;
 import org.apache.maven.artifact.resolver.ArtifactNotFoundException;
 import org.apache.maven.artifact.resolver.ArtifactResolutionException;
 import org.apache.maven.artifact.resolver.ArtifactResolver;
-import org.apache.maven.execution.MavenSession;
+import org.apache.maven.execution.DefaultMavenExecutionRequest;
+import org.apache.maven.execution.MavenExecutionRequest;
 import org.apache.maven.execution.ReactorManager;
-import org.apache.maven.lifecycle.LifecycleExecutionException;
 import org.apache.maven.lifecycle.LifecycleExecutor;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
@@ -42,10 +43,10 @@ import org.apache.maven.plugin.descriptor.PluginDescriptor;
 import org.apache.maven.plugin.descriptor.PluginDescriptorBuilder;
 import org.apache.maven.profiles.DefaultProfileManager;
 import org.apache.maven.profiles.ProfileManager;
-import org.apache.maven.project.DuplicateProjectException;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.MavenProjectBuilder;
 import org.apache.maven.project.ProjectBuildingException;
+import org.apache.maven.reactor.MavenExecutionException;
 import org.apache.maven.settings.MavenSettingsBuilder;
 import org.apache.maven.settings.RuntimeInfo;
 import org.apache.maven.settings.Settings;
@@ -59,8 +60,9 @@ import org.codehaus.plexus.component.repository.exception.ComponentLookupExcepti
 import org.codehaus.plexus.configuration.PlexusConfiguration;
 import org.codehaus.plexus.configuration.PlexusConfigurationException;
 import org.codehaus.plexus.embed.Embedder;
+import org.codehaus.plexus.logging.LoggerManager;
+import org.codehaus.plexus.logging.Logger;
 import org.codehaus.plexus.util.DirectoryScanner;
-import org.codehaus.plexus.util.dag.CycleDetectedException;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
 import java.io.File;
@@ -72,10 +74,10 @@ import java.io.InputStreamReader;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
+import java.util.StringTokenizer;
 
 /**
  * Class intended to be used by clients who wish to embed Maven into their applications
@@ -119,6 +121,8 @@ public class MavenEmbedder
     private ArtifactResolver artifactResolver;
 
     private ArtifactRepositoryLayout defaultArtifactRepositoryLayout;
+
+    private Maven maven;
 
     // ----------------------------------------------------------------------
     // Configuration
@@ -377,7 +381,7 @@ public class MavenEmbedder
                          TransferListener transferListener,
                          Properties properties,
                          File executionRootDirectory )
-        throws CycleDetectedException, LifecycleExecutionException, BuildFailureException, DuplicateProjectException
+        throws MavenExecutionException
     {
         execute( Collections.singletonList( project ), goals, eventMonitor, transferListener, properties, executionRootDirectory );
     }
@@ -388,36 +392,26 @@ public class MavenEmbedder
                          TransferListener transferListener,
                          Properties properties,
                          File executionRootDirectory )
-        throws CycleDetectedException, LifecycleExecutionException, BuildFailureException, DuplicateProjectException
+        throws MavenExecutionException
     {
-        ReactorManager rm = new ReactorManager( projects );
-
         EventDispatcher eventDispatcher = new DefaultEventDispatcher();
 
         eventDispatcher.addEventMonitor( eventMonitor );
 
-        // If this option is set the exception seems to be hidden ...
+        LoggerManager  loggerManager = new MavenEmbedderLoggerManager( new PlexusLoggerAdapter( logger ) );
 
-        //rm.setFailureBehavior( ReactorManager.FAIL_AT_END );
+        loggerManager.setThreshold( Logger.LEVEL_INFO );
 
-        rm.setFailureBehavior( ReactorManager.FAIL_FAST );
-
-        MavenSession session = new MavenSession( embedder.getContainer(),
-                                                 settings,
-                                                 localRepository,
-                                                 eventDispatcher,
-                                                 rm,
-                                                 goals,
-                                                 executionRootDirectory.getAbsolutePath(),
-                                                 properties,
-                                                 new Date() );
-
-        session.setUsingPOMsFromFilesystem( true );
-
-        if ( transferListener != null )
-        {
-            wagonManager.setDownloadMonitor( transferListener );
-        }
+        MavenExecutionRequest request = createRequest( settings,
+                                                       goals,
+                                                       eventDispatcher,
+                                                       loggerManager,
+                                                       profileManager,
+                                                       executionRootDirectory,
+                                                       properties,
+                                                       true,
+                                                       false,
+                                                       null );
 
         // ----------------------------------------------------------------------
         // Maven should not be using system properties internally but because
@@ -438,8 +432,60 @@ public class MavenEmbedder
             }
         }
 
-        lifecycleExecutor.execute( session, rm, session.getEventDispatcher() );
+        if ( transferListener != null )
+        {
+            wagonManager.setDownloadMonitor( transferListener );
+        }
+
+        maven.execute( request );
     }
+
+
+    private MavenExecutionRequest createRequest( Settings settings,
+                                                 List goals,
+                                                 EventDispatcher eventDispatcher,
+                                                 LoggerManager loggerManager,
+                                                 ProfileManager profileManager,
+                                                 File baseDir,
+                                                 Properties properties,
+                                                 boolean showErrors,
+                                                 boolean isNonRecursive ,
+                                                 String failureType )
+    {
+        MavenExecutionRequest request;
+
+        ArtifactRepository localRepository = createLocalRepository( settings );
+
+        request = new DefaultMavenExecutionRequest( localRepository,
+                                                    settings,
+                                                    eventDispatcher,
+                                                    goals,
+                                                    baseDir.getPath(),
+                                                    profileManager,
+                                                    properties,
+                                                    showErrors );
+
+        if ( isNonRecursive )
+        {
+            request.setRecursive( false );
+        }
+
+        if ( failureType == null || failureType.equals( ReactorManager.FAIL_FAST ) )
+        {
+            request.setFailureBehavior( ReactorManager.FAIL_FAST );
+        }
+        else if ( failureType.equals( ReactorManager.FAIL_AT_END ) )
+        {
+            request.setFailureBehavior( ReactorManager.FAIL_AT_END );
+        }
+        else if ( failureType.equals( ReactorManager.FAIL_FAST ) )
+        {
+            request.setFailureBehavior( ReactorManager.FAIL_NEVER );
+        }
+
+        return request;
+    }
+
 
     // ----------------------------------------------------------------------
     // Lifecycle information
@@ -490,13 +536,11 @@ public class MavenEmbedder
     }
 
     public ArtifactRepository createLocalRepository( Settings settings )
-        throws ComponentLookupException
     {
         return createLocalRepository( settings.getLocalRepository(), DEFAULT_LOCAL_REPO_ID );
     }
 
     public ArtifactRepository createLocalRepository( String url, String repositoryId )
-        throws ComponentLookupException
     {
         if ( !url.startsWith( "file:" ) )
         {
@@ -507,7 +551,6 @@ public class MavenEmbedder
     }
 
     public ArtifactRepository createRepository( String url, String repositoryId )
-        throws ComponentLookupException
     {
         // snapshots vs releases
         // offline = to turning the update policy off
@@ -603,6 +646,8 @@ public class MavenEmbedder
 
             modelWriter = new MavenXpp3Writer();
 
+            maven = (Maven) embedder.lookup( Maven.ROLE );
+
             pluginDescriptorBuilder = new PluginDescriptorBuilder();
 
             profileManager = new DefaultProfileManager( embedder.getContainer() );
@@ -627,7 +672,7 @@ public class MavenEmbedder
 
             createMavenSettings();
 
-            profileManager.loadSettingsProfile( settings );
+            profileManager.loadSettingsProfiles( settings );
 
             localRepository = createLocalRepository( settings );
         }

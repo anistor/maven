@@ -44,9 +44,9 @@ import org.apache.maven.reactor.MavenExecutionException;
 import org.apache.maven.settings.MavenSettingsBuilder;
 import org.apache.maven.settings.RuntimeInfo;
 import org.apache.maven.settings.Settings;
+import org.apache.maven.wagon.events.TransferListener;
 import org.codehaus.classworlds.ClassWorld;
 import org.codehaus.plexus.PlexusContainerException;
-import org.codehaus.plexus.component.repository.exception.ComponentLifecycleException;
 import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
 import org.codehaus.plexus.embed.Embedder;
 import org.codehaus.plexus.logging.Logger;
@@ -56,11 +56,13 @@ import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 import java.util.StringTokenizer;
 
 /**
- * @author <a href="mailto:jason@maven.org">Jason van Zyl</a>
+ * @author jason van zyl
  * @version $Id$
  * @noinspection UseOfSystemOutOrSystemErr,ACCESS_STATIC_VIA_INSTANCE
  */
@@ -119,7 +121,7 @@ public class MavenCli
             cliManager.displayHelp();
             return 0;
         }
-        
+
         if ( commandLine.hasOption( CLIManager.VERSION ) )
         {
             showVersion();
@@ -130,8 +132,6 @@ public class MavenCli
         {
             showVersion();
         }
-
-        EventDispatcher eventDispatcher = new DefaultEventDispatcher();
 
         // ----------------------------------------------------------------------
         // Now that we have everything that we need we will fire up plexus and
@@ -158,42 +158,113 @@ public class MavenCli
 
         Properties executionProperties = getExecutionProperties( commandLine );
 
-        Settings settings;
+        // ----------------------------------------------------------------------
+        //
+        // ----------------------------------------------------------------------
+
+        String userSettingsPath = null;
+
+        if ( commandLine.hasOption( CLIManager.ALTERNATE_USER_SETTINGS ) )
+        {
+            userSettingsPath = commandLine.getOptionValue( CLIManager.ALTERNATE_USER_SETTINGS );
+        }
+
+        boolean interactive = true;
+
+        if ( commandLine.hasOption( CLIManager.BATCH_MODE ) )
+        {
+            interactive = false;
+        }
+
+        boolean usePluginRegistry = true;
+
+        if ( commandLine.hasOption( CLIManager.SUPPRESS_PLUGIN_REGISTRY ) )
+        {
+            usePluginRegistry = false;
+        }
+
+        Boolean pluginUpdateOverride = Boolean.FALSE;
+
+        if ( commandLine.hasOption( CLIManager.FORCE_PLUGIN_UPDATES ) ||
+            commandLine.hasOption( CLIManager.FORCE_PLUGIN_UPDATES2 ) )
+        {
+            pluginUpdateOverride = Boolean.TRUE;
+        }
+        else if ( commandLine.hasOption( CLIManager.SUPPRESS_PLUGIN_UPDATES ) )
+        {
+            pluginUpdateOverride = Boolean.FALSE;
+        }
+
+        // ----------------------------------------------------------------------
+        //
+        // ----------------------------------------------------------------------
 
         try
         {
-            settings = buildSettings( commandLine );
-        }
-        catch ( SettingsConfigurationException e )
-        {
-            showError( "Error reading settings.xml: " + e.getMessage(), e, showErrors );
+            List goals = commandLine.getArgList();
 
-            return 1;
-        }
-        catch ( ComponentLookupException e )
-        {
-            showFatalError( "Unable to read settings.xml", e, showErrors );
+            boolean recursive = true;
 
-            return 1;
-        }
+            String failureType = null;
 
-        Maven maven = null;
-
-        MavenExecutionRequest request = null;
-
-        LoggerManager loggerManager = null;
-
-        try
-        {
-            // logger must be created first
-            loggerManager = (LoggerManager) embedder.lookup( LoggerManager.ROLE );
-
-            if ( debug )
+            if ( commandLine.hasOption( CLIManager.NON_RECURSIVE ) )
             {
-                loggerManager.setThreshold( Logger.LEVEL_DEBUG );
+                recursive = false;
             }
 
-            ProfileManager profileManager = new DefaultProfileManager( embedder.getContainer() );
+            if ( commandLine.hasOption( CLIManager.FAIL_FAST ) )
+            {
+                failureType = ReactorManager.FAIL_FAST;
+            }
+            else if ( commandLine.hasOption( CLIManager.FAIL_AT_END ) )
+            {
+                failureType = ReactorManager.FAIL_AT_END;
+            }
+            else if ( commandLine.hasOption( CLIManager.FAIL_NEVER ) )
+            {
+                failureType = ReactorManager.FAIL_NEVER;
+            }
+
+            boolean offline = false;
+
+            if ( commandLine.hasOption( CLIManager.OFFLINE ) )
+            {
+                offline = true;
+            }
+
+            boolean updateSnapshots = false;
+
+            if ( commandLine.hasOption( CLIManager.UPDATE_SNAPSHOTS ) )
+            {
+                updateSnapshots = true;
+            }
+
+            String globalChecksumPolicy = null;
+
+            if ( commandLine.hasOption( CLIManager.CHECKSUM_FAILURE_POLICY ) )
+            {
+                // todo; log
+                System.out.println( "+ Enabling strict checksum verification on all artifact downloads." );
+
+                globalChecksumPolicy = ArtifactRepositoryPolicy.CHECKSUM_POLICY_FAIL;
+            }
+            else if ( commandLine.hasOption( CLIManager.CHECKSUM_WARNING_POLICY ) )
+            {
+                // todo: log
+                System.out.println( "+ Disabling strict checksum verification on all artifact downloads." );
+
+                globalChecksumPolicy = ArtifactRepositoryPolicy.CHECKSUM_POLICY_WARN;
+            }
+
+            File baseDirectory = new File( System.getProperty( "user.dir" ) );
+
+            // ----------------------------------------------------------------------
+            // Profile Activation
+            // ----------------------------------------------------------------------
+
+            List activeProfiles = new ArrayList();
+
+            List inactiveProfiles = new ArrayList();
 
             if ( commandLine.hasOption( CLIManager.ACTIVATE_PROFILES ) )
             {
@@ -207,51 +278,111 @@ public class MavenCli
 
                     if ( profileAction.startsWith( "-" ) )
                     {
-                        profileManager.explicitlyDeactivate( profileAction.substring( 1 ) );
+                        activeProfiles.add( profileAction.substring( 1 ) );
                     }
                     else if ( profileAction.startsWith( "+" ) )
                     {
-                        profileManager.explicitlyActivate( profileAction.substring( 1 ) );
+                        inactiveProfiles.add( profileAction.substring( 1 ) );
                     }
                     else
                     {
                         // TODO: deprecate this eventually!
-                        profileManager.explicitlyActivate( profileAction );
+                        activeProfiles.add( profileAction );
                     }
                 }
             }
 
-            request = createRequest( commandLine, settings, eventDispatcher, loggerManager, profileManager,
-                                     executionProperties, showErrors );
+            TransferListener transferListener;
 
-            setProjectFileOptions( commandLine, request );
+            if ( interactive )
+            {
+                transferListener = new ConsoleDownloadMonitor();
+            }
+            else
+            {
+                transferListener = new BatchModeDownloadMonitor();
+            }
 
-            maven = createMavenInstance( settings.isInteractiveMode() );
+            boolean reactorActive = false;
+
+            if ( commandLine.hasOption( CLIManager.REACTOR ) )
+            {
+                reactorActive = true;
+            }
+
+            String alternatePomFile = null;
+
+            if ( commandLine.hasOption( CLIManager.ALTERNATE_POM_FILE ) )
+            {
+                alternatePomFile = commandLine.getOptionValue( CLIManager.ALTERNATE_POM_FILE );
+            }
+
+            // ----------------------------------------------------------------------
+            // From here we are CLI free
+            // ----------------------------------------------------------------------
+
+            // We have a general problem with plexus components that are singletons in that they use
+            // the same logger for their lifespan. This is not good in that many requests may be fired
+            // off and the singleton plexus component will continue to funnel their output to the same
+            // logger. We need to be able to swap the logger.
+
+            LoggerManager loggerManager = (LoggerManager) embedder.lookup( LoggerManager.ROLE );
+
+            if ( debug )
+            {
+                loggerManager.setThreshold( Logger.LEVEL_DEBUG );
+            }
+
+            Settings settings = buildSettings( userSettingsPath, interactive, usePluginRegistry, pluginUpdateOverride );
+
+            ProfileManager profileManager = new DefaultProfileManager( embedder.getContainer() );
+
+            profileManager.explicitlyActivate( activeProfiles );
+
+            profileManager.explicitlyDeactivate( inactiveProfiles );
+
+            EventDispatcher eventDispatcher = new DefaultEventDispatcher();
+
+            MavenExecutionRequest request = createRequest( baseDirectory,
+                                                           goals,
+                                                           settings,
+                                                           eventDispatcher,
+                                                           loggerManager,
+                                                           profileManager,
+                                                           executionProperties,
+                                                           failureType,
+                                                           globalChecksumPolicy,
+                                                           showErrors,
+                                                           recursive,
+                                                           offline,
+                                                           updateSnapshots
+            );
+
+            request.setReactorActive( reactorActive );
+
+            request.setPomFile( alternatePomFile );
+
+            WagonManager wagonManager = (WagonManager) embedder.lookup( WagonManager.ROLE );
+
+            wagonManager.setDownloadMonitor( transferListener );
+
+            wagonManager.setInteractive( interactive );
+
+            Maven maven = (Maven) embedder.lookup( Maven.ROLE );
+
+            maven.execute( request );
+        }
+        catch ( SettingsConfigurationException e )
+        {
+            showError( "Error reading settings.xml: " + e.getMessage(), e, showErrors );
+
+            return 1;
         }
         catch ( ComponentLookupException e )
         {
             showFatalError( "Unable to configure the Maven application", e, showErrors );
 
             return 1;
-        }
-        finally
-        {
-            if ( loggerManager != null )
-            {
-                try
-                {
-                    embedder.release( loggerManager );
-                }
-                catch ( ComponentLifecycleException e )
-                {
-                    showFatalError( "Error releasing logging manager", e, showErrors );
-                }
-            }
-        }
-
-        try
-        {
-            maven.execute( request );
         }
         catch ( MavenExecutionException e )
         {
@@ -260,89 +391,6 @@ public class MavenCli
 
         return 0;
     }
-
-    private static Settings buildSettings( CommandLine commandLine )
-        throws ComponentLookupException, SettingsConfigurationException
-    {
-        String userSettingsPath = null;
-
-        if ( commandLine.hasOption( CLIManager.ALTERNATE_USER_SETTINGS ) )
-        {
-            userSettingsPath = commandLine.getOptionValue( CLIManager.ALTERNATE_USER_SETTINGS );
-        }
-
-        Settings settings = null;
-
-        MavenSettingsBuilder settingsBuilder = (MavenSettingsBuilder) embedder.lookup( MavenSettingsBuilder.ROLE );
-
-        try
-        {
-            if ( userSettingsPath != null )
-            {
-                File userSettingsFile = new File( userSettingsPath );
-
-                if ( userSettingsFile.exists() && !userSettingsFile.isDirectory() )
-                {
-                    settings = settingsBuilder.buildSettings( userSettingsFile );
-                }
-                else
-                {
-                    System.out.println( "WARNING: Alternate user settings file: " + userSettingsPath +
-                        " is invalid. Using default path." );
-                }
-            }
-
-            if ( settings == null )
-            {
-                settings = settingsBuilder.buildSettings();
-            }
-        }
-        catch ( IOException e )
-        {
-            throw new SettingsConfigurationException( "Error reading settings file", e );
-        }
-        catch ( XmlPullParserException e )
-        {
-            throw new SettingsConfigurationException( e.getMessage(), e.getDetail(), e.getLineNumber(),
-                                                      e.getColumnNumber() );
-        }
-
-        // why aren't these part of the runtime info? jvz.
-
-        if ( commandLine.hasOption( CLIManager.BATCH_MODE ) )
-        {
-            settings.setInteractiveMode( false );
-        }
-
-        if ( commandLine.hasOption( CLIManager.SUPPRESS_PLUGIN_REGISTRY ) )
-        {
-            settings.setUsePluginRegistry( false );
-        }
-
-        // Create settings runtime info
-
-        settings.setRuntimeInfo( createRuntimeInfo( commandLine, settings ) );
-
-        return settings;
-    }
-
-    private static RuntimeInfo createRuntimeInfo( CommandLine commandLine, Settings settings )
-    {
-        RuntimeInfo runtimeInfo = new RuntimeInfo( settings );
-
-        if ( commandLine.hasOption( CLIManager.FORCE_PLUGIN_UPDATES ) ||
-            commandLine.hasOption( CLIManager.FORCE_PLUGIN_UPDATES2 ) )
-        {
-            runtimeInfo.setPluginUpdateOverride( Boolean.TRUE );
-        }
-        else if ( commandLine.hasOption( CLIManager.SUPPRESS_PLUGIN_UPDATES ) )
-        {
-            runtimeInfo.setPluginUpdateOverride( Boolean.FALSE );
-        }
-
-        return runtimeInfo;
-    }
-
 
     private static void showFatalError( String message, Exception e, boolean show )
     {
@@ -370,133 +418,6 @@ public class MavenCli
         }
     }
 
-    private static MavenExecutionRequest createRequest( CommandLine commandLine, Settings settings,
-                                                        EventDispatcher eventDispatcher, LoggerManager loggerManager,
-                                                        ProfileManager profileManager, Properties executionProperties,
-                                                        boolean showErrors )
-        throws ComponentLookupException
-    {
-        MavenExecutionRequest request;
-
-        ArtifactRepository localRepository = createLocalRepository( embedder, settings, commandLine );
-
-        File userDir = new File( System.getProperty( "user.dir" ) );
-
-        request = new DefaultMavenExecutionRequest( localRepository, settings, eventDispatcher,
-                                                    commandLine.getArgList(), userDir.getPath(), profileManager,
-                                                    executionProperties, showErrors );
-
-        // TODO [BP]: do we set one per mojo? where to do it?
-        Logger logger = loggerManager.getLoggerForComponent( Mojo.ROLE );
-
-        if ( logger != null )
-        {
-            request.addEventMonitor( new DefaultEventMonitor( logger ) );
-        }
-
-        if ( commandLine.hasOption( CLIManager.NON_RECURSIVE ) )
-        {
-            request.setRecursive( false );
-        }
-
-        if ( commandLine.hasOption( CLIManager.FAIL_FAST ) )
-        {
-            request.setFailureBehavior( ReactorManager.FAIL_FAST );
-        }
-        else if ( commandLine.hasOption( CLIManager.FAIL_AT_END ) )
-        {
-            request.setFailureBehavior( ReactorManager.FAIL_AT_END );
-        }
-        else if ( commandLine.hasOption( CLIManager.FAIL_NEVER ) )
-        {
-            request.setFailureBehavior( ReactorManager.FAIL_NEVER );
-        }
-
-        return request;
-    }
-
-    private static void setProjectFileOptions( CommandLine commandLine, MavenExecutionRequest request )
-    {
-        if ( commandLine.hasOption( CLIManager.REACTOR ) )
-        {
-            request.setReactorActive( true );
-        }
-        else if ( commandLine.hasOption( CLIManager.ALTERNATE_POM_FILE ) )
-        {
-            request.setPomFile( commandLine.getOptionValue( CLIManager.ALTERNATE_POM_FILE ) );
-        }
-    }
-
-    private static Maven createMavenInstance( boolean interactive )
-        throws ComponentLookupException
-    {
-        // TODO [BP]: doing this here as it is CLI specific, though it doesn't feel like the right place (likewise logger).
-        WagonManager wagonManager = (WagonManager) embedder.lookup( WagonManager.ROLE );
-        if ( interactive )
-        {
-            wagonManager.setDownloadMonitor( new ConsoleDownloadMonitor() );
-        }
-        else
-        {
-            wagonManager.setDownloadMonitor( new BatchModeDownloadMonitor() );
-        }
-
-        wagonManager.setInteractive( interactive );
-
-        return (Maven) embedder.lookup( Maven.ROLE );
-    }
-
-    private static ArtifactRepository createLocalRepository( Embedder embedder, Settings settings,
-                                                             CommandLine commandLine )
-        throws ComponentLookupException
-    {
-        // TODO: release
-        // TODO: something in plexus to show all active hooks?
-        ArtifactRepositoryLayout repositoryLayout =
-            (ArtifactRepositoryLayout) embedder.lookup( ArtifactRepositoryLayout.ROLE, "default" );
-
-        ArtifactRepositoryFactory artifactRepositoryFactory =
-            (ArtifactRepositoryFactory) embedder.lookup( ArtifactRepositoryFactory.ROLE );
-
-        String url = settings.getLocalRepository();
-
-        if ( !url.startsWith( "file:" ) )
-        {
-            url = "file://" + url;
-        }
-
-        ArtifactRepository localRepository = new DefaultArtifactRepository( "local", url, repositoryLayout );
-
-        boolean snapshotPolicySet = false;
-
-        if ( commandLine.hasOption( CLIManager.OFFLINE ) )
-        {
-            settings.setOffline( true );
-
-            snapshotPolicySet = true;
-        }
-
-        if ( !snapshotPolicySet && commandLine.hasOption( CLIManager.UPDATE_SNAPSHOTS ) )
-        {
-            artifactRepositoryFactory.setGlobalUpdatePolicy( ArtifactRepositoryPolicy.UPDATE_POLICY_ALWAYS );
-        }
-
-        if ( commandLine.hasOption( CLIManager.CHECKSUM_FAILURE_POLICY ) )
-        {
-            System.out.println( "+ Enabling strict checksum verification on all artifact downloads." );
-
-            artifactRepositoryFactory.setGlobalChecksumPolicy( ArtifactRepositoryPolicy.CHECKSUM_POLICY_FAIL );
-        }
-        else if ( commandLine.hasOption( CLIManager.CHECKSUM_WARNING_POLICY ) )
-        {
-            System.out.println( "+ Disabling strict checksum verification on all artifact downloads." );
-
-            artifactRepositoryFactory.setGlobalChecksumPolicy( ArtifactRepositoryPolicy.CHECKSUM_POLICY_WARN );
-        }
-
-        return localRepository;
-    }
-
     private static void showVersion()
     {
         InputStream resourceAsStream;
@@ -506,15 +427,15 @@ public class MavenCli
             resourceAsStream = MavenCli.class.getClassLoader().getResourceAsStream(
                 "META-INF/maven/org.apache.maven/maven-core/pom.properties" );
             properties.load( resourceAsStream );
-            
-            if( properties.getProperty( "builtOn" ) != null )
+
+            if ( properties.getProperty( "builtOn" ) != null )
             {
-            	System.out.println( "Maven version: " + properties.getProperty( "version", "unknown" ) 
-            		+ " built on " + properties.getProperty( "builtOn" ) );
+                System.out.println( "Maven version: " + properties.getProperty( "version", "unknown" )
+                    + " built on " + properties.getProperty( "builtOn" ) );
             }
             else
             {
-            	System.out.println( "Maven version: " + properties.getProperty( "version", "unknown" ) );
+                System.out.println( "Maven version: " + properties.getProperty( "version", "unknown" ) );
             }
         }
         catch ( IOException e )
@@ -714,5 +635,148 @@ public class MavenCli
             HelpFormatter formatter = new HelpFormatter();
             formatter.printHelp( "mvn [options] [<goal(s)>] [<phase(s)>]", "\nOptions:", options, "\n" );
         }
+    }
+
+    // ----------------------------------------------------------------------
+    // Methods that are now decoupled from the CLI, we want to push these
+    // into DefaultMaven and use them in the embedder as well.
+    // ----------------------------------------------------------------------
+
+    private static MavenExecutionRequest createRequest( File baseDirectory,
+                                                        List goals,
+                                                        Settings settings,
+                                                        EventDispatcher eventDispatcher,
+                                                        LoggerManager loggerManager,
+                                                        ProfileManager profileManager,
+                                                        Properties executionProperties,
+                                                        String failureType,
+                                                        String globalChecksumPolicy,
+                                                        boolean showErrors,
+                                                        boolean recursive,
+                                                        boolean offline,
+                                                        boolean updateSnapshots
+    )
+        throws ComponentLookupException
+    {
+        MavenExecutionRequest request;
+
+        ArtifactRepository localRepository = createLocalRepository( embedder, settings, offline, updateSnapshots, globalChecksumPolicy );
+
+        request = new DefaultMavenExecutionRequest( localRepository,
+                                                    settings,
+                                                    eventDispatcher,
+                                                    goals,
+                                                    baseDirectory.getAbsolutePath(),
+                                                    profileManager,
+                                                    executionProperties,
+                                                    showErrors );
+
+        Logger logger = loggerManager.getLoggerForComponent( Mojo.ROLE );
+
+        request.addEventMonitor( new DefaultEventMonitor( logger ) );
+
+        if ( !recursive )
+        {
+            request.setRecursive( false );
+        }
+
+        request.setFailureBehavior( failureType );
+
+        return request;
+    }
+
+    private static ArtifactRepository createLocalRepository( Embedder embedder,
+                                                             Settings settings,
+                                                             boolean offline,
+                                                             boolean updateSnapshots,
+                                                             String globalChecksumPolicy )
+        throws ComponentLookupException
+    {
+        // TODO: release
+        // TODO: something in plexus to show all active hooks?
+        ArtifactRepositoryLayout repositoryLayout =
+            (ArtifactRepositoryLayout) embedder.lookup( ArtifactRepositoryLayout.ROLE, "default" );
+
+        ArtifactRepositoryFactory artifactRepositoryFactory =
+            (ArtifactRepositoryFactory) embedder.lookup( ArtifactRepositoryFactory.ROLE );
+
+        String url = settings.getLocalRepository();
+
+        if ( !url.startsWith( "file:" ) )
+        {
+            url = "file://" + url;
+        }
+
+        ArtifactRepository localRepository = new DefaultArtifactRepository( "local", url, repositoryLayout );
+
+        boolean snapshotPolicySet = false;
+
+        if ( offline )
+        {
+            settings.setOffline( true );
+
+            snapshotPolicySet = true;
+        }
+
+        if ( !snapshotPolicySet && updateSnapshots )
+        {
+            artifactRepositoryFactory.setGlobalUpdatePolicy( ArtifactRepositoryPolicy.UPDATE_POLICY_ALWAYS );
+        }
+
+        artifactRepositoryFactory.setGlobalChecksumPolicy( globalChecksumPolicy );
+
+        return localRepository;
+    }
+
+    private static Settings buildSettings( String userSettingsPath, boolean interactive, boolean usePluginRegistry, Boolean pluginUpdateOverride )
+        throws ComponentLookupException, SettingsConfigurationException
+    {
+        Settings settings = null;
+
+        MavenSettingsBuilder settingsBuilder = (MavenSettingsBuilder) embedder.lookup( MavenSettingsBuilder.ROLE );
+
+        try
+        {
+            if ( userSettingsPath != null )
+            {
+                File userSettingsFile = new File( userSettingsPath );
+
+                if ( userSettingsFile.exists() && !userSettingsFile.isDirectory() )
+                {
+                    settings = settingsBuilder.buildSettings( userSettingsFile );
+                }
+                else
+                {
+                    System.out.println( "WARNING: Alternate user settings file: " + userSettingsPath +
+                        " is invalid. Using default path." );
+                }
+            }
+
+            if ( settings == null )
+            {
+                settings = settingsBuilder.buildSettings();
+            }
+        }
+        catch ( IOException e )
+        {
+            throw new SettingsConfigurationException( "Error reading settings file", e );
+        }
+        catch ( XmlPullParserException e )
+        {
+            throw new SettingsConfigurationException( e.getMessage(), e.getDetail(), e.getLineNumber(),
+                                                      e.getColumnNumber() );
+        }
+
+        settings.setInteractiveMode( interactive );
+
+        settings.setUsePluginRegistry( usePluginRegistry );
+
+        RuntimeInfo runtimeInfo = new RuntimeInfo( settings );
+
+        runtimeInfo.setPluginUpdateOverride( pluginUpdateOverride );
+
+        settings.setRuntimeInfo( runtimeInfo );
+
+        return settings;
     }
 }

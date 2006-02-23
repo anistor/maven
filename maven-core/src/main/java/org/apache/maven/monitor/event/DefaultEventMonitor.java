@@ -24,7 +24,6 @@ import org.codehaus.plexus.logging.Logger;
 public class DefaultEventMonitor
     extends AbstractSelectiveEventMonitor
 {
-
     private static final String[] START_EVENTS = {MavenEvents.MOJO_EXECUTION};
 
     private final Logger logger;
@@ -40,5 +39,4 @@ public class DefaultEventMonitor
     {
         logger.info( "[" + target + "]" );
     }
-
 }
