@@ -321,6 +321,36 @@ public class MavenCli
             // From here we are CLI free
             // ----------------------------------------------------------------------
 
+            //  1. LoggerManager: can get from the container
+            //  2. debug: use to set the threshold on the logger manager
+            //  3. Settings
+            //     -> localRepository
+            //     -> interactiveMode
+            //     -> usePluginRegistry
+            //     -> offline
+            //     -> proxies
+            //     -> servers
+            //     -> mirrors
+            //     -> profiles
+            //     -> activeProfiles
+            //     -> pluginGroups
+            //  4. ProfileManager
+            //     -> active profiles
+            //     -> inactive profiles
+            //  5. EventDispatcher
+            //  6. baseDirectory
+            //  7. goals
+            //  8. executionProperties
+            //  9. failureType: fail fast, fail at end, fail never
+            // 10. globalChecksumPolicy: fail, warn
+            // 11. showErrors (this is really CLI is but used inside Maven internals
+            // 12. recursive
+            // 13. offline
+            // 14. updateSnapshots
+            // 15. reactorActive
+            // 16. transferListener: in the CLI this is batch or console
+            // 17. interactive
+
             // We have a general problem with plexus components that are singletons in that they use
             // the same logger for their lifespan. This is not good in that many requests may be fired
             // off and the singleton plexus component will continue to funnel their output to the same
@@ -364,6 +394,7 @@ public class MavenCli
 
             WagonManager wagonManager = (WagonManager) embedder.lookup( WagonManager.ROLE );
 
+            // this seems redundant having the transferListener be
             wagonManager.setDownloadMonitor( transferListener );
 
             wagonManager.setInteractive( interactive );
