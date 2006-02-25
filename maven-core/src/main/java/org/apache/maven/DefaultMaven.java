@@ -30,7 +30,9 @@ import org.apache.maven.lifecycle.LifecycleExecutionException;
 import org.apache.maven.lifecycle.LifecycleExecutor;
 import org.apache.maven.monitor.event.EventDispatcher;
 import org.apache.maven.monitor.event.MavenEvents;
+import org.apache.maven.monitor.event.DefaultEventDispatcher;
 import org.apache.maven.profiles.ProfileManager;
+import org.apache.maven.profiles.DefaultProfileManager;
 import org.apache.maven.profiles.activation.ProfileActivationException;
 import org.apache.maven.project.DuplicateProjectException;
 import org.apache.maven.project.MavenProject;
@@ -67,8 +69,9 @@ import java.util.List;
 import java.util.TimeZone;
 
 /**
- * @author <a href="mailto:jason@maven.org">Jason van Zyl </a>
+ * @author jason van zyl
  * @version $Id$
+ * @todo EventDispatcher should be a component as it is internal to maven.
  */
 public class DefaultMaven
     extends AbstractLogEnabled
@@ -88,6 +91,8 @@ public class DefaultMaven
 
     protected RuntimeInformation runtimeInformation;
 
+    protected WagonManager wagonManager;
+
     private static final long MB = 1024 * 1024;
 
     private static final int MS_PER_SEC = 1000;
@@ -101,7 +106,13 @@ public class DefaultMaven
     public void execute( MavenExecutionRequest request )
         throws MavenExecutionException
     {
-        EventDispatcher dispatcher = request.getEventDispatcher();
+        request.setStartTime( new Date() );
+
+        wagonManager.setInteractive( request.isInteractive() );
+
+        wagonManager.setDownloadMonitor( request.getTransferListener() );
+
+        EventDispatcher dispatcher = new DefaultEventDispatcher( request.getEventMonitors()  );
 
         String event = MavenEvents.REACTOR_EXECUTION;
 
@@ -266,9 +277,13 @@ public class DefaultMaven
             throw new MavenExecutionException( "Unable to configure Maven for execution", e );
         }
 
-        ProfileManager globalProfileManager = request.getGlobalProfileManager();
+        ProfileManager globalProfileManager = new DefaultProfileManager( container );
 
         globalProfileManager.loadSettingsProfiles( request.getSettings() );
+
+        globalProfileManager.explicitlyActivate( request.getActiveProfiles() );
+
+        globalProfileManager.explicitlyDeactivate( request.getInactiveProfiles() );
 
         getLogger().info( "Scanning for projects..." );
 
@@ -313,7 +328,7 @@ public class DefaultMaven
             }
         }
 
-        MavenSession session = createSession( request, rm );
+        MavenSession session = createSession( request, rm, dispatcher );
 
         session.setUsingPOMsFromFilesystem( foundProjects );
 
@@ -522,11 +537,16 @@ public class DefaultMaven
     // the session type would be specific to the request i.e. having a project
     // or not.
 
-    protected MavenSession createSession( MavenExecutionRequest request, ReactorManager rpm )
+    protected MavenSession createSession( MavenExecutionRequest request, ReactorManager rpm, EventDispatcher dispatcher )
     {
-        return new MavenSession( container, request.getSettings(), request.getLocalRepository(),
-                                 request.getEventDispatcher(), rpm, request.getGoals(), request.getBaseDirectory(),
-                                 request.getExecutionProperties(), request.getStartTime() );
+        return new MavenSession( container,
+                                 request.getSettings(),
+                                 request.getLocalRepository(),
+                                 dispatcher,
+                                 rpm, request.getGoals(),
+                                 request.getBaseDirectory(),
+                                 request.getProperties(),
+                                 request.getStartTime() );
     }
 
     /**

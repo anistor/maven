@@ -189,7 +189,11 @@ public class DefaultMavenSettingsBuilder
     private void setLocalRepository( Settings userSettings )
     {
         // try using the local repository specified on the command line...
-        String localRepository = System.getProperty( MavenSettingsBuilder.ALT_LOCAL_REPOSITORY_LOCATION );
+        //String localRepository = System.getProperty( MavenSettingsBuilder.ALT_LOCAL_REPOSITORY_LOCATION );
+
+        String localRepository = null;
+
+        System.out.println( "from the system localRepository = " + localRepository );
 
         // otherwise, use the one in settings.xml
         if ( localRepository == null || localRepository.length() < 1 )

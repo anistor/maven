@@ -17,11 +17,11 @@ package org.apache.maven.execution;
  */
 
 import org.apache.maven.artifact.repository.ArtifactRepository;
-import org.apache.maven.monitor.event.EventDispatcher;
 import org.apache.maven.monitor.event.EventMonitor;
-import org.apache.maven.profiles.ProfileManager;
 import org.apache.maven.settings.Settings;
+import org.apache.maven.wagon.events.TransferListener;
 
+import java.io.File;
 import java.util.Date;
 import java.util.List;
 import java.util.Properties;
@@ -36,39 +36,73 @@ public interface MavenExecutionRequest
 
     List getGoals();
 
-    void setSession( MavenSession session );
-
-    MavenSession getSession();
-
-    void addEventMonitor( EventMonitor monitor );
-
-    EventDispatcher getEventDispatcher();
-
     Settings getSettings();
 
     String getBaseDirectory();
 
-    void setRecursive( boolean recursive );
-
     boolean isRecursive();
 
-    void setReactorActive( boolean reactorActive );
+    boolean isInteractive();
 
     boolean isReactorActive();
 
-    void setPomFile( String pomFile );
-
     String getPomFile();
-
-    void setFailureBehavior( String failureBehavior );
 
     String getFailureBehavior();
 
-    ProfileManager getGlobalProfileManager();
-
-    Properties getExecutionProperties();
+    Properties getProperties();
 
     Date getStartTime();
 
     boolean isShowErrors();
+
+    List getEventMonitors();
+
+    List getActiveProfiles();
+
+    List getInactiveProfiles();
+
+    TransferListener getTransferListener();
+
+    // ----------------------------------------------------------------------
+    //
+    // ----------------------------------------------------------------------
+
+    MavenExecutionRequest setBasedir( File basedir );
+
+    MavenExecutionRequest setSettings( Settings settings );
+
+    MavenExecutionRequest setStartTime( Date start );
+
+    MavenExecutionRequest setGoals( List goals );
+
+    MavenExecutionRequest setLocalRepository( ArtifactRepository localRepository );
+
+    MavenExecutionRequest setProperties( Properties properties );
+
+    MavenExecutionRequest setFailureBehavior( String failureBehavior );
+
+    MavenExecutionRequest setSession( MavenSession session );
+
+    MavenExecutionRequest addActiveProfile( String profile );
+
+    MavenExecutionRequest addInactiveProfile( String profile );
+
+    MavenExecutionRequest addActiveProfiles( List profiles );
+
+    MavenExecutionRequest addInactiveProfiles( List profiles );
+
+    MavenExecutionRequest addEventMonitor( EventMonitor monitor );
+
+    MavenExecutionRequest setReactorActive( boolean reactorActive );
+
+    MavenExecutionRequest setPomFile( String pomFilename );
+
+    MavenExecutionRequest setRecursive( boolean recursive );
+
+    MavenExecutionRequest setShowErrors( boolean showErrors );
+
+    MavenExecutionRequest setInteractive( boolean interactive );
+
+    MavenExecutionRequest setTransferListener( TransferListener transferListener );
 }

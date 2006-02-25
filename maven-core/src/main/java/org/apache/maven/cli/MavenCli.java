@@ -25,7 +25,6 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.maven.Maven;
 import org.apache.maven.SettingsConfigurationException;
-import org.apache.maven.artifact.manager.WagonManager;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.artifact.repository.ArtifactRepositoryFactory;
 import org.apache.maven.artifact.repository.ArtifactRepositoryPolicy;
@@ -34,12 +33,8 @@ import org.apache.maven.artifact.repository.layout.ArtifactRepositoryLayout;
 import org.apache.maven.execution.DefaultMavenExecutionRequest;
 import org.apache.maven.execution.MavenExecutionRequest;
 import org.apache.maven.execution.ReactorManager;
-import org.apache.maven.monitor.event.DefaultEventDispatcher;
 import org.apache.maven.monitor.event.DefaultEventMonitor;
-import org.apache.maven.monitor.event.EventDispatcher;
 import org.apache.maven.plugin.Mojo;
-import org.apache.maven.profiles.DefaultProfileManager;
-import org.apache.maven.profiles.ProfileManager;
 import org.apache.maven.reactor.MavenExecutionException;
 import org.apache.maven.settings.MavenSettingsBuilder;
 import org.apache.maven.settings.RuntimeInfo;
@@ -65,6 +60,8 @@ import java.util.StringTokenizer;
  * @author jason van zyl
  * @version $Id$
  * @noinspection UseOfSystemOutOrSystemErr,ACCESS_STATIC_VIA_INSTANCE
+ * @todo loggerManager is internal
+ * @todo there shouldn't actually be any components in here. so remove all cli free code now
  */
 public class MavenCli
 {
@@ -151,17 +148,6 @@ public class MavenCli
             return 1;
         }
 
-        // ----------------------------------------------------------------------
-        // The execution properties need to be created before the settings
-        // are constructed.
-        // ----------------------------------------------------------------------
-
-        Properties executionProperties = getExecutionProperties( commandLine );
-
-        // ----------------------------------------------------------------------
-        //
-        // ----------------------------------------------------------------------
-
         String userSettingsPath = null;
 
         if ( commandLine.hasOption( CLIManager.ALTERNATE_USER_SETTINGS ) )
@@ -205,7 +191,7 @@ public class MavenCli
 
             boolean recursive = true;
 
-            String failureType = null;
+            String reactorFailureBehaviour = null;
 
             if ( commandLine.hasOption( CLIManager.NON_RECURSIVE ) )
             {
@@ -214,15 +200,15 @@ public class MavenCli
 
             if ( commandLine.hasOption( CLIManager.FAIL_FAST ) )
             {
-                failureType = ReactorManager.FAIL_FAST;
+                reactorFailureBehaviour = ReactorManager.FAIL_FAST;
             }
             else if ( commandLine.hasOption( CLIManager.FAIL_AT_END ) )
             {
-                failureType = ReactorManager.FAIL_AT_END;
+                reactorFailureBehaviour = ReactorManager.FAIL_AT_END;
             }
             else if ( commandLine.hasOption( CLIManager.FAIL_NEVER ) )
             {
-                failureType = ReactorManager.FAIL_NEVER;
+                reactorFailureBehaviour = ReactorManager.FAIL_NEVER;
             }
 
             boolean offline = false;
@@ -311,7 +297,6 @@ public class MavenCli
             }
 
             String alternatePomFile = null;
-
             if ( commandLine.hasOption( CLIManager.ALTERNATE_POM_FILE ) )
             {
                 alternatePomFile = commandLine.getOptionValue( CLIManager.ALTERNATE_POM_FILE );
@@ -341,7 +326,7 @@ public class MavenCli
             //  6. baseDirectory
             //  7. goals
             //  8. executionProperties
-            //  9. failureType: fail fast, fail at end, fail never
+            //  9. reactorFailureBehaviour: fail fast, fail at end, fail never
             // 10. globalChecksumPolicy: fail, warn
             // 11. showErrors (this is really CLI is but used inside Maven internals
             // 12. recursive
@@ -356,6 +341,17 @@ public class MavenCli
             // off and the singleton plexus component will continue to funnel their output to the same
             // logger. We need to be able to swap the logger.
 
+            Properties executionProperties = getExecutionProperties( commandLine );
+
+            Settings settings = buildSettings( userSettingsPath, interactive, usePluginRegistry, pluginUpdateOverride );
+
+            ArtifactRepository localRepository = createLocalRepository( settings, offline, updateSnapshots, globalChecksumPolicy );
+
+            // The default event monitor is for plexus logging so maybe this should be something that is configurable and
+            // not turned on by default.
+
+            // ---remove
+
             LoggerManager loggerManager = (LoggerManager) embedder.lookup( LoggerManager.ROLE );
 
             if ( debug )
@@ -363,41 +359,28 @@ public class MavenCli
                 loggerManager.setThreshold( Logger.LEVEL_DEBUG );
             }
 
-            Settings settings = buildSettings( userSettingsPath, interactive, usePluginRegistry, pluginUpdateOverride );
+            // maybe just have an option to turn it on
 
-            ProfileManager profileManager = new DefaultProfileManager( embedder.getContainer() );
+            // ---remove
 
-            profileManager.explicitlyActivate( activeProfiles );
+            Logger logger = loggerManager.getLoggerForComponent( Mojo.ROLE );
 
-            profileManager.explicitlyDeactivate( inactiveProfiles );
-
-            EventDispatcher eventDispatcher = new DefaultEventDispatcher();
-
-            MavenExecutionRequest request = createRequest( baseDirectory,
-                                                           goals,
-                                                           settings,
-                                                           eventDispatcher,
-                                                           loggerManager,
-                                                           profileManager,
-                                                           executionProperties,
-                                                           failureType,
-                                                           globalChecksumPolicy,
-                                                           showErrors,
-                                                           recursive,
-                                                           offline,
-                                                           updateSnapshots
-            );
-
-            request.setReactorActive( reactorActive );
-
-            request.setPomFile( alternatePomFile );
-
-            WagonManager wagonManager = (WagonManager) embedder.lookup( WagonManager.ROLE );
-
-            // this seems redundant having the transferListener be
-            wagonManager.setDownloadMonitor( transferListener );
-
-            wagonManager.setInteractive( interactive );
+            MavenExecutionRequest request = new DefaultMavenExecutionRequest()
+                .setBasedir( baseDirectory )
+                .setGoals( goals )
+                .setSettings( settings )
+                .setLocalRepository( localRepository )
+                .setProperties( executionProperties )
+                .setRecursive( recursive )
+                .setFailureBehavior( reactorFailureBehaviour )
+                .setReactorActive( reactorActive )
+                .setPomFile( alternatePomFile )
+                .setShowErrors( showErrors )
+                .setInteractive( interactive )
+                .setTransferListener( transferListener )
+                .addActiveProfiles( activeProfiles )
+                .addInactiveProfiles( inactiveProfiles )
+                .addEventMonitor( new DefaultEventMonitor( logger ) );
 
             Maven maven = (Maven) embedder.lookup( Maven.ROLE );
 
@@ -668,68 +651,17 @@ public class MavenCli
         }
     }
 
-    // ----------------------------------------------------------------------
-    // Methods that are now decoupled from the CLI, we want to push these
-    // into DefaultMaven and use them in the embedder as well.
-    // ----------------------------------------------------------------------
-
-    private static MavenExecutionRequest createRequest( File baseDirectory,
-                                                        List goals,
-                                                        Settings settings,
-                                                        EventDispatcher eventDispatcher,
-                                                        LoggerManager loggerManager,
-                                                        ProfileManager profileManager,
-                                                        Properties executionProperties,
-                                                        String failureType,
-                                                        String globalChecksumPolicy,
-                                                        boolean showErrors,
-                                                        boolean recursive,
-                                                        boolean offline,
-                                                        boolean updateSnapshots
-    )
-        throws ComponentLookupException
-    {
-        MavenExecutionRequest request;
-
-        ArtifactRepository localRepository = createLocalRepository( embedder, settings, offline, updateSnapshots, globalChecksumPolicy );
-
-        request = new DefaultMavenExecutionRequest( localRepository,
-                                                    settings,
-                                                    eventDispatcher,
-                                                    goals,
-                                                    baseDirectory.getAbsolutePath(),
-                                                    profileManager,
-                                                    executionProperties,
-                                                    showErrors );
-
-        Logger logger = loggerManager.getLoggerForComponent( Mojo.ROLE );
-
-        request.addEventMonitor( new DefaultEventMonitor( logger ) );
-
-        if ( !recursive )
-        {
-            request.setRecursive( false );
-        }
-
-        request.setFailureBehavior( failureType );
-
-        return request;
-    }
-
-    private static ArtifactRepository createLocalRepository( Embedder embedder,
-                                                             Settings settings,
+    private static ArtifactRepository createLocalRepository( Settings settings,
                                                              boolean offline,
                                                              boolean updateSnapshots,
                                                              String globalChecksumPolicy )
         throws ComponentLookupException
     {
-        // TODO: release
-        // TODO: something in plexus to show all active hooks?
-        ArtifactRepositoryLayout repositoryLayout =
-            (ArtifactRepositoryLayout) embedder.lookup( ArtifactRepositoryLayout.ROLE, "default" );
+        // @requirement
+        ArtifactRepositoryLayout repositoryLayout = (ArtifactRepositoryLayout) embedder.lookup( ArtifactRepositoryLayout.ROLE, "default" );
 
-        ArtifactRepositoryFactory artifactRepositoryFactory =
-            (ArtifactRepositoryFactory) embedder.lookup( ArtifactRepositoryFactory.ROLE );
+        // @requirement
+        ArtifactRepositoryFactory artifactRepositoryFactory = (ArtifactRepositoryFactory) embedder.lookup( ArtifactRepositoryFactory.ROLE );
 
         String url = settings.getLocalRepository();
 
@@ -759,7 +691,10 @@ public class MavenCli
         return localRepository;
     }
 
-    private static Settings buildSettings( String userSettingsPath, boolean interactive, boolean usePluginRegistry, Boolean pluginUpdateOverride )
+    private static Settings buildSettings( String userSettingsPath,
+                                           boolean interactive,
+                                           boolean usePluginRegistry,
+                                           Boolean pluginUpdateOverride )
         throws ComponentLookupException, SettingsConfigurationException
     {
         Settings settings = null;
@@ -775,6 +710,8 @@ public class MavenCli
                 if ( userSettingsFile.exists() && !userSettingsFile.isDirectory() )
                 {
                     settings = settingsBuilder.buildSettings( userSettingsFile );
+
+                    System.out.println( "settings local repository = " + settings.getLocalRepository() );
                 }
                 else
                 {
@@ -782,6 +719,8 @@ public class MavenCli
                         " is invalid. Using default path." );
                 }
             }
+
+            System.out.println( "settings = " + settings );
 
             if ( settings == null )
             {
