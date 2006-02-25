@@ -33,8 +33,6 @@ import org.apache.maven.artifact.repository.layout.ArtifactRepositoryLayout;
 import org.apache.maven.execution.DefaultMavenExecutionRequest;
 import org.apache.maven.execution.MavenExecutionRequest;
 import org.apache.maven.execution.ReactorManager;
-import org.apache.maven.monitor.event.DefaultEventMonitor;
-import org.apache.maven.plugin.Mojo;
 import org.apache.maven.reactor.MavenExecutionException;
 import org.apache.maven.settings.MavenSettingsBuilder;
 import org.apache.maven.settings.RuntimeInfo;
@@ -44,8 +42,6 @@ import org.codehaus.classworlds.ClassWorld;
 import org.codehaus.plexus.PlexusContainerException;
 import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
 import org.codehaus.plexus.embed.Embedder;
-import org.codehaus.plexus.logging.Logger;
-import org.codehaus.plexus.logging.LoggerManager;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
 import java.io.File;
@@ -60,8 +56,9 @@ import java.util.StringTokenizer;
  * @author jason van zyl
  * @version $Id$
  * @noinspection UseOfSystemOutOrSystemErr,ACCESS_STATIC_VIA_INSTANCE
- * @todo loggerManager is internal
- * @todo there shouldn't actually be any components in here. so remove all cli free code now
+ * @todo clear strategy for creating local repository
+ * @todo clear strategy        
+ * @todo clearn strategy for using settings, they are really an artifact of the CLI but people want integration with existing installations
  */
 public class MavenCli
 {
@@ -347,23 +344,18 @@ public class MavenCli
 
             ArtifactRepository localRepository = createLocalRepository( settings, offline, updateSnapshots, globalChecksumPolicy );
 
-            // The default event monitor is for plexus logging so maybe this should be something that is configurable and
-            // not turned on by default.
-
-            // ---remove
-
-            LoggerManager loggerManager = (LoggerManager) embedder.lookup( LoggerManager.ROLE );
+            int loggingLevel;
 
             if ( debug )
             {
-                loggerManager.setThreshold( Logger.LEVEL_DEBUG );
+                loggingLevel = MavenExecutionRequest.LOGGING_LEVEL_DEBUG;
+            }
+            else
+            {
+                loggingLevel = MavenExecutionRequest.LOGGING_LEVEL_WARN;
             }
 
-            // maybe just have an option to turn it on
-
-            // ---remove
-
-            Logger logger = loggerManager.getLoggerForComponent( Mojo.ROLE );
+            Maven maven = (Maven) embedder.lookup( Maven.ROLE );
 
             MavenExecutionRequest request = new DefaultMavenExecutionRequest()
                 .setBasedir( baseDirectory )
@@ -380,9 +372,8 @@ public class MavenCli
                 .setTransferListener( transferListener )
                 .addActiveProfiles( activeProfiles )
                 .addInactiveProfiles( inactiveProfiles )
-                .addEventMonitor( new DefaultEventMonitor( logger ) );
-
-            Maven maven = (Maven) embedder.lookup( Maven.ROLE );
+                .setLoggingLevel( loggingLevel )
+                .activateDefaultEventMonitor();
 
             maven.execute( request );
         }

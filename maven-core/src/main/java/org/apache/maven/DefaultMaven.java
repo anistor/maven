@@ -31,6 +31,7 @@ import org.apache.maven.lifecycle.LifecycleExecutor;
 import org.apache.maven.monitor.event.EventDispatcher;
 import org.apache.maven.monitor.event.MavenEvents;
 import org.apache.maven.monitor.event.DefaultEventDispatcher;
+import org.apache.maven.monitor.event.DefaultEventMonitor;
 import org.apache.maven.profiles.ProfileManager;
 import org.apache.maven.profiles.DefaultProfileManager;
 import org.apache.maven.profiles.activation.ProfileActivationException;
@@ -45,6 +46,7 @@ import org.apache.maven.settings.Server;
 import org.apache.maven.settings.Settings;
 import org.apache.maven.usability.SystemWarnings;
 import org.apache.maven.usability.diagnostics.ErrorDiagnostics;
+import org.apache.maven.plugin.Mojo;
 import org.codehaus.plexus.PlexusConstants;
 import org.codehaus.plexus.PlexusContainer;
 import org.codehaus.plexus.component.repository.exception.ComponentLifecycleException;
@@ -52,7 +54,11 @@ import org.codehaus.plexus.component.repository.exception.ComponentLookupExcepti
 import org.codehaus.plexus.context.Context;
 import org.codehaus.plexus.context.ContextException;
 import org.codehaus.plexus.logging.AbstractLogEnabled;
+import org.codehaus.plexus.logging.LoggerManager;
+import org.codehaus.plexus.logging.Logger;
 import org.codehaus.plexus.personality.plexus.lifecycle.phase.Contextualizable;
+import org.codehaus.plexus.personality.plexus.lifecycle.phase.Initializable;
+import org.codehaus.plexus.personality.plexus.lifecycle.phase.InitializationException;
 import org.codehaus.plexus.util.FileUtils;
 import org.codehaus.plexus.util.dag.CycleDetectedException;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
@@ -75,7 +81,7 @@ import java.util.TimeZone;
  */
 public class DefaultMaven
     extends AbstractLogEnabled
-    implements Maven, Contextualizable
+    implements Maven, Contextualizable, Initializable
 {
     // ----------------------------------------------------------------------
     // Components
@@ -93,6 +99,8 @@ public class DefaultMaven
 
     protected WagonManager wagonManager;
 
+    protected LoggerManager loggerManager;
+
     private static final long MB = 1024 * 1024;
 
     private static final int MS_PER_SEC = 1000;
@@ -106,6 +114,15 @@ public class DefaultMaven
     public void execute( MavenExecutionRequest request )
         throws MavenExecutionException
     {
+        Logger logger = loggerManager.getLoggerForComponent( Mojo.ROLE );
+
+        if ( request.isDefaultEventMonitorActive() )
+        {
+            request.addEventMonitor( new DefaultEventMonitor( logger ) );
+        }
+
+        loggerManager.setThreshold( request.getLoggingLevel() );
+
         request.setStartTime( new Date() );
 
         wagonManager.setInteractive( request.isInteractive() );
@@ -614,6 +631,18 @@ public class DefaultMaven
         container = (PlexusContainer) context.get( PlexusConstants.PLEXUS_KEY );
     }
 
+    public void initialize()
+        throws InitializationException
+    {
+        try
+        {
+            loggerManager = (LoggerManager) container.lookup( LoggerManager.ROLE );
+        }
+        catch ( ComponentLookupException e )
+        {
+            throw new InitializationException( "Cannot lookup logger manager.", e );
+        }
+    }
     // ----------------------------------------------------------------------
     // Reporting / Logging
     // ----------------------------------------------------------------------

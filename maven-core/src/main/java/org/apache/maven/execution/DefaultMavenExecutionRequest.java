@@ -71,6 +71,10 @@ public class DefaultMavenExecutionRequest
 
     private TransferListener transferListener;
 
+    private int loggingLevel;
+
+    private boolean activateDefaultEventMonitor;
+
     // ----------------------------------------------------------------------
     //
     // ----------------------------------------------------------------------
@@ -153,6 +157,21 @@ public class DefaultMavenExecutionRequest
     public TransferListener getTransferListener()
     {
         return transferListener;
+    }
+
+    public boolean isDefaultEventMonitorActivated()
+    {
+        return activateDefaultEventMonitor;
+    }
+
+    public int getLoggingLevel()
+    {
+        return loggingLevel;
+    }
+
+    public boolean isDefaultEventMonitorActive()
+    {
+        return activateDefaultEventMonitor;
     }
 
     // ----------------------------------------------------------------------
@@ -283,6 +302,13 @@ public class DefaultMavenExecutionRequest
         return this;
     }
 
+    public MavenExecutionRequest activateDefaultEventMonitor()
+    {
+        activateDefaultEventMonitor = true;
+
+        return this;
+    }
+
     public MavenExecutionRequest setReactorActive( boolean reactorActive )
     {
         this.reactorActive = reactorActive;
@@ -319,6 +345,13 @@ public class DefaultMavenExecutionRequest
     public MavenExecutionRequest setTransferListener( TransferListener transferListener )
     {
         this.transferListener = transferListener;
+
+        return this;
+    }
+
+    public MavenExecutionRequest setLoggingLevel( int loggingLevel )
+    {
+        this.loggingLevel = loggingLevel;
 
         return this;
     }
