@@ -21,7 +21,6 @@ import org.apache.commons.cli.ParseException;
 import org.apache.maven.CommonMavenObjectFactory;
 import org.apache.maven.Maven;
 import org.apache.maven.SettingsConfigurationException;
-import org.apache.maven.artifact.repository.ArtifactRepositoryPolicy;
 import org.apache.maven.execution.DefaultMavenExecutionRequest;
 import org.apache.maven.execution.MavenExecutionRequest;
 import org.apache.maven.reactor.MavenExecutionException;
@@ -212,14 +211,14 @@ public class MavenCli
                 // todo; log
                 System.out.println( "+ Enabling strict checksum verification on all artifact downloads." );
 
-                globalChecksumPolicy = ArtifactRepositoryPolicy.CHECKSUM_POLICY_FAIL;
+                globalChecksumPolicy = MavenExecutionRequest.CHECKSUM_POLICY_FAIL;
             }
             else if ( commandLine.hasOption( CLIManager.CHECKSUM_WARNING_POLICY ) )
             {
                 // todo: log
                 System.out.println( "+ Disabling strict checksum verification on all artifact downloads." );
 
-                globalChecksumPolicy = ArtifactRepositoryPolicy.CHECKSUM_POLICY_WARN;
+                globalChecksumPolicy = MavenExecutionRequest.CHECKSUM_POLICY_WARN;
             }
 
             File baseDirectory = new File( System.getProperty( "user.dir" ) );

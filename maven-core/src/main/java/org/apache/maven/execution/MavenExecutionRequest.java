@@ -20,6 +20,7 @@ import org.apache.maven.monitor.event.EventMonitor;
 import org.apache.maven.settings.Settings;
 import org.apache.maven.wagon.events.TransferListener;
 import org.apache.maven.artifact.repository.ArtifactRepository;
+import org.apache.maven.artifact.repository.ArtifactRepositoryPolicy;
 import org.codehaus.plexus.logging.Logger;
 
 import java.io.File;
@@ -102,6 +103,14 @@ public interface MavenExecutionRequest
     static final String REACTOR_FAIL_AT_END = ReactorManager.FAIL_AT_END;
 
     static final String REACTOR_FAIL_NEVER = ReactorManager.FAIL_NEVER;
+
+    // ----------------------------------------------------------------------
+    // Artifactr repository policies
+    // ----------------------------------------------------------------------
+    
+    static final String CHECKSUM_POLICY_FAIL = ArtifactRepositoryPolicy.CHECKSUM_POLICY_FAIL;
+
+    static final String CHECKSUM_POLICY_WARN = ArtifactRepositoryPolicy.CHECKSUM_POLICY_WARN;
 
     // ----------------------------------------------------------------------
     //
