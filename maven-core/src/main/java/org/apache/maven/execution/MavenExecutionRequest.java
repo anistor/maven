@@ -20,6 +20,7 @@ import org.apache.maven.monitor.event.EventMonitor;
 import org.apache.maven.settings.Settings;
 import org.apache.maven.wagon.events.TransferListener;
 import org.apache.maven.artifact.repository.ArtifactRepository;
+import org.codehaus.plexus.logging.Logger;
 
 import java.io.File;
 import java.util.Date;
@@ -80,27 +81,27 @@ public interface MavenExecutionRequest
     // Logging
     // ----------------------------------------------------------------------
 
-    static final int LOGGING_LEVEL_DEBUG = 0;
+    static final int LOGGING_LEVEL_DEBUG = Logger.LEVEL_DEBUG;
 
-    static final int LOGGING_LEVEL_INFO = 1;
+    static final int LOGGING_LEVEL_INFO = Logger.LEVEL_INFO;
 
-    static final int LOGGING_LEVEL_WARN = 2;
+    static final int LOGGING_LEVEL_WARN = Logger.LEVEL_WARN;
 
-    static final int LOGGING_LEVEL_ERROR = 3;
+    static final int LOGGING_LEVEL_ERROR = Logger.LEVEL_ERROR;
 
-    static final int LOGGING_LEVEL_FATAL = 4;
+    static final int LOGGING_LEVEL_FATAL = Logger.LEVEL_FATAL;
 
-    static final int LOGGING_LEVEL_DISABLE = 5;
+    static final int LOGGING_LEVEL_DISABLED = Logger.LEVEL_DISABLED;
 
     // ----------------------------------------------------------------------
     // Reactor Failure Mode
     // ----------------------------------------------------------------------
 
-    static final int REACTOR_FAIL_FAST = 0;
+    static final String REACTOR_FAIL_FAST = ReactorManager.FAIL_FAST;
 
-    static final int REACTOR_FAIL_END = 1;
+    static final String REACTOR_FAIL_AT_END = ReactorManager.FAIL_AT_END;
 
-    static final int REACTOR_FAIL_NEVER = 2;
+    static final String REACTOR_FAIL_NEVER = ReactorManager.FAIL_NEVER;
 
     // ----------------------------------------------------------------------
     //

@@ -24,7 +24,6 @@ import org.apache.maven.SettingsConfigurationException;
 import org.apache.maven.artifact.repository.ArtifactRepositoryPolicy;
 import org.apache.maven.execution.DefaultMavenExecutionRequest;
 import org.apache.maven.execution.MavenExecutionRequest;
-import org.apache.maven.execution.ReactorManager;
 import org.apache.maven.reactor.MavenExecutionException;
 import org.apache.maven.settings.Settings;
 import org.apache.maven.wagon.events.TransferListener;
@@ -181,15 +180,15 @@ public class MavenCli
 
             if ( commandLine.hasOption( CLIManager.FAIL_FAST ) )
             {
-                reactorFailureBehaviour = ReactorManager.FAIL_FAST;
+                reactorFailureBehaviour = MavenExecutionRequest.REACTOR_FAIL_FAST;
             }
             else if ( commandLine.hasOption( CLIManager.FAIL_AT_END ) )
             {
-                reactorFailureBehaviour = ReactorManager.FAIL_AT_END;
+                reactorFailureBehaviour = MavenExecutionRequest.REACTOR_FAIL_AT_END;
             }
             else if ( commandLine.hasOption( CLIManager.FAIL_NEVER ) )
             {
-                reactorFailureBehaviour = ReactorManager.FAIL_NEVER;
+                reactorFailureBehaviour = MavenExecutionRequest.REACTOR_FAIL_NEVER;
             }
 
             boolean offline = false;
