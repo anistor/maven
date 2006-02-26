@@ -13,7 +13,7 @@ import org.apache.commons.cli.HelpFormatter;
 
 /**
  * @author Jason van Zyl
- * @version $Revision:$
+ * @version $Revision: 381114 $
  */
 public class CLIManager
 {

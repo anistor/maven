@@ -25,7 +25,7 @@ import org.codehaus.plexus.logging.AbstractLogEnabled;
  * Console download progress meter.
  *
  * @author <a href="mailto:brett@apache.org">Brett Porter</a>
- * @version $Id: ConsoleDownloadMonitor.java 169548 2005-05-11 01:04:50Z brett $
+ * @version $Id$
  */
 public class BatchModeDownloadMonitor
     extends AbstractLogEnabled

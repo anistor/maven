@@ -17,7 +17,9 @@ package org.apache.maven.embedder;
  */
 
 import org.apache.maven.Maven;
-import org.apache.maven.SettingsConfigurationException;
+import org.apache.maven.CommonMavenObjectFactory;
+import org.apache.maven.reactor.MavenExecutionException;
+import org.apache.maven.execution.MavenExecutionRequest;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.factory.ArtifactFactory;
 import org.apache.maven.artifact.manager.WagonManager;
@@ -28,16 +30,10 @@ import org.apache.maven.artifact.repository.layout.ArtifactRepositoryLayout;
 import org.apache.maven.artifact.resolver.ArtifactNotFoundException;
 import org.apache.maven.artifact.resolver.ArtifactResolutionException;
 import org.apache.maven.artifact.resolver.ArtifactResolver;
-import org.apache.maven.execution.DefaultMavenExecutionRequest;
-import org.apache.maven.execution.MavenExecutionRequest;
-import org.apache.maven.execution.ReactorManager;
 import org.apache.maven.lifecycle.LifecycleExecutor;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
 import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
-import org.apache.maven.monitor.event.DefaultEventDispatcher;
-import org.apache.maven.monitor.event.EventDispatcher;
-import org.apache.maven.monitor.event.EventMonitor;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.descriptor.PluginDescriptor;
 import org.apache.maven.plugin.descriptor.PluginDescriptorBuilder;
@@ -46,7 +42,6 @@ import org.apache.maven.profiles.ProfileManager;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.MavenProjectBuilder;
 import org.apache.maven.project.ProjectBuildingException;
-import org.apache.maven.reactor.MavenExecutionException;
 import org.apache.maven.settings.MavenSettingsBuilder;
 import org.apache.maven.settings.RuntimeInfo;
 import org.apache.maven.settings.Settings;
@@ -60,8 +55,6 @@ import org.codehaus.plexus.component.repository.exception.ComponentLookupExcepti
 import org.codehaus.plexus.configuration.PlexusConfiguration;
 import org.codehaus.plexus.configuration.PlexusConfigurationException;
 import org.codehaus.plexus.embed.Embedder;
-import org.codehaus.plexus.logging.LoggerManager;
-import org.codehaus.plexus.logging.Logger;
 import org.codehaus.plexus.util.DirectoryScanner;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
@@ -73,11 +66,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Writer;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Properties;
-import java.util.StringTokenizer;
 
 /**
  * Class intended to be used by clients who wish to embed Maven into their applications
@@ -122,7 +112,13 @@ public class MavenEmbedder
 
     private ArtifactRepositoryLayout defaultArtifactRepositoryLayout;
 
+    // ----------------------------------------------------------------------
+    //
+    // ----------------------------------------------------------------------
+
     private Maven maven;
+
+    private CommonMavenObjectFactory mavenObjectFactory;
 
     // ----------------------------------------------------------------------
     // Configuration
@@ -371,120 +367,6 @@ public class MavenEmbedder
     // Execution of phases/goals
     // ----------------------------------------------------------------------
 
-    // TODO: should we allow the passing in of a settings object so that everything can be taken from the client env
-    // TODO: transfer listener
-    // TODO: logger
-
-    public void execute( MavenProject project,
-                         List goals,
-                         EventMonitor eventMonitor,
-                         TransferListener transferListener,
-                         Properties properties,
-                         File executionRootDirectory )
-        throws MavenExecutionException
-    {
-        execute( Collections.singletonList( project ), goals, eventMonitor, transferListener, properties, executionRootDirectory );
-    }
-
-    public void execute( List projects,
-                         List goals,
-                         EventMonitor eventMonitor,
-                         TransferListener transferListener,
-                         Properties properties,
-                         File executionRootDirectory )
-        throws MavenExecutionException
-    {
-        EventDispatcher eventDispatcher = new DefaultEventDispatcher();
-
-        eventDispatcher.addEventMonitor( eventMonitor );
-
-        LoggerManager  loggerManager = new MavenEmbedderLoggerManager( new PlexusLoggerAdapter( logger ) );
-
-        loggerManager.setThreshold( Logger.LEVEL_INFO );
-
-        MavenExecutionRequest request = createRequest( settings,
-                                                       goals,
-                                                       eventDispatcher,
-                                                       loggerManager,
-                                                       profileManager,
-                                                       executionRootDirectory,
-                                                       properties,
-                                                       true,
-                                                       false,
-                                                       null );
-
-        // ----------------------------------------------------------------------
-        // Maven should not be using system properties internally but because
-        // it does for now I'll just take properties that are handed to me
-        // and set them so that the plugin expression evaluator will work
-        // as expected.
-        // ----------------------------------------------------------------------
-
-        if ( properties != null )
-        {
-            for ( Iterator i = properties.keySet().iterator(); i.hasNext(); )
-            {
-                String key = (String) i.next();
-
-                String value = properties.getProperty( key );
-
-                System.setProperty( key, value );
-            }
-        }
-
-        if ( transferListener != null )
-        {
-            wagonManager.setDownloadMonitor( transferListener );
-        }
-
-        maven.execute( request );
-    }
-
-
-    private MavenExecutionRequest createRequest( Settings settings,
-                                                 List goals,
-                                                 EventDispatcher eventDispatcher,
-                                                 LoggerManager loggerManager,
-                                                 ProfileManager profileManager,
-                                                 File baseDir,
-                                                 Properties properties,
-                                                 boolean showErrors,
-                                                 boolean isNonRecursive ,
-                                                 String failureType )
-    {
-        MavenExecutionRequest request;
-
-        ArtifactRepository localRepository = createLocalRepository( settings );
-
-        request = new DefaultMavenExecutionRequest( localRepository,
-                                                    settings,
-                                                    eventDispatcher,
-                                                    goals,
-                                                    baseDir.getPath(),
-                                                    profileManager,
-                                                    properties,
-                                                    showErrors );
-
-        if ( isNonRecursive )
-        {
-            request.setRecursive( false );
-        }
-
-        if ( failureType == null || failureType.equals( ReactorManager.FAIL_FAST ) )
-        {
-            request.setFailureBehavior( ReactorManager.FAIL_FAST );
-        }
-        else if ( failureType.equals( ReactorManager.FAIL_AT_END ) )
-        {
-            request.setFailureBehavior( ReactorManager.FAIL_AT_END );
-        }
-        else if ( failureType.equals( ReactorManager.FAIL_FAST ) )
-        {
-            request.setFailureBehavior( ReactorManager.FAIL_NEVER );
-        }
-
-        return request;
-    }
 
 
     // ----------------------------------------------------------------------
@@ -648,6 +530,8 @@ public class MavenEmbedder
 
             maven = (Maven) embedder.lookup( Maven.ROLE );
 
+            mavenObjectFactory = (CommonMavenObjectFactory) embedder.lookup( CommonMavenObjectFactory.ROLE );
+
             pluginDescriptorBuilder = new PluginDescriptorBuilder();
 
             profileManager = new DefaultProfileManager( embedder.getContainer() );
@@ -777,5 +661,15 @@ public class MavenEmbedder
         {
             throw new MavenEmbedderException( "Cannot stop the embedder.", e );
         }
+    }
+
+    // ----------------------------------------------------------------------
+    // Start of new embedder API
+    // ----------------------------------------------------------------------
+
+    public void execute( MavenExecutionRequest request )
+        throws MavenExecutionException
+    {
+        maven.execute(  request );
     }
 }

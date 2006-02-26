@@ -41,7 +41,6 @@ import java.util.List;
 import java.util.Properties;
 import java.util.StringTokenizer;
 
-
 /**
  * @author jason van zyl
  * @version $Id$
