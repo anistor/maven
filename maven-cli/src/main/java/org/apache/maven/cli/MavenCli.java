@@ -18,18 +18,15 @@ package org.apache.maven.cli;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.ParseException;
-import org.apache.maven.CommonMavenObjectFactory;
-import org.apache.maven.Maven;
 import org.apache.maven.SettingsConfigurationException;
+import org.apache.maven.embedder.MavenEmbedder;
+import org.apache.maven.embedder.MavenEmbedderException;
 import org.apache.maven.execution.DefaultMavenExecutionRequest;
 import org.apache.maven.execution.MavenExecutionRequest;
 import org.apache.maven.reactor.MavenExecutionException;
 import org.apache.maven.settings.Settings;
 import org.apache.maven.wagon.events.TransferListener;
 import org.codehaus.classworlds.ClassWorld;
-import org.codehaus.plexus.PlexusContainerException;
-import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
-import org.codehaus.plexus.embed.Embedder;
 
 import java.io.File;
 import java.io.IOException;
@@ -114,13 +111,17 @@ public class MavenCli
         // bring the maven component to life for use.
         // ----------------------------------------------------------------------
 
-        Embedder embedder = new Embedder();
+        //** use CLI option values directly in request where possible
+
+        MavenEmbedder embedder = new MavenEmbedder();
 
         try
         {
-            embedder.start( classWorld );
+            embedder.setClassWorld( classWorld );
+
+            embedder.start();
         }
-        catch ( PlexusContainerException e )
+        catch ( MavenEmbedderException e )
         {
             showFatalError( "Unable to start the embedded plexus container", e, showErrors );
 
@@ -336,11 +337,7 @@ public class MavenCli
                 loggingLevel = MavenExecutionRequest.LOGGING_LEVEL_WARN;
             }
 
-            Maven maven = (Maven) embedder.lookup( Maven.ROLE );
-
-            CommonMavenObjectFactory mavenObjectFactory = (CommonMavenObjectFactory) embedder.lookup( CommonMavenObjectFactory.ROLE );
-
-            Settings settings = mavenObjectFactory.buildSettings( userSettingsPath, interactive, offline, usePluginRegistry, pluginUpdateOverride );
+            Settings settings = embedder.buildSettings( userSettingsPath, interactive, offline, usePluginRegistry, pluginUpdateOverride );
 
             String localRepositoryPath = settings.getLocalRepository();
 
@@ -370,7 +367,7 @@ public class MavenCli
                 .setUpdateSnapshots( updateSnapshots )
                 .setGlobalChecksumPolicy( globalChecksumPolicy );
 
-            maven.execute( request );
+            embedder.execute( request );
         }
         catch ( SettingsConfigurationException e )
         {
@@ -378,14 +375,10 @@ public class MavenCli
 
             return 1;
         }
-        catch ( ComponentLookupException e )
+        catch ( MavenExecutionException e )
         {
             showFatalError( "Unable to configure the Maven application", e, showErrors );
 
-            return 1;
-        }
-        catch ( MavenExecutionException e )
-        {
             return 1;
         }
 

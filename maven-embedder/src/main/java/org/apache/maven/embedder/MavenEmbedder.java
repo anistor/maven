@@ -18,6 +18,7 @@ package org.apache.maven.embedder;
 
 import org.apache.maven.Maven;
 import org.apache.maven.CommonMavenObjectFactory;
+import org.apache.maven.SettingsConfigurationException;
 import org.apache.maven.reactor.MavenExecutionException;
 import org.apache.maven.execution.MavenExecutionRequest;
 import org.apache.maven.artifact.Artifact;
@@ -132,6 +133,8 @@ public class MavenEmbedder
 
     private ClassLoader classLoader;
 
+    private ClassWorld classWorld;
+
     private MavenEmbedderLogger logger;
 
     // ----------------------------------------------------------------------
@@ -208,6 +211,16 @@ public class MavenEmbedder
     public ClassLoader getClassLoader()
     {
         return classLoader;
+    }
+
+    public void setClassWorld( ClassWorld classWorld )
+    {
+        this.classWorld = classWorld;
+    }
+
+    public ClassWorld getClassWorld()
+    {
+        return classWorld;
     }
 
     public void setLocalRepositoryDirectory( File localRepositoryDirectory )
@@ -513,9 +526,12 @@ public class MavenEmbedder
 
         try
         {
-            ClassWorld classWorld = new ClassWorld();
+            if ( classWorld == null )
+            {
+                classWorld = new ClassWorld();
 
-            classWorld.newRealm( "plexus.core", classLoader );
+                classWorld.newRealm( "plexus.core", classLoader );
+            }
 
             embedder.start( classWorld );
 
@@ -671,5 +687,21 @@ public class MavenEmbedder
         throws MavenExecutionException
     {
         maven.execute(  request );
+    }
+
+
+
+    public Settings buildSettings( String userSettingsPath,
+                                   boolean interactive,
+                                   boolean offline,
+                                   boolean usePluginRegistry,
+                                   Boolean pluginUpdateOverride )
+        throws SettingsConfigurationException
+    {
+        return mavenObjectFactory.buildSettings( userSettingsPath,
+                                                 interactive,
+                                                 offline,
+                                                 usePluginRegistry,
+                                                 pluginUpdateOverride );
     }
 }
