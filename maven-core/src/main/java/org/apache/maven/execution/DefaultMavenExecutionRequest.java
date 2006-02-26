@@ -16,10 +16,10 @@ package org.apache.maven.execution;
  * limitations under the License.
  */
 
-import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.monitor.event.EventMonitor;
 import org.apache.maven.settings.Settings;
 import org.apache.maven.wagon.events.TransferListener;
+import org.apache.maven.artifact.repository.ArtifactRepository;
 
 import java.util.Date;
 import java.util.List;
@@ -40,6 +40,8 @@ public class DefaultMavenExecutionRequest
      * @todo [BP] is this required? This hands off to MavenSession, but could be passed through the handler.handle function (+ createSession).
      */
     private ArtifactRepository localRepository;
+
+    private File localRepositoryPath;
 
     private  List goals;
 
@@ -75,6 +77,12 @@ public class DefaultMavenExecutionRequest
 
     private boolean activateDefaultEventMonitor;
 
+    private boolean offline;
+
+    private boolean updateSnapshots;
+
+    private String globalChecksumPolicy;
+
     // ----------------------------------------------------------------------
     //
     // ----------------------------------------------------------------------
@@ -97,6 +105,11 @@ public class DefaultMavenExecutionRequest
     public ArtifactRepository getLocalRepository()
     {
         return localRepository;
+    }
+
+    public File getLocalRepositoryPath()
+    {
+        return localRepositoryPath;
     }
 
     public List getGoals()
@@ -174,6 +187,21 @@ public class DefaultMavenExecutionRequest
         return activateDefaultEventMonitor;
     }
 
+    public boolean isOffline()
+    {
+        return offline;
+    }
+
+    public boolean isUpdateSnapshots()
+    {
+        return updateSnapshots;
+    }
+
+    public String getGlobalChecksumPolicy()
+    {
+        return globalChecksumPolicy;
+    }
+
     // ----------------------------------------------------------------------
     //
     // ----------------------------------------------------------------------
@@ -216,6 +244,20 @@ public class DefaultMavenExecutionRequest
     public MavenExecutionRequest setLocalRepository( ArtifactRepository localRepository )
     {
         this.localRepository = localRepository;
+
+        return this;
+    }
+
+    public MavenExecutionRequest setLocalRepositoryPath( File localRepository )
+    {
+        this.localRepositoryPath = localRepository;
+
+        return this;
+    }
+
+    public MavenExecutionRequest setLocalRepositoryPath( String localRepository )
+    {
+        this.localRepositoryPath = new File( localRepository );
 
         return this;
     }
@@ -352,6 +394,27 @@ public class DefaultMavenExecutionRequest
     public MavenExecutionRequest setLoggingLevel( int loggingLevel )
     {
         this.loggingLevel = loggingLevel;
+
+        return this;
+    }
+
+    public MavenExecutionRequest setOffline( boolean offline )
+    {
+        this.offline = offline;
+
+        return this;
+    }
+
+    public MavenExecutionRequest setUpdateSnapshots( boolean updateSnapshots )
+    {
+        this.updateSnapshots = updateSnapshots;
+
+        return this;
+    }
+
+    public MavenExecutionRequest setGlobalChecksumPolicy( String globalChecksumPolicy )
+    {
+        this.globalChecksumPolicy = globalChecksumPolicy;
 
         return this;
     }

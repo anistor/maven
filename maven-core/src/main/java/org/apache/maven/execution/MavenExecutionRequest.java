@@ -16,10 +16,10 @@ package org.apache.maven.execution;
  * limitations under the License.
  */
 
-import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.monitor.event.EventMonitor;
 import org.apache.maven.settings.Settings;
 import org.apache.maven.wagon.events.TransferListener;
+import org.apache.maven.artifact.repository.ArtifactRepository;
 
 import java.io.File;
 import java.util.Date;
@@ -32,6 +32,8 @@ import java.util.Properties;
  */
 public interface MavenExecutionRequest
 {
+    File getLocalRepositoryPath();
+
     ArtifactRepository getLocalRepository();
 
     List getGoals();
@@ -68,6 +70,12 @@ public interface MavenExecutionRequest
 
     boolean isDefaultEventMonitorActive();
 
+    boolean isOffline();
+
+    boolean isUpdateSnapshots();
+
+    String getGlobalChecksumPolicy();
+
     // ----------------------------------------------------------------------
     // Logging
     // ----------------------------------------------------------------------
@@ -85,6 +93,16 @@ public interface MavenExecutionRequest
     static final int LOGGING_LEVEL_DISABLE = 5;
 
     // ----------------------------------------------------------------------
+    // Reactor Failure Mode
+    // ----------------------------------------------------------------------
+
+    static final int REACTOR_FAIL_FAST = 0;
+
+    static final int REACTOR_FAIL_END = 1;
+
+    static final int REACTOR_FAIL_NEVER = 2;
+
+    // ----------------------------------------------------------------------
     //
     // ----------------------------------------------------------------------
 
@@ -97,6 +115,10 @@ public interface MavenExecutionRequest
     MavenExecutionRequest setGoals( List goals );
 
     MavenExecutionRequest setLocalRepository( ArtifactRepository localRepository );
+
+    MavenExecutionRequest setLocalRepositoryPath( String localRepository );
+
+    MavenExecutionRequest setLocalRepositoryPath( File localRepository );
 
     MavenExecutionRequest setProperties( Properties properties );
 
@@ -129,4 +151,10 @@ public interface MavenExecutionRequest
     MavenExecutionRequest setLoggingLevel( int loggingLevel );
 
     MavenExecutionRequest activateDefaultEventMonitor();
+
+    MavenExecutionRequest setOffline( boolean offline );
+
+    MavenExecutionRequest setUpdateSnapshots( boolean updateSnapshots );
+
+    MavenExecutionRequest setGlobalChecksumPolicy( String globalChecksumPolicy );
 }

@@ -28,12 +28,13 @@ import org.apache.maven.execution.ReactorManager;
 import org.apache.maven.execution.RuntimeInformation;
 import org.apache.maven.lifecycle.LifecycleExecutionException;
 import org.apache.maven.lifecycle.LifecycleExecutor;
-import org.apache.maven.monitor.event.EventDispatcher;
-import org.apache.maven.monitor.event.MavenEvents;
 import org.apache.maven.monitor.event.DefaultEventDispatcher;
 import org.apache.maven.monitor.event.DefaultEventMonitor;
-import org.apache.maven.profiles.ProfileManager;
+import org.apache.maven.monitor.event.EventDispatcher;
+import org.apache.maven.monitor.event.MavenEvents;
+import org.apache.maven.plugin.Mojo;
 import org.apache.maven.profiles.DefaultProfileManager;
+import org.apache.maven.profiles.ProfileManager;
 import org.apache.maven.profiles.activation.ProfileActivationException;
 import org.apache.maven.project.DuplicateProjectException;
 import org.apache.maven.project.MavenProject;
@@ -46,7 +47,6 @@ import org.apache.maven.settings.Server;
 import org.apache.maven.settings.Settings;
 import org.apache.maven.usability.SystemWarnings;
 import org.apache.maven.usability.diagnostics.ErrorDiagnostics;
-import org.apache.maven.plugin.Mojo;
 import org.codehaus.plexus.PlexusConstants;
 import org.codehaus.plexus.PlexusContainer;
 import org.codehaus.plexus.component.repository.exception.ComponentLifecycleException;
@@ -54,8 +54,8 @@ import org.codehaus.plexus.component.repository.exception.ComponentLookupExcepti
 import org.codehaus.plexus.context.Context;
 import org.codehaus.plexus.context.ContextException;
 import org.codehaus.plexus.logging.AbstractLogEnabled;
-import org.codehaus.plexus.logging.LoggerManager;
 import org.codehaus.plexus.logging.Logger;
+import org.codehaus.plexus.logging.LoggerManager;
 import org.codehaus.plexus.personality.plexus.lifecycle.phase.Contextualizable;
 import org.codehaus.plexus.personality.plexus.lifecycle.phase.Initializable;
 import org.codehaus.plexus.personality.plexus.lifecycle.phase.InitializationException;
@@ -101,6 +101,8 @@ public class DefaultMaven
 
     protected LoggerManager loggerManager;
 
+    protected CommonMavenObjectFactory mavenObjectFactory;
+
     private static final long MB = 1024 * 1024;
 
     private static final int MS_PER_SEC = 1000;
@@ -114,6 +116,11 @@ public class DefaultMaven
     public void execute( MavenExecutionRequest request )
         throws MavenExecutionException
     {
+        request.setLocalRepository( mavenObjectFactory.createLocalRepository( request.getLocalRepositoryPath(),
+                                                                              request.isOffline(),
+                                                                              request.isUpdateSnapshots(),
+                                                                              request.getGlobalChecksumPolicy() ) );
+
         Logger logger = loggerManager.getLoggerForComponent( Mojo.ROLE );
 
         if ( request.isDefaultEventMonitorActive() )
@@ -129,13 +136,16 @@ public class DefaultMaven
 
         wagonManager.setDownloadMonitor( request.getTransferListener() );
 
-        EventDispatcher dispatcher = new DefaultEventDispatcher( request.getEventMonitors()  );
+        wagonManager.setOnline( !request.getSettings().isOffline() );
+
+        EventDispatcher dispatcher = new DefaultEventDispatcher( request.getEventMonitors() );
 
         String event = MavenEvents.REACTOR_EXECUTION;
 
         dispatcher.dispatchStart( event, request.getBaseDirectory() );
 
         ReactorManager rm;
+
         try
         {
             rm = doExecute( request, dispatcher );
@@ -378,8 +388,12 @@ public class DefaultMaven
         {
             List files = getProjectFiles( request );
 
-            projects = collectProjects( files, request.getLocalRepository(), request.isRecursive(),
-                                        request.getSettings(), globalProfileManager, !request.isReactorActive() );
+            projects = collectProjects( files,
+                                        request.getLocalRepository(),
+                                        request.isRecursive(),
+                                        request.getSettings(),
+                                        globalProfileManager,
+                                        !request.isReactorActive() );
 
         }
         catch ( IOException e )

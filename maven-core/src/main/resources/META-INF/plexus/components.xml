@@ -67,6 +67,21 @@
      |
      |
      -->
+
+    <component>
+      <role>org.apache.maven.CommonMavenObjectFactory</role>
+      <implementation>org.apache.maven.DefaultCommonMavenObjectFactory</implementation>
+      <requirements>
+        <requirement>
+          <role>org.apache.maven.artifact.repository.layout.ArtifactRepositoryLayout</role>
+          <role-hint>default</role-hint>
+        </requirement>
+        <requirement>
+          <role>org.apache.maven.artifact.repository.ArtifactRepositoryFactory</role>
+        </requirement>
+      </requirements>
+    </component>
+
     <component>
       <role>org.apache.maven.Maven</role>
       <implementation>org.apache.maven.DefaultMaven</implementation>
@@ -85,6 +100,9 @@
         </requirement>
         <requirement>
           <role>org.apache.maven.artifact.manager.WagonManager</role>
+        </requirement>
+        <requirement>
+          <role>org.apache.maven.CommonMavenObjectFactory</role>
         </requirement>
       </requirements>
     </component>

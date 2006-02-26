@@ -17,19 +17,10 @@ package org.apache.maven.cli;
  */
 
 import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.GnuParser;
-import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.OptionBuilder;
-import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.maven.Maven;
 import org.apache.maven.SettingsConfigurationException;
-import org.apache.maven.artifact.repository.ArtifactRepository;
-import org.apache.maven.artifact.repository.ArtifactRepositoryFactory;
 import org.apache.maven.artifact.repository.ArtifactRepositoryPolicy;
-import org.apache.maven.artifact.repository.DefaultArtifactRepository;
-import org.apache.maven.artifact.repository.layout.ArtifactRepositoryLayout;
 import org.apache.maven.execution.DefaultMavenExecutionRequest;
 import org.apache.maven.execution.MavenExecutionRequest;
 import org.apache.maven.execution.ReactorManager;
@@ -52,12 +43,13 @@ import java.util.List;
 import java.util.Properties;
 import java.util.StringTokenizer;
 
+
 /**
  * @author jason van zyl
  * @version $Id$
  * @noinspection UseOfSystemOutOrSystemErr,ACCESS_STATIC_VIA_INSTANCE
  * @todo clear strategy for creating local repository
- * @todo clear strategy        
+ * @todo clear strategy
  * @todo clearn strategy for using settings, they are really an artifact of the CLI but people want integration with existing installations
  */
 public class MavenCli
@@ -303,9 +295,14 @@ public class MavenCli
             // From here we are CLI free
             // ----------------------------------------------------------------------
 
-            //  1. LoggerManager: can get from the container
-            //  2. debug: use to set the threshold on the logger manager
-            //  3. Settings
+            //  -> baseDirectory
+            //  -> goals
+            //  -> debug: use to set the threshold on the logger manager
+            //  -> active profiles (settings)
+            //  -> inactive profiles (settings)
+            //  -> offline (settings)
+            //  -> interactive (settings)
+            //  -> Settings
             //     -> localRepository
             //     -> interactiveMode
             //     -> usePluginRegistry
@@ -316,22 +313,14 @@ public class MavenCli
             //     -> profiles
             //     -> activeProfiles
             //     -> pluginGroups
-            //  4. ProfileManager
-            //     -> active profiles
-            //     -> inactive profiles
-            //  5. EventDispatcher
-            //  6. baseDirectory
-            //  7. goals
-            //  8. executionProperties
-            //  9. reactorFailureBehaviour: fail fast, fail at end, fail never
-            // 10. globalChecksumPolicy: fail, warn
-            // 11. showErrors (this is really CLI is but used inside Maven internals
-            // 12. recursive
-            // 13. offline
-            // 14. updateSnapshots
-            // 15. reactorActive
-            // 16. transferListener: in the CLI this is batch or console
-            // 17. interactive
+            //  -> executionProperties
+            //  -> reactorFailureBehaviour: fail fast, fail at end, fail never
+            //  -> globalChecksumPolicy: fail, warn
+            //  -> showErrors (this is really CLI is but used inside Maven internals
+            //  -> recursive
+            //  -> updateSnapshots
+            //  -> reactorActive
+            //  -> transferListener: in the CLI this is batch or console
 
             // We have a general problem with plexus components that are singletons in that they use
             // the same logger for their lifespan. This is not good in that many requests may be fired
@@ -340,9 +329,15 @@ public class MavenCli
 
             Properties executionProperties = getExecutionProperties( commandLine );
 
-            Settings settings = buildSettings( userSettingsPath, interactive, usePluginRegistry, pluginUpdateOverride );
+            Settings settings = buildSettings( userSettingsPath, interactive, offline, usePluginRegistry, pluginUpdateOverride );
 
-            ArtifactRepository localRepository = createLocalRepository( settings, offline, updateSnapshots, globalChecksumPolicy );
+            // the local repository should just be a path and we should look here:
+            // in the system property
+            // user specified settings.xml
+            // default ~/.m2/settings.xml
+            // and with that maven internals should contruct the ArtifactRepository object
+
+            String localRepositoryPath = settings.getLocalRepository();
 
             int loggingLevel;
 
@@ -357,23 +352,31 @@ public class MavenCli
 
             Maven maven = (Maven) embedder.lookup( Maven.ROLE );
 
+            // @todo we either make Settings the official configuration mechanism or allow the indiviaul setting in the request
+            // for each of the things in the settings object. Seems redundant to configure some things via settings and
+            // some via the request. The Settings object is used in about 16 different places in the core so something
+            // to consider.
+
             MavenExecutionRequest request = new DefaultMavenExecutionRequest()
                 .setBasedir( baseDirectory )
                 .setGoals( goals )
-                .setSettings( settings )
-                .setLocalRepository( localRepository )
+                .setLocalRepositoryPath( localRepositoryPath )
                 .setProperties( executionProperties )
-                .setRecursive( recursive )
                 .setFailureBehavior( reactorFailureBehaviour )
+                .setRecursive( recursive )
                 .setReactorActive( reactorActive )
                 .setPomFile( alternatePomFile )
                 .setShowErrors( showErrors )
                 .setInteractive( interactive )
-                .setTransferListener( transferListener )
                 .addActiveProfiles( activeProfiles )
                 .addInactiveProfiles( inactiveProfiles )
                 .setLoggingLevel( loggingLevel )
-                .activateDefaultEventMonitor();
+                .activateDefaultEventMonitor()
+                .setSettings( settings )
+                .setTransferListener( transferListener )
+                .setOffline( offline )
+                .setUpdateSnapshots( updateSnapshots )
+                .setGlobalChecksumPolicy( globalChecksumPolicy );
 
             maven.execute( request );
         }
@@ -513,177 +516,9 @@ public class MavenCli
     // Command line manager
     // ----------------------------------------------------------------------
 
-    static class CLIManager
-    {
-        public static final char ALTERNATE_POM_FILE = 'f';
-
-        public static final char BATCH_MODE = 'B';
-
-        public static final char SET_SYSTEM_PROPERTY = 'D';
-
-        public static final char OFFLINE = 'o';
-
-        public static final char REACTOR = 'r';
-
-        public static final char DEBUG = 'X';
-
-        public static final char ERRORS = 'e';
-
-        public static final char HELP = 'h';
-
-        public static final char VERSION = 'v';
-
-        private Options options;
-
-        public static final char NON_RECURSIVE = 'N';
-
-        public static final char UPDATE_SNAPSHOTS = 'U';
-
-        public static final char ACTIVATE_PROFILES = 'P';
-
-        public static final String FORCE_PLUGIN_UPDATES = "cpu";
-
-        public static final String FORCE_PLUGIN_UPDATES2 = "up";
-
-        public static final String SUPPRESS_PLUGIN_UPDATES = "npu";
-
-        public static final String SUPPRESS_PLUGIN_REGISTRY = "npr";
-
-        public static final char CHECKSUM_FAILURE_POLICY = 'C';
-
-        public static final char CHECKSUM_WARNING_POLICY = 'c';
-
-        private static final char ALTERNATE_USER_SETTINGS = 's';
-
-        private static final String FAIL_FAST = "ff";
-
-        private static final String FAIL_AT_END = "fae";
-
-        private static final String FAIL_NEVER = "fn";
-
-        public CLIManager()
-        {
-            options = new Options();
-
-            options.addOption( OptionBuilder.withLongOpt( "file" ).hasArg().withDescription(
-                "Force the use of an alternate POM file." ).create( ALTERNATE_POM_FILE ) );
-
-            options.addOption(
-                OptionBuilder.withLongOpt( "define" ).hasArg().withDescription( "Define a system property" ).create(
-                    SET_SYSTEM_PROPERTY ) );
-            options.addOption(
-                OptionBuilder.withLongOpt( "offline" ).withDescription( "Work offline" ).create( OFFLINE ) );
-            options.addOption(
-                OptionBuilder.withLongOpt( "help" ).withDescription( "Display help information" ).create( HELP ) );
-            options.addOption(
-                OptionBuilder.withLongOpt( "version" ).withDescription( "Display version information" ).create(
-                    VERSION ) );
-            options.addOption(
-                OptionBuilder.withLongOpt( "debug" ).withDescription( "Produce execution debug output" ).create(
-                    DEBUG ) );
-            options.addOption(
-                OptionBuilder.withLongOpt( "errors" ).withDescription( "Produce execution error messages" ).create(
-                    ERRORS ) );
-            options.addOption( OptionBuilder.withLongOpt( "reactor" ).withDescription(
-                "Execute goals for project found in the reactor" ).create( REACTOR ) );
-            options.addOption( OptionBuilder.withLongOpt( "non-recursive" ).withDescription(
-                "Do not recurse into sub-projects" ).create( NON_RECURSIVE ) );
-            options.addOption( OptionBuilder.withLongOpt( "update-snapshots" ).withDescription(
-                "Update all snapshots regardless of repository policies" ).create( UPDATE_SNAPSHOTS ) );
-            options.addOption( OptionBuilder.withLongOpt( "activate-profiles" ).withDescription(
-                "Comma-delimited list of profiles to activate" ).hasArg().create( ACTIVATE_PROFILES ) );
-
-            options.addOption( OptionBuilder.withLongOpt( "batch-mode" ).withDescription(
-                "Run in non-interactive (batch) mode" ).create( BATCH_MODE ) );
-
-            options.addOption( OptionBuilder.withLongOpt( "check-plugin-updates" ).withDescription(
-                "Force upToDate check for any relevant registered plugins" ).create( FORCE_PLUGIN_UPDATES ) );
-            options.addOption( OptionBuilder.withLongOpt( "update-plugins" ).withDescription(
-                "Synonym for " + FORCE_PLUGIN_UPDATES ).create( FORCE_PLUGIN_UPDATES2 ) );
-            options.addOption( OptionBuilder.withLongOpt( "no-plugin-updates" ).withDescription(
-                "Suppress upToDate check for any relevant registered plugins" ).create( SUPPRESS_PLUGIN_UPDATES ) );
-
-            options.addOption( OptionBuilder.withLongOpt( "no-plugin-registry" ).withDescription(
-                "Don't use ~/.m2/plugin-registry.xml for plugin versions" ).create( SUPPRESS_PLUGIN_REGISTRY ) );
-
-            options.addOption( OptionBuilder.withLongOpt( "strict-checksums" ).withDescription(
-                "Fail the build if checksums don't match" ).create( CHECKSUM_FAILURE_POLICY ) );
-            options.addOption(
-                OptionBuilder.withLongOpt( "lax-checksums" ).withDescription( "Warn if checksums don't match" ).create(
-                    CHECKSUM_WARNING_POLICY ) );
-
-            options.addOption( OptionBuilder.withLongOpt( "settings" )
-                .withDescription( "Alternate path for the user settings file" ).hasArg()
-                .create( ALTERNATE_USER_SETTINGS ) );
-
-            options.addOption( OptionBuilder.withLongOpt( "fail-fast" ).withDescription(
-                "Stop at first failure in reactorized builds" ).create( FAIL_FAST ) );
-
-            options.addOption( OptionBuilder.withLongOpt( "fail-at-end" ).withDescription(
-                "Only fail the build afterwards; allow all non-impacted builds to continue" ).create( FAIL_AT_END ) );
-
-            options.addOption( OptionBuilder.withLongOpt( "fail-never" ).withDescription(
-                "NEVER fail the build, regardless of project result" ).create( FAIL_NEVER ) );
-        }
-
-        public CommandLine parse( String[] args )
-            throws ParseException
-        {
-            CommandLineParser parser = new GnuParser();
-            return parser.parse( options, args );
-        }
-
-        public void displayHelp()
-        {
-            System.out.println();
-
-            HelpFormatter formatter = new HelpFormatter();
-            formatter.printHelp( "mvn [options] [<goal(s)>] [<phase(s)>]", "\nOptions:", options, "\n" );
-        }
-    }
-
-    private static ArtifactRepository createLocalRepository( Settings settings,
-                                                             boolean offline,
-                                                             boolean updateSnapshots,
-                                                             String globalChecksumPolicy )
-        throws ComponentLookupException
-    {
-        // @requirement
-        ArtifactRepositoryLayout repositoryLayout = (ArtifactRepositoryLayout) embedder.lookup( ArtifactRepositoryLayout.ROLE, "default" );
-
-        // @requirement
-        ArtifactRepositoryFactory artifactRepositoryFactory = (ArtifactRepositoryFactory) embedder.lookup( ArtifactRepositoryFactory.ROLE );
-
-        String url = settings.getLocalRepository();
-
-        if ( !url.startsWith( "file:" ) )
-        {
-            url = "file://" + url;
-        }
-
-        ArtifactRepository localRepository = new DefaultArtifactRepository( "local", url, repositoryLayout );
-
-        boolean snapshotPolicySet = false;
-
-        if ( offline )
-        {
-            settings.setOffline( true );
-
-            snapshotPolicySet = true;
-        }
-
-        if ( !snapshotPolicySet && updateSnapshots )
-        {
-            artifactRepositoryFactory.setGlobalUpdatePolicy( ArtifactRepositoryPolicy.UPDATE_POLICY_ALWAYS );
-        }
-
-        artifactRepositoryFactory.setGlobalChecksumPolicy( globalChecksumPolicy );
-
-        return localRepository;
-    }
-
     private static Settings buildSettings( String userSettingsPath,
                                            boolean interactive,
+                                           boolean offline,
                                            boolean usePluginRegistry,
                                            Boolean pluginUpdateOverride )
         throws ComponentLookupException, SettingsConfigurationException
@@ -691,6 +526,11 @@ public class MavenCli
         Settings settings = null;
 
         MavenSettingsBuilder settingsBuilder = (MavenSettingsBuilder) embedder.lookup( MavenSettingsBuilder.ROLE );
+
+        if ( offline )
+        {
+            settings.setOffline( true );
+        }
 
         try
         {
