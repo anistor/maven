@@ -1,7 +1,7 @@
 package org.apache.maven;
 
 import org.apache.maven.artifact.repository.ArtifactRepository;
-import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
+import org.apache.maven.settings.Settings;
 
 import java.io.File;
 
@@ -10,8 +10,17 @@ import java.io.File;
  */
 public interface CommonMavenObjectFactory
 {
-     ArtifactRepository createLocalRepository( File localRepositoryPath,
-                                               boolean offline,
-                                               boolean updateSnapshots,
-                                               String globalChecksumPolicy );
+    static String ROLE = CommonMavenObjectFactory.class.getName();
+
+    ArtifactRepository createLocalRepository( File localRepositoryPath,
+                                              boolean offline,
+                                              boolean updateSnapshots,
+                                              String globalChecksumPolicy );
+
+    public Settings buildSettings( String userSettingsPath,
+                                   boolean interactive,
+                                   boolean offline,
+                                   boolean usePluginRegistry,
+                                   Boolean pluginUpdateOverride )
+        throws SettingsConfigurationException;
 }

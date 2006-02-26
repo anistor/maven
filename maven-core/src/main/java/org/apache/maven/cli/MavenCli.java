@@ -18,6 +18,7 @@ package org.apache.maven.cli;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.ParseException;
+import org.apache.maven.CommonMavenObjectFactory;
 import org.apache.maven.Maven;
 import org.apache.maven.SettingsConfigurationException;
 import org.apache.maven.artifact.repository.ArtifactRepositoryPolicy;
@@ -25,15 +26,12 @@ import org.apache.maven.execution.DefaultMavenExecutionRequest;
 import org.apache.maven.execution.MavenExecutionRequest;
 import org.apache.maven.execution.ReactorManager;
 import org.apache.maven.reactor.MavenExecutionException;
-import org.apache.maven.settings.MavenSettingsBuilder;
-import org.apache.maven.settings.RuntimeInfo;
 import org.apache.maven.settings.Settings;
 import org.apache.maven.wagon.events.TransferListener;
 import org.codehaus.classworlds.ClassWorld;
 import org.codehaus.plexus.PlexusContainerException;
 import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
 import org.codehaus.plexus.embed.Embedder;
-import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
 import java.io.File;
 import java.io.IOException;
@@ -48,14 +46,9 @@ import java.util.StringTokenizer;
  * @author jason van zyl
  * @version $Id$
  * @noinspection UseOfSystemOutOrSystemErr,ACCESS_STATIC_VIA_INSTANCE
- * @todo clear strategy for creating local repository
- * @todo clear strategy
- * @todo clearn strategy for using settings, they are really an artifact of the CLI but people want integration with existing installations
  */
 public class MavenCli
 {
-    private static Embedder embedder;
-
     /**
      * @noinspection ConfusingMainMethod
      */
@@ -124,7 +117,7 @@ public class MavenCli
         // bring the maven component to life for use.
         // ----------------------------------------------------------------------
 
-        embedder = new Embedder();
+        Embedder embedder = new Embedder();
 
         try
         {
@@ -329,15 +322,11 @@ public class MavenCli
 
             Properties executionProperties = getExecutionProperties( commandLine );
 
-            Settings settings = buildSettings( userSettingsPath, interactive, offline, usePluginRegistry, pluginUpdateOverride );
-
             // the local repository should just be a path and we should look here:
             // in the system property
             // user specified settings.xml
             // default ~/.m2/settings.xml
             // and with that maven internals should contruct the ArtifactRepository object
-
-            String localRepositoryPath = settings.getLocalRepository();
 
             int loggingLevel;
 
@@ -351,6 +340,12 @@ public class MavenCli
             }
 
             Maven maven = (Maven) embedder.lookup( Maven.ROLE );
+
+            CommonMavenObjectFactory mavenObjectFactory = (CommonMavenObjectFactory) embedder.lookup( CommonMavenObjectFactory.ROLE );
+
+            Settings settings = mavenObjectFactory.buildSettings( userSettingsPath, interactive, offline, usePluginRegistry, pluginUpdateOverride );
+
+            String localRepositoryPath = settings.getLocalRepository();
 
             // @todo we either make Settings the official configuration mechanism or allow the indiviaul setting in the request
             // for each of the things in the settings object. Seems redundant to configure some things via settings and
@@ -510,74 +505,5 @@ public class MavenCli
         // ----------------------------------------------------------------------
 
         System.setProperty( name, value );
-    }
-
-    // ----------------------------------------------------------------------
-    // Command line manager
-    // ----------------------------------------------------------------------
-
-    private static Settings buildSettings( String userSettingsPath,
-                                           boolean interactive,
-                                           boolean offline,
-                                           boolean usePluginRegistry,
-                                           Boolean pluginUpdateOverride )
-        throws ComponentLookupException, SettingsConfigurationException
-    {
-        Settings settings = null;
-
-        MavenSettingsBuilder settingsBuilder = (MavenSettingsBuilder) embedder.lookup( MavenSettingsBuilder.ROLE );
-
-        if ( offline )
-        {
-            settings.setOffline( true );
-        }
-
-        try
-        {
-            if ( userSettingsPath != null )
-            {
-                File userSettingsFile = new File( userSettingsPath );
-
-                if ( userSettingsFile.exists() && !userSettingsFile.isDirectory() )
-                {
-                    settings = settingsBuilder.buildSettings( userSettingsFile );
-
-                    System.out.println( "settings local repository = " + settings.getLocalRepository() );
-                }
-                else
-                {
-                    System.out.println( "WARNING: Alternate user settings file: " + userSettingsPath +
-                        " is invalid. Using default path." );
-                }
-            }
-
-            System.out.println( "settings = " + settings );
-
-            if ( settings == null )
-            {
-                settings = settingsBuilder.buildSettings();
-            }
-        }
-        catch ( IOException e )
-        {
-            throw new SettingsConfigurationException( "Error reading settings file", e );
-        }
-        catch ( XmlPullParserException e )
-        {
-            throw new SettingsConfigurationException( e.getMessage(), e.getDetail(), e.getLineNumber(),
-                                                      e.getColumnNumber() );
-        }
-
-        settings.setInteractiveMode( interactive );
-
-        settings.setUsePluginRegistry( usePluginRegistry );
-
-        RuntimeInfo runtimeInfo = new RuntimeInfo( settings );
-
-        runtimeInfo.setPluginUpdateOverride( pluginUpdateOverride );
-
-        settings.setRuntimeInfo( runtimeInfo );
-
-        return settings;
     }
 }
