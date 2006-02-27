@@ -356,31 +356,9 @@ public class MavenCli
 
             Properties executionProperties = getExecutionProperties( commandLine );
 
-            // Rules for finding settings
-            // system property
-            // cli option
-            // ~/.m2/settings.xml
+            File userSettingsPath = getUserSettingsPath( commandLine );
 
-            File userSettingsPath = new File( System.getProperty( ALT_USER_SETTINGS_XML_LOCATION ) + "" );
-
-            if ( !userSettingsPath.exists() )
-            {
-                if ( commandLine.hasOption( CLIManager.ALTERNATE_USER_SETTINGS ) )
-                {
-                    userSettingsPath = new File( commandLine.getOptionValue( CLIManager.ALTERNATE_USER_SETTINGS ) );
-                }
-                else
-                {
-                    userSettingsPath = defaultUserSettingsFile;
-                }
-            }
-
-            File globalSettingsFile = new File( System.getProperty( ALT_GLOBAL_SETTINGS_XML_LOCATION ) + "" );
-
-            if ( !globalSettingsFile.exists() )
-            {
-                globalSettingsFile = defaultGlobalSettingsFile;
-            }
+            File globalSettingsFile = getGlobalSettingsPath();
 
             Settings settings = mavenEmbedder.buildSettings( userSettingsPath,
                                                              globalSettingsFile,
@@ -389,24 +367,7 @@ public class MavenCli
                                                              usePluginRegistry,
                                                              pluginUpdateOverride );
 
-            // Rules for finding the localRepository path
-            // system property
-            // settings localRepository
-            // ~/.m2/repository
-
-            // this should be --local-repo to match the --settings option instead of using
-            // system properties
-            String localRepositoryPath = System.getProperty( ALT_LOCAL_REPOSITORY_LOCATION );
-
-            if ( localRepositoryPath == null )
-            {
-                localRepositoryPath = settings.getLocalRepository();
-            }
-
-            if ( localRepositoryPath == null )
-            {
-                localRepositoryPath = defaultUserLocalRepository.getAbsolutePath();
-            }
+            String localRepositoryPath = getLocalRepositoryPath( settings );
 
             // @todo we either make Settings the official configuration mechanism or allow the indiviaul setting in the request
             // for each of the things in the settings object. Seems redundant to configure some things via settings and
@@ -562,5 +523,78 @@ public class MavenCli
         // ----------------------------------------------------------------------
 
         System.setProperty( name, value );
+    }
+
+    // ----------------------------------------------------------------------
+    //
+    // ----------------------------------------------------------------------
+
+    /**
+     * Retrieve the user settings path using the followiwin search pattern:
+     * <p/>
+     * 1. System Property
+     * 2. CLI Option
+     * 3. ${user.home}/.m2/settings.xml
+     */
+    public static File getUserSettingsPath( CommandLine commandLine )
+    {
+        File userSettingsPath = new File( System.getProperty( ALT_USER_SETTINGS_XML_LOCATION ) + "" );
+
+        if ( !userSettingsPath.exists() )
+        {
+            if ( commandLine.hasOption( CLIManager.ALTERNATE_USER_SETTINGS ) )
+            {
+                userSettingsPath = new File( commandLine.getOptionValue( CLIManager.ALTERNATE_USER_SETTINGS ) );
+            }
+            else
+            {
+                userSettingsPath = defaultUserSettingsFile;
+            }
+        }
+
+        return userSettingsPath;
+    }
+
+    /**
+     * Retrieve the global settings path using the followiwin search pattern:
+     * <p/>
+     * 1. System Property
+     * 2. CLI Option
+     * 3. ${maven.home}/conf/settings.xml
+     */
+    public static File getGlobalSettingsPath()
+    {
+        File globalSettingsFile = new File( System.getProperty( ALT_GLOBAL_SETTINGS_XML_LOCATION ) + "" );
+
+        if ( !globalSettingsFile.exists() )
+        {
+            globalSettingsFile = defaultGlobalSettingsFile;
+        }
+
+        return globalSettingsFile;
+    }
+
+    /**
+     * Retrieve the local repository path using the followiwin search pattern:
+     * <p/>
+     * 1. System Property
+     * 2. localRepository specified in user settings file
+     * 3. ${user.home}/.m2/repository
+     */
+    public static String getLocalRepositoryPath( Settings settings )
+    {
+        String localRepositoryPath = System.getProperty( ALT_LOCAL_REPOSITORY_LOCATION );
+
+        if ( localRepositoryPath == null )
+        {
+            localRepositoryPath = settings.getLocalRepository();
+        }
+
+        if ( localRepositoryPath == null )
+        {
+            localRepositoryPath = defaultUserLocalRepository.getAbsolutePath();
+        }
+
+        return localRepositoryPath;
     }
 }
