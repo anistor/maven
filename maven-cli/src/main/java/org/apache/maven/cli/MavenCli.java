@@ -18,6 +18,7 @@ package org.apache.maven.cli;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.ParseException;
+import org.apache.maven.MavenTransferListener;
 import org.apache.maven.SettingsConfigurationException;
 import org.apache.maven.embedder.MavenEmbedder;
 import org.apache.maven.embedder.MavenEmbedderException;
@@ -25,7 +26,6 @@ import org.apache.maven.execution.DefaultMavenExecutionRequest;
 import org.apache.maven.execution.MavenExecutionRequest;
 import org.apache.maven.reactor.MavenExecutionException;
 import org.apache.maven.settings.Settings;
-import org.apache.maven.wagon.events.TransferListener;
 import org.codehaus.classworlds.ClassWorld;
 
 import java.io.File;
@@ -277,7 +277,7 @@ public class MavenCli
                 }
             }
 
-            TransferListener transferListener;
+            MavenTransferListener transferListener;
 
             if ( interactive )
             {
