@@ -17,7 +17,8 @@ public interface CommonMavenObjectFactory
                                               boolean updateSnapshots,
                                               String globalChecksumPolicy );
 
-    public Settings buildSettings( String userSettingsPath,
+    public Settings buildSettings( File userSettingsPath,
+                                   File globalSettingsPath,
                                    boolean interactive,
                                    boolean offline,
                                    boolean usePluginRegistry,

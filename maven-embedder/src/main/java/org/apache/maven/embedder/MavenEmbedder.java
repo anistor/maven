@@ -512,9 +512,9 @@ public class MavenEmbedder
         // the plugin registry builder.
         // ----------------------------------------------------------------------
 
-        if ( classLoader == null )
+        if ( classWorld == null && classLoader == null )
         {
-            throw new IllegalStateException( "A classloader must be specified using setClassLoader(ClassLoader)." );
+            throw new IllegalStateException( "A classWorld or classloader must be specified using setClassLoader|World(ClassLoader)." );
         }
 
         embedder = new Embedder();
@@ -574,7 +574,7 @@ public class MavenEmbedder
 
             profileManager.loadSettingsProfiles( settings );
 
-            localRepository = createLocalRepository( settings );
+            //localRepository = createLocalRepository( settings );
         }
         catch ( PlexusContainerException e )
         {
@@ -626,7 +626,7 @@ public class MavenEmbedder
 
             try
             {
-                settings = settingsBuilder.buildSettings();
+                settings = settingsBuilder.buildSettings( null, null );
             }
             catch ( IOException e )
             {
@@ -689,9 +689,8 @@ public class MavenEmbedder
         maven.execute(  request );
     }
 
-
-
-    public Settings buildSettings( String userSettingsPath,
+    public Settings buildSettings( File userSettingsPath,
+                                   File globalSettingsPath,
                                    boolean interactive,
                                    boolean offline,
                                    boolean usePluginRegistry,
@@ -699,6 +698,7 @@ public class MavenEmbedder
         throws SettingsConfigurationException
     {
         return mavenObjectFactory.buildSettings( userSettingsPath,
+                                                 globalSettingsPath,
                                                  interactive,
                                                  offline,
                                                  usePluginRegistry,

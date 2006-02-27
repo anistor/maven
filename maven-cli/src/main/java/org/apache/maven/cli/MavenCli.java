@@ -43,6 +43,32 @@ import java.util.StringTokenizer;
  */
 public class MavenCli
 {
+    public static final String userHome = System.getProperty( "user.home" );
+
+    public static final File userMavenConfigurationHome = new File( userHome, ".m2" );
+
+    public static final String mavenHome = System.getProperty( "maven.home" );
+
+    // ----------------------------------------------------------------------
+    // Settings
+    // ----------------------------------------------------------------------
+
+    public static final File defaultUserSettingsFile = new File( userMavenConfigurationHome, "settings.xml" );
+
+    public static final File defaultGlobalSettingsFile = new File( mavenHome, "conf/settings.xml" );
+
+    public static final String ALT_USER_SETTINGS_XML_LOCATION = "org.apache.maven.user-settings";
+
+    public static final String ALT_GLOBAL_SETTINGS_XML_LOCATION = "org.apache.maven.global-settings";
+
+    // ----------------------------------------------------------------------
+    // Local Repository
+    // ----------------------------------------------------------------------
+
+    public static final String ALT_LOCAL_REPOSITORY_LOCATION = "maven.repo.local";
+
+    public static final File defaultUserLocalRepository = new File( userMavenConfigurationHome, "repository" );
+
     /**
      * @noinspection ConfusingMainMethod
      */
@@ -113,26 +139,19 @@ public class MavenCli
 
         //** use CLI option values directly in request where possible
 
-        MavenEmbedder embedder = new MavenEmbedder();
+        MavenEmbedder mavenEmbedder = new MavenEmbedder();
 
         try
         {
-            embedder.setClassWorld( classWorld );
+            mavenEmbedder.setClassWorld( classWorld );
 
-            embedder.start();
+            mavenEmbedder.start();
         }
         catch ( MavenEmbedderException e )
         {
             showFatalError( "Unable to start the embedded plexus container", e, showErrors );
 
             return 1;
-        }
-
-        String userSettingsPath = null;
-
-        if ( commandLine.hasOption( CLIManager.ALTERNATE_USER_SETTINGS ) )
-        {
-            userSettingsPath = commandLine.getOptionValue( CLIManager.ALTERNATE_USER_SETTINGS );
         }
 
         boolean interactive = true;
@@ -318,8 +337,6 @@ public class MavenCli
             // off and the singleton plexus component will continue to funnel their output to the same
             // logger. We need to be able to swap the logger.
 
-            Properties executionProperties = getExecutionProperties( commandLine );
-
             // the local repository should just be a path and we should look here:
             // in the system property
             // user specified settings.xml
@@ -337,9 +354,59 @@ public class MavenCli
                 loggingLevel = MavenExecutionRequest.LOGGING_LEVEL_WARN;
             }
 
-            Settings settings = embedder.buildSettings( userSettingsPath, interactive, offline, usePluginRegistry, pluginUpdateOverride );
+            Properties executionProperties = getExecutionProperties( commandLine );
 
-            String localRepositoryPath = settings.getLocalRepository();
+            // Rules for finding settings
+            // system property
+            // cli option
+            // ~/.m2/settings.xml
+
+            File userSettingsPath = new File( System.getProperty( ALT_USER_SETTINGS_XML_LOCATION ) + "" );
+
+            if ( !userSettingsPath.exists() )
+            {
+                if ( commandLine.hasOption( CLIManager.ALTERNATE_USER_SETTINGS ) )
+                {
+                    userSettingsPath = new File( commandLine.getOptionValue( CLIManager.ALTERNATE_USER_SETTINGS ) );
+                }
+                else
+                {
+                    userSettingsPath = defaultUserSettingsFile;
+                }
+            }
+
+            File globalSettingsFile = new File( System.getProperty( ALT_GLOBAL_SETTINGS_XML_LOCATION ) + "" );
+
+            if ( !globalSettingsFile.exists() )
+            {
+                globalSettingsFile = defaultGlobalSettingsFile;
+            }
+
+            Settings settings = mavenEmbedder.buildSettings( userSettingsPath,
+                                                             globalSettingsFile,
+                                                             interactive,
+                                                             offline,
+                                                             usePluginRegistry,
+                                                             pluginUpdateOverride );
+
+            // Rules for finding the localRepository path
+            // system property
+            // settings localRepository
+            // ~/.m2/repository
+
+            // this should be --local-repo to match the --settings option instead of using
+            // system properties
+            String localRepositoryPath = System.getProperty( ALT_LOCAL_REPOSITORY_LOCATION );
+
+            if ( localRepositoryPath == null )
+            {
+                localRepositoryPath = settings.getLocalRepository();
+            }
+
+            if ( localRepositoryPath == null )
+            {
+                localRepositoryPath = defaultUserLocalRepository.getAbsolutePath();
+            }
 
             // @todo we either make Settings the official configuration mechanism or allow the indiviaul setting in the request
             // for each of the things in the settings object. Seems redundant to configure some things via settings and
@@ -367,7 +434,7 @@ public class MavenCli
                 .setUpdateSnapshots( updateSnapshots )
                 .setGlobalChecksumPolicy( globalChecksumPolicy );
 
-            embedder.execute( request );
+            mavenEmbedder.execute( request );
         }
         catch ( SettingsConfigurationException e )
         {

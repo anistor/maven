@@ -60,7 +60,8 @@ public class DefaultCommonMavenObjectFactory
         return localRepository;
     }
 
-    public Settings buildSettings( String userSettingsPath,
+    public Settings buildSettings( File userSettingsPath,
+                                   File globalSettingsPath,
                                    boolean interactive,
                                    boolean offline,
                                    boolean usePluginRegistry,
@@ -71,27 +72,7 @@ public class DefaultCommonMavenObjectFactory
 
         try
         {
-            if ( userSettingsPath != null )
-            {
-                File userSettingsFile = new File( userSettingsPath );
-
-                if ( userSettingsFile.exists() && !userSettingsFile.isDirectory() )
-                {
-                    settings = settingsBuilder.buildSettings( userSettingsFile );
-
-                    System.out.println( "settings local repository = " + settings.getLocalRepository() );
-                }
-                else
-                {
-                    System.out.println( "WARNING: Alternate user settings file: " + userSettingsPath +
-                        " is invalid. Using default path." );
-                }
-            }
-
-            if ( settings == null )
-            {
-                settings = settingsBuilder.buildSettings();
-            }
+                settings = settingsBuilder.buildSettings( userSettingsPath, globalSettingsPath );
         }
         catch ( IOException e )
         {
