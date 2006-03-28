@@ -159,10 +159,10 @@
       <version>1.1</version>
     </dependency>
   </dependencies>
-  <distributionManagement>
+  <!-- distributionManagement>
     <site>
       <id>website</id>
       <url>scp://minotaur.apache.org/www/maven.apache.org/m2</url>
     </site>
-  </distributionManagement>
+  </distributionManagement -->
 </project>
