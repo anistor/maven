@@ -687,7 +687,7 @@ public class DefaultMavenProjectBuilder
 
         // we don't have to force the collision exception for superModel here, it's already been done in getSuperModel()
         MavenProject previousProject = superProject;
-        
+
         Model previous = superProject.getModel();
 
         for ( Iterator i = lineage.iterator(); i.hasNext(); )
@@ -695,9 +695,9 @@ public class DefaultMavenProjectBuilder
             MavenProject currentProject = (MavenProject) i.next();
 
             Model current = currentProject.getModel();
-            
+
             String pathAdjustment = null;
-            
+
             try
             {
                 pathAdjustment = previousProject.getModulePathAdjustment( currentProject );
@@ -835,6 +835,16 @@ public class DefaultMavenProjectBuilder
         {
             context.put( "basedir", projectDir.getAbsolutePath() );
         }
+
+        // TODO: this is a hack to ensure MNG-2124 can be satisfied without triggering MNG-1927
+        //  MNG-1927 relies on the false assumption that ${project.build.*} evaluates to null, which occurs before
+        //  MNG-2124 is fixed. The null value would leave it uninterpolated, to be handled after path translation.
+        //  Until these steps are correctly sequenced, we guarantee these fields remain uninterpolated.
+        context.put( "build.directory", null );
+        context.put( "build.outputDirectory", null );
+        context.put( "build.testOutputDirectory", null );
+        context.put( "build.sourceDirectory", null );
+        context.put( "build.testSourceDirectory", null );
 
         model = modelInterpolator.interpolate( model, context, strict );
 
@@ -1008,6 +1018,11 @@ public class DefaultMavenProjectBuilder
             {
                 parentDescriptor = new File( projectDir, parentRelativePath );
 
+                if ( getLogger().isDebugEnabled() )
+                {
+                    getLogger().debug( "Searching for parent-POM: " + parentModel.getId() + " of project: " + project.getId() + " in relative path: " + parentRelativePath );
+                }
+
                 if ( parentDescriptor.isDirectory() )
                 {
                     if ( getLogger().isDebugEnabled() )
@@ -1020,8 +1035,12 @@ public class DefaultMavenProjectBuilder
 
                     if ( !parentDescriptor.exists() )
                     {
-                        throw new ProjectBuildingException( projectId, "missing parent project descriptor: " +
-                            parentDescriptor.getAbsolutePath() );
+                        if ( getLogger().isDebugEnabled() )
+                        {
+                            getLogger().debug( "Parent-POM: " + parentModel.getId() + " for project: " + project.getId() + " cannot be loaded from relative path: " + parentDescriptor + "; path does not exist." );
+                        }
+
+                        parentDescriptor = null;
                     }
                 }
 
@@ -1068,6 +1087,10 @@ public class DefaultMavenProjectBuilder
                             "\n  Specified: " + parentModel.getId() + "\n  Found:     " + candidateParent.getId() );
                     }
                 }
+                else if ( getLogger().isDebugEnabled() )
+                {
+                    getLogger().debug( "Parent-POM: " + parentModel.getId() + " not found in relative path: " + parentRelativePath );
+                }
             }
 
             Artifact parentArtifact = null;
@@ -1084,17 +1107,30 @@ public class DefaultMavenProjectBuilder
                 // as we go in order to do this.
                 // ----------------------------------------------------------------------
 
-                getLogger().debug( "Retrieving parent-POM from the repository for project: " + project.getId() );
+                // we must add the repository this POM was found in too, by chance it may be located where the parent is
+                // we can't query the parent to ask where it is :)
+                List remoteRepositories = new ArrayList( aggregatedRemoteWagonRepositories );
+                remoteRepositories.addAll( parentSearchRepositories );
+
+                if ( getLogger().isDebugEnabled() )
+                {
+                    getLogger().debug(
+                                       "Retrieving parent-POM: " + parentModel.getId() + " for project: "
+                                           + project.getId() + " from the repository." );
+                }
 
                 parentArtifact = artifactFactory.createParentArtifact( parentModel.getGroupId(),
                                                                        parentModel.getArtifactId(),
                                                                        parentModel.getVersion() );
 
-                // we must add the repository this POM was found in too, by chance it may be located where the parent is
-                // we can't query the parent to ask where it is :)
-                List remoteRepositories = new ArrayList( aggregatedRemoteWagonRepositories );
-                remoteRepositories.addAll( parentSearchRepositories );
-                model = findModelFromRepository( parentArtifact, remoteRepositories, localRepository, false );
+                try
+                {
+                    model = findModelFromRepository( parentArtifact, remoteRepositories, localRepository, false );
+                }
+                catch( ProjectBuildingException e )
+                {
+                    throw new ProjectBuildingException( project.getId(), "Cannot find parent: " + e.getProjectId() + " for project: " + project.getId(), e );
+                }
             }
 
             if ( model != null && !"pom".equals( model.getPackaging() ) )

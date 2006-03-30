@@ -258,6 +258,25 @@ it0094: Test classloading issues with mojos after 2.0 (MNG-1898).
 
 it0095: Test URL calculation when modules are in sibling dirs of parent. (MNG-2006)
 
+it0096: Test that plugin executions from >1 step of inheritance don't run multiple times. 
+
+it0097: Test that the implied relative path for the parent POM works, even two
+        levels deep.
+
+it0098: Test that quoted system properties are processed correctly. [MNG-1415]
+
+it0099: Test that parent-POMs cached during a build are available as parents
+        to other POMs in the multimodule build. [MNG-2130]
+
+it0100: Test that ${parent.artifactId} resolves correctly. [MNG-2124]
+
+it0101: Test that properties defined in an active profile in the user's
+        settings are available for interpolation of systemPath in a dependency.
+        [MNG-2052]
+
+it0102: Test that <activeByDefault/> calculations for profile activation only
+        use profiles defined in the POM. [MNG-2136]
+
 -------------------------------------------------------------------------------
 
 - generated sources
