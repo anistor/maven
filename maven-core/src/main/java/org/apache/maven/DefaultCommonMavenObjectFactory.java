@@ -29,19 +29,32 @@ public class DefaultCommonMavenObjectFactory
 
     private MavenSettingsBuilder settingsBuilder;
 
-    public ArtifactRepository createLocalRepository( File localRepositoryPath,
+    // ----------------------------------------------------------------------------
+    // ArtifactRepository
+    // ----------------------------------------------------------------------------
+
+    public ArtifactRepository createLocalRepository( File directory,
                                                      boolean offline,
                                                      boolean updateSnapshots,
                                                      String globalChecksumPolicy )
     {
-        String localRepositoryUrl = localRepositoryPath.getAbsolutePath();
+        String localRepositoryUrl = directory.getAbsolutePath();
 
         if ( !localRepositoryUrl.startsWith( "file:" ) )
         {
             localRepositoryUrl = "file://" + localRepositoryUrl;
         }
 
-        ArtifactRepository localRepository = new DefaultArtifactRepository( "local", localRepositoryUrl, repositoryLayout );
+        return createRepository( "local", localRepositoryUrl, false, true, ArtifactRepositoryPolicy.CHECKSUM_POLICY_WARN );
+    }
+
+    protected ArtifactRepository createRepository( String repositoryId,
+                                                   String repositoryUrl,
+                                                   boolean offline,
+                                                   boolean updateSnapshots,
+                                                   String globalChecksumPolicy )
+    {
+        ArtifactRepository localRepository = new DefaultArtifactRepository( repositoryId, repositoryUrl, repositoryLayout );
 
         boolean snapshotPolicySet = false;
 
@@ -55,10 +68,15 @@ public class DefaultCommonMavenObjectFactory
             artifactRepositoryFactory.setGlobalUpdatePolicy( ArtifactRepositoryPolicy.UPDATE_POLICY_ALWAYS );
         }
 
-        artifactRepositoryFactory.setGlobalChecksumPolicy( globalChecksumPolicy );
+        artifactRepositoryFactory.setGlobalChecksumPolicy( globalChecksumPolicy  );
 
         return localRepository;
     }
+
+
+    // ----------------------------------------------------------------------------
+    // Settings
+    // ----------------------------------------------------------------------------
 
     public Settings buildSettings( File userSettingsPath,
                                    File globalSettingsPath,
@@ -68,7 +86,7 @@ public class DefaultCommonMavenObjectFactory
                                    Boolean pluginUpdateOverride )
         throws SettingsConfigurationException
     {
-        Settings settings = null;
+        Settings settings;
 
         try
         {
