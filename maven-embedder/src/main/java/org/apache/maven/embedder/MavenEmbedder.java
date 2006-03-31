@@ -16,11 +16,9 @@ package org.apache.maven.embedder;
  * limitations under the License.
  */
 
-import org.apache.maven.Maven;
 import org.apache.maven.CommonMavenObjectFactory;
+import org.apache.maven.Maven;
 import org.apache.maven.SettingsConfigurationException;
-import org.apache.maven.reactor.MavenExecutionException;
-import org.apache.maven.execution.MavenExecutionRequest;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.factory.ArtifactFactory;
 import org.apache.maven.artifact.manager.WagonManager;
@@ -31,6 +29,7 @@ import org.apache.maven.artifact.repository.layout.ArtifactRepositoryLayout;
 import org.apache.maven.artifact.resolver.ArtifactNotFoundException;
 import org.apache.maven.artifact.resolver.ArtifactResolutionException;
 import org.apache.maven.artifact.resolver.ArtifactResolver;
+import org.apache.maven.execution.MavenExecutionRequest;
 import org.apache.maven.lifecycle.LifecycleExecutor;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
@@ -43,6 +42,7 @@ import org.apache.maven.profiles.ProfileManager;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.MavenProjectBuilder;
 import org.apache.maven.project.ProjectBuildingException;
+import org.apache.maven.reactor.MavenExecutionException;
 import org.apache.maven.settings.MavenSettingsBuilder;
 import org.apache.maven.settings.RuntimeInfo;
 import org.apache.maven.settings.Settings;
@@ -380,8 +380,6 @@ public class MavenEmbedder
     // Execution of phases/goals
     // ----------------------------------------------------------------------
 
-
-
     // ----------------------------------------------------------------------
     // Lifecycle information
     // ----------------------------------------------------------------------
@@ -466,15 +464,6 @@ public class MavenEmbedder
     // ----------------------------------------------------------------------
     // Internal utility code
     // ----------------------------------------------------------------------
-
-    private RuntimeInfo createRuntimeInfo( Settings settings )
-    {
-        RuntimeInfo runtimeInfo = new RuntimeInfo( settings );
-
-        runtimeInfo.setPluginUpdateOverride( Boolean.FALSE );
-
-        return runtimeInfo;
-    }
 
     private List getPomFiles( File basedir, String[] includes, String[] excludes )
     {
@@ -570,11 +559,7 @@ public class MavenEmbedder
 
             wagonManager = (WagonManager) embedder.lookup( WagonManager.ROLE );
 
-            createMavenSettings();
-
             profileManager.loadSettingsProfiles( settings );
-
-            //localRepository = createLocalRepository( settings );
         }
         catch ( PlexusContainerException e )
         {
@@ -599,60 +584,6 @@ public class MavenEmbedder
         if ( new File( userHome, ".m2" ).exists() )
         {
             alignWithUserInstallation = true;
-        }
-    }
-
-    /**
-     * Create the Settings that will be used with the embedder. If we are aligning with the user
-     * installation then we lookup the standard settings builder and use that to create our
-     * settings. Otherwise we constructs a settings object and populate the information
-     * ourselves.
-     *
-     * @throws MavenEmbedderException
-     * @throws ComponentLookupException
-     */
-    private void createMavenSettings()
-        throws MavenEmbedderException, ComponentLookupException
-    {
-        if ( alignWithUserInstallation )
-        {
-            // ----------------------------------------------------------------------
-            // We will use the standard method for creating the settings. This
-            // method reproduces the method of building the settings from the CLI
-            // mode of operation.
-            // ----------------------------------------------------------------------
-
-            settingsBuilder = (MavenSettingsBuilder) embedder.lookup( MavenSettingsBuilder.ROLE );
-
-            try
-            {
-                settings = settingsBuilder.buildSettings( null, null );
-            }
-            catch ( IOException e )
-            {
-                throw new MavenEmbedderException( "Error creating settings.", e );
-            }
-            catch ( XmlPullParserException e )
-            {
-                throw new MavenEmbedderException( "Error creating settings.", e );
-            }
-        }
-        else
-        {
-            if ( localRepository == null )
-            {
-                throw new IllegalArgumentException( "When not aligning with a user install you must specify a local repository location using the setLocalRepositoryDirectory( File ) method." );
-            }
-
-            settings = new Settings();
-
-            settings.setLocalRepository( localRepositoryDirectory.getAbsolutePath() );
-
-            settings.setRuntimeInfo( createRuntimeInfo( settings ) );
-
-            settings.setOffline( offline );
-
-            settings.setInteractiveMode( interactiveMode );
         }
     }
 
