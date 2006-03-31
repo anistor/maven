@@ -263,7 +263,7 @@ public class DefaultMavenProjectBuilder
 
         try
         {
-            project = processProjectLogic( "<Super-POM>", project, null, null, true );
+            project = processProjectLogic( "<Super-POM>", project, null, null, STRICT_MODEL_PARSING );
 
             project.setExecutionRoot( true );
 
@@ -409,7 +409,7 @@ public class DefaultMavenProjectBuilder
                                                       boolean checkDistributionManagementStatus )
         throws ProjectBuildingException
     {
-        Model model = readModel( "unknown", projectDescriptor, true );
+        Model model = readModel( "unknown", projectDescriptor, STRICT_MODEL_PARSING );
 
         MavenProject project = buildInternal( projectDescriptor.getAbsolutePath(),
                                               model,
@@ -417,7 +417,7 @@ public class DefaultMavenProjectBuilder
                                               buildArtifactRepositories( getSuperModel() ),
                                               projectDescriptor,
                                               profileManager,
-                                              true );
+                                              STRICT_MODEL_PARSING );
 
         if ( checkDistributionManagementStatus )
         {
@@ -466,7 +466,7 @@ public class DefaultMavenProjectBuilder
 
             File file = projectArtifact.getFile();
 
-            model = readModel( projectId, file, false );
+            model = readModel( projectId, file, STRICT_MODEL_PARSING );
 
             String downloadUrl = null;
 
@@ -1451,7 +1451,7 @@ public class DefaultMavenProjectBuilder
 
         String projectId = safeVersionlessKey( STANDALONE_SUPERPOM_GROUPID, STANDALONE_SUPERPOM_ARTIFACTID );
 
-        return readModel( projectId, url, true );
+        return readModel( projectId, url, STRICT_MODEL_PARSING );
     }
 
     public void contextualize( Context context )

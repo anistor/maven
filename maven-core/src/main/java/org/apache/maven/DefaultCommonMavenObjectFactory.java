@@ -62,8 +62,7 @@ public class DefaultCommonMavenObjectFactory
             localRepositoryUrl = "file://" + localRepositoryUrl;
         }
 
-        return createRepository( "local", localRepositoryUrl, false, true,
-                                 ArtifactRepositoryPolicy.CHECKSUM_POLICY_WARN );
+        return createRepository( "local", localRepositoryUrl, false, true, ArtifactRepositoryPolicy.CHECKSUM_POLICY_WARN );
     }
 
     public ArtifactRepository createRepository( String repositoryId,
