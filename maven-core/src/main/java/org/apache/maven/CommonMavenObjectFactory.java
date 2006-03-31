@@ -17,11 +17,18 @@ public interface CommonMavenObjectFactory
                                               boolean updateSnapshots,
                                               String globalChecksumPolicy );
 
-    public Settings buildSettings( File userSettingsPath,
-                                   File globalSettingsPath,
-                                   boolean interactive,
-                                   boolean offline,
-                                   boolean usePluginRegistry,
-                                   Boolean pluginUpdateOverride )
+    ArtifactRepository createRepository( String repositoryId,
+                                         String repositoryUrl,
+                                         boolean offline,
+                                         boolean updateSnapshots,
+                                         String globalChecksumPolicy );
+
+
+    Settings buildSettings( File userSettingsPath,
+                            File globalSettingsPath,
+                            boolean interactive,
+                            boolean offline,
+                            boolean usePluginRegistry,
+                            Boolean pluginUpdateOverride )
         throws SettingsConfigurationException;
 }

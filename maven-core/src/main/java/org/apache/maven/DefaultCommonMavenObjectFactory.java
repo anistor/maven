@@ -35,7 +35,8 @@ import java.util.Iterator;
  * @author Jason van Zyl
  */
 public class DefaultCommonMavenObjectFactory
-    implements CommonMavenObjectFactory, Contextualizable
+    implements CommonMavenObjectFactory,
+    Contextualizable
 {
     private ArtifactRepositoryLayout repositoryLayout;
 
@@ -61,16 +62,18 @@ public class DefaultCommonMavenObjectFactory
             localRepositoryUrl = "file://" + localRepositoryUrl;
         }
 
-        return createRepository( "local", localRepositoryUrl, false, true, ArtifactRepositoryPolicy.CHECKSUM_POLICY_WARN );
+        return createRepository( "local", localRepositoryUrl, false, true,
+                                 ArtifactRepositoryPolicy.CHECKSUM_POLICY_WARN );
     }
 
-    protected ArtifactRepository createRepository( String repositoryId,
-                                                   String repositoryUrl,
-                                                   boolean offline,
-                                                   boolean updateSnapshots,
-                                                   String globalChecksumPolicy )
+    public ArtifactRepository createRepository( String repositoryId,
+                                                String repositoryUrl,
+                                                boolean offline,
+                                                boolean updateSnapshots,
+                                                String globalChecksumPolicy )
     {
-        ArtifactRepository localRepository = new DefaultArtifactRepository( repositoryId, repositoryUrl, repositoryLayout );
+        ArtifactRepository localRepository =
+            new DefaultArtifactRepository( repositoryId, repositoryUrl, repositoryLayout );
 
         boolean snapshotPolicySet = false;
 
@@ -84,11 +87,10 @@ public class DefaultCommonMavenObjectFactory
             artifactRepositoryFactory.setGlobalUpdatePolicy( ArtifactRepositoryPolicy.UPDATE_POLICY_ALWAYS );
         }
 
-        artifactRepositoryFactory.setGlobalChecksumPolicy( globalChecksumPolicy  );
+        artifactRepositoryFactory.setGlobalChecksumPolicy( globalChecksumPolicy );
 
         return localRepository;
     }
-
 
     // ----------------------------------------------------------------------------
     // Settings
@@ -106,7 +108,7 @@ public class DefaultCommonMavenObjectFactory
 
         try
         {
-                settings = settingsBuilder.buildSettings( userSettingsPath, globalSettingsPath );
+            settings = settingsBuilder.buildSettings( userSettingsPath, globalSettingsPath );
         }
         catch ( IOException e )
         {
@@ -151,8 +153,7 @@ public class DefaultCommonMavenObjectFactory
         {
             Repository mavenRepo = (Repository) i.next();
 
-            ArtifactRepository artifactRepo =
-                buildArtifactRepository( mavenRepo );
+            ArtifactRepository artifactRepo = buildArtifactRepository( mavenRepo );
 
             if ( !repos.contains( artifactRepo ) )
             {
