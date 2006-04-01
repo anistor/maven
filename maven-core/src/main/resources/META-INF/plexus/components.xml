@@ -62,29 +62,7 @@
       <role>org.apache.maven.project.path.PathTranslator</role>
       <implementation>org.apache.maven.project.path.DefaultPathTranslator</implementation>
     </component>
-    <!--
-     |
-     |
-     |
-     -->
-
-    <component>
-      <role>org.apache.maven.CommonMavenObjectFactory</role>
-      <implementation>org.apache.maven.DefaultCommonMavenObjectFactory</implementation>
-      <requirements>
-        <requirement>
-          <role>org.apache.maven.artifact.repository.layout.ArtifactRepositoryLayout</role>
-          <role-hint>default</role-hint>
-        </requirement>
-        <requirement>
-          <role>org.apache.maven.artifact.repository.ArtifactRepositoryFactory</role>
-        </requirement>
-        <requirement>
-          <role>org.apache.maven.settings.MavenSettingsBuilder</role>
-        </requirement>
-      </requirements>
-    </component>
-
+    
     <component>
       <role>org.apache.maven.Maven</role>
       <implementation>org.apache.maven.DefaultMaven</implementation>
