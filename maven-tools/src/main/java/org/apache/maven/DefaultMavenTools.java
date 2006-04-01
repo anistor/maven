@@ -34,8 +34,8 @@ import java.util.Iterator;
  *
  * @author Jason van Zyl
  */
-public class DefaultCommonMavenObjectFactory
-    implements CommonMavenObjectFactory,
+public class DefaultMavenTools
+    implements MavenTools,
     Contextualizable
 {
     private ArtifactRepositoryLayout repositoryLayout;
@@ -204,7 +204,7 @@ public class DefaultCommonMavenObjectFactory
         }
     }
 
-    private ArtifactRepositoryPolicy buildArtifactRepositoryPolicy( RepositoryPolicy policy )
+    public ArtifactRepositoryPolicy buildArtifactRepositoryPolicy( RepositoryPolicy policy )
     {
         boolean enabled = true;
         String updatePolicy = null;

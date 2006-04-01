@@ -83,7 +83,7 @@
           <role>org.apache.maven.artifact.manager.WagonManager</role>
         </requirement>
         <requirement>
-          <role>org.apache.maven.CommonMavenObjectFactory</role>
+          <role>org.apache.maven.MavenTools</role>
         </requirement>
       </requirements>
     </component>

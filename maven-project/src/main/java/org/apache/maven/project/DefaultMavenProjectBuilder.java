@@ -60,6 +60,7 @@ import org.apache.maven.project.path.PathTranslator;
 import org.apache.maven.project.validation.ModelValidationResult;
 import org.apache.maven.project.validation.ModelValidator;
 import org.apache.maven.wagon.events.TransferListener;
+import org.apache.maven.MavenTools;
 import org.codehaus.plexus.PlexusConstants;
 import org.codehaus.plexus.PlexusContainer;
 import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
@@ -135,8 +136,7 @@ public class DefaultMavenProjectBuilder
     extends AbstractLogEnabled
     implements MavenProjectBuilder, Initializable, Contextualizable
 {
-    // TODO: remove
-    private PlexusContainer container;
+    protected PlexusContainer container;
 
     protected MavenProfilesBuilder profilesBuilder;
 
@@ -164,6 +164,8 @@ public class DefaultMavenProjectBuilder
     private ModelInterpolator modelInterpolator;
 
     private ArtifactRepositoryFactory artifactRepositoryFactory;
+
+    private MavenTools mavenTools;
 
     // ----------------------------------------------------------------------
     // I am making this available for use with a new method that takes a
@@ -653,7 +655,7 @@ public class DefaultMavenProjectBuilder
                 ArtifactRepository artifactRepo = null;
                 try
                 {
-                    artifactRepo = ProjectUtils.buildArtifactRepository( mavenRepo, artifactRepositoryFactory, container );
+                    artifactRepo = mavenTools.buildArtifactRepository( mavenRepo );
                 }
                 catch ( InvalidRepositoryException e )
                 {
@@ -789,7 +791,9 @@ public class DefaultMavenProjectBuilder
     {
         try
         {
-            return ProjectUtils.buildArtifactRepositories( model.getRepositories(), artifactRepositoryFactory, container );
+            System.out.println( "mavenTools = " + mavenTools );
+
+            return mavenTools.buildArtifactRepositories( model.getRepositories() );
         }
         catch ( InvalidRepositoryException e )
         {
@@ -867,22 +871,17 @@ public class DefaultMavenProjectBuilder
                                                                         project.getVersion(), project.getPackaging() );
         project.setArtifact( projectArtifact );
 
-        project.setPluginArtifactRepositories( ProjectUtils.buildArtifactRepositories( model.getPluginRepositories(),
-                                                                                       artifactRepositoryFactory,
-                                                                                       container ) );
+        project.setPluginArtifactRepositories( mavenTools.buildArtifactRepositories( model.getPluginRepositories() ) );
 
         DistributionManagement dm = model.getDistributionManagement();
         if ( dm != null )
         {
-            ArtifactRepository repo = ProjectUtils.buildDeploymentArtifactRepository( dm.getRepository(),
-                                                                                      artifactRepositoryFactory,
-                                                                                      container );
+            ArtifactRepository repo = mavenTools.buildDeploymentArtifactRepository( dm.getRepository() );
             project.setReleaseArtifactRepository( repo );
 
             if ( dm.getSnapshotRepository() != null )
             {
-                repo = ProjectUtils.buildDeploymentArtifactRepository( dm.getSnapshotRepository(),
-                                                                       artifactRepositoryFactory, container );
+                repo = mavenTools.buildDeploymentArtifactRepository( dm.getSnapshotRepository() );
                 project.setSnapshotArtifactRepository( repo );
             }
         }
@@ -909,7 +908,7 @@ public class DefaultMavenProjectBuilder
         }
 
         project.setRemoteArtifactRepositories(
-            ProjectUtils.buildArtifactRepositories( model.getRepositories(), artifactRepositoryFactory, container ) );
+            mavenTools.buildArtifactRepositories( model.getRepositories() ) );
 
         // TODO: these aren't taking active project artifacts into consideration in the reactor
         project.setPluginArtifacts( createPluginArtifacts( projectId, project.getBuildPlugins() ) );

@@ -16,8 +16,8 @@ package org.apache.maven.embedder;
  * limitations under the License.
  */
 
-import org.apache.maven.CommonMavenObjectFactory;
 import org.apache.maven.Maven;
+import org.apache.maven.MavenTools;
 import org.apache.maven.SettingsConfigurationException;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.factory.ArtifactFactory;
@@ -44,7 +44,6 @@ import org.apache.maven.project.MavenProjectBuilder;
 import org.apache.maven.project.ProjectBuildingException;
 import org.apache.maven.reactor.MavenExecutionException;
 import org.apache.maven.settings.MavenSettingsBuilder;
-import org.apache.maven.settings.RuntimeInfo;
 import org.apache.maven.settings.Settings;
 import org.apache.maven.wagon.events.TransferListener;
 import org.codehaus.classworlds.ClassWorld;
@@ -119,7 +118,7 @@ public class MavenEmbedder
 
     private Maven maven;
 
-    private CommonMavenObjectFactory mavenObjectFactory;
+    private MavenTools mavenTools;
 
     // ----------------------------------------------------------------------
     // Configuration
@@ -535,7 +534,7 @@ public class MavenEmbedder
 
             maven = (Maven) embedder.lookup( Maven.ROLE );
 
-            mavenObjectFactory = (CommonMavenObjectFactory) embedder.lookup( CommonMavenObjectFactory.ROLE );
+            mavenTools = (MavenTools) embedder.lookup( MavenTools.ROLE );
 
             pluginDescriptorBuilder = new PluginDescriptorBuilder();
 
@@ -628,7 +627,7 @@ public class MavenEmbedder
                                    Boolean pluginUpdateOverride )
         throws SettingsConfigurationException
     {
-        return mavenObjectFactory.buildSettings( userSettingsPath,
+        return mavenTools.buildSettings( userSettingsPath,
                                                  globalSettingsPath,
                                                  interactive,
                                                  offline,

@@ -1,16 +1,22 @@
 package org.apache.maven;
 
 import org.apache.maven.artifact.repository.ArtifactRepository;
+import org.apache.maven.artifact.repository.ArtifactRepositoryPolicy;
+import org.apache.maven.artifact.InvalidRepositoryException;
 import org.apache.maven.settings.Settings;
+import org.apache.maven.model.DeploymentRepository;
+import org.apache.maven.model.Repository;
+import org.apache.maven.model.RepositoryPolicy;
 
 import java.io.File;
+import java.util.List;
 
 /**
  * @author Jason van Zyl
  */
-public interface CommonMavenObjectFactory
+public interface MavenTools
 {
-    static String ROLE = CommonMavenObjectFactory.class.getName();
+    static String ROLE = MavenTools.class.getName();
 
     ArtifactRepository createLocalRepository( File localRepositoryPath,
                                               boolean offline,
@@ -31,4 +37,14 @@ public interface CommonMavenObjectFactory
                             boolean usePluginRegistry,
                             Boolean pluginUpdateOverride )
         throws SettingsConfigurationException;
+
+    List buildArtifactRepositories( List repositories )
+        throws InvalidRepositoryException;
+
+    ArtifactRepository buildDeploymentArtifactRepository( DeploymentRepository repo )
+        throws InvalidRepositoryException;
+
+    ArtifactRepository buildArtifactRepository( Repository repo )
+        throws InvalidRepositoryException;
+
 }

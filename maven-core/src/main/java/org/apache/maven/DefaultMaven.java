@@ -101,7 +101,7 @@ public class DefaultMaven
 
     protected LoggerManager loggerManager;
 
-    protected CommonMavenObjectFactory mavenObjectFactory;
+    protected MavenTools mavenTools;
 
     private static final long MB = 1024 * 1024;
 
@@ -116,7 +116,7 @@ public class DefaultMaven
     public void execute( MavenExecutionRequest request )
         throws MavenExecutionException
     {
-        request.setLocalRepository( mavenObjectFactory.createLocalRepository( request.getLocalRepositoryPath(),
+        request.setLocalRepository( mavenTools.createLocalRepository( request.getLocalRepositoryPath(),
                                                                               request.isOffline(),
                                                                               request.isUpdateSnapshots(),
                                                                               request.getGlobalChecksumPolicy() ) );
