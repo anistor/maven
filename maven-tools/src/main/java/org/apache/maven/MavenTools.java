@@ -16,7 +16,37 @@ import java.util.List;
  */
 public interface MavenTools
 {
-    static String ROLE = MavenTools.class.getName();
+    String ROLE = MavenTools.class.getName();
+
+    String userHome = System.getProperty( "user.home" );
+
+    File userMavenConfigurationHome = new File( userHome, ".m2" );
+
+    String mavenHome = System.getProperty( "maven.home" );
+
+    // ----------------------------------------------------------------------
+    // Settings
+    // ----------------------------------------------------------------------
+
+    File defaultUserSettingsFile = new File( userMavenConfigurationHome, "settings.xml" );
+
+    File defaultGlobalSettingsFile = new File( mavenHome, "conf/settings.xml" );
+
+    String ALT_USER_SETTINGS_XML_LOCATION = "org.apache.maven.user-settings";
+
+    String ALT_GLOBAL_SETTINGS_XML_LOCATION = "org.apache.maven.global-settings";
+
+    // ----------------------------------------------------------------------
+    // Local Repository
+    // ----------------------------------------------------------------------
+
+    String ALT_LOCAL_REPOSITORY_LOCATION = "maven.repo.local";
+
+    File defaultUserLocalRepository = new File( userMavenConfigurationHome, "repository" );
+
+    // ----------------------------------------------------------------------------
+    //
+    // ----------------------------------------------------------------------------
 
     ArtifactRepository createLocalRepository( File localRepositoryPath,
                                               boolean offline,
@@ -37,6 +67,20 @@ public interface MavenTools
                             boolean usePluginRegistry,
                             Boolean pluginUpdateOverride )
         throws SettingsConfigurationException;
+
+    // ----------------------------------------------------------------------------
+    // Methods taken from CLI
+    // ----------------------------------------------------------------------------
+
+    File getUserSettingsPath( String optionalSettingsPath );
+
+    File getGlobalSettingsPath();
+
+    String getLocalRepositoryPath( Settings settings );
+
+    // ----------------------------------------------------------------------------
+    // Methods taken from ProjectUtils
+    // ----------------------------------------------------------------------------
 
     List buildArtifactRepositories( List repositories )
         throws InvalidRepositoryException;

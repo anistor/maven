@@ -28,10 +28,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 
 /**
- * A small utility that provides a common place for creating object instances that are used frequently in Maven:
- * ArtifactRepositories, Artifacts .... A facade for all factories we have lying around. This could very well
- * belong somewhere else but is here for the maven-embedder-refactor.
- *
  * @author Jason van Zyl
  */
 public class DefaultMavenTools
@@ -242,6 +238,92 @@ public class DefaultMavenTools
                 "\' for remote repository with id: \'" + mavenRepo.getId() + "\'.", e );
         }
         return repositoryLayout;
+    }
+
+    // ----------------------------------------------------------------------------
+    //
+    // ----------------------------------------------------------------------------
+
+    /**
+     * Retrieve the user settings path using the followiwin search pattern:
+     * <p/>
+     * 1. System Property
+     * 2. Optional path
+     * 3. ${user.home}/.m2/settings.xml
+     */
+    public File getUserSettingsPath( String optionalSettingsPath )
+    {
+
+
+        
+
+        File userSettingsPath = new File( System.getProperty( ALT_USER_SETTINGS_XML_LOCATION ) + "" );
+
+        if ( !userSettingsPath.exists() )
+        {
+            if ( optionalSettingsPath != null )
+            {
+                File optionalSettingsPathFile = new File( optionalSettingsPath );
+
+                if ( optionalSettingsPathFile.exists() )
+                {
+                    userSettingsPath = optionalSettingsPathFile;
+                }
+                else
+                {
+                    userSettingsPath = defaultUserSettingsFile;
+                }
+            }
+            else
+            {
+                userSettingsPath = defaultUserSettingsFile;
+            }
+        }
+
+        return userSettingsPath;
+    }
+
+    /**
+     * Retrieve the global settings path using the followiwin search pattern:
+     * <p/>
+     * 1. System Property
+     * 2. CLI Option
+     * 3. ${maven.home}/conf/settings.xml
+     */
+    public File getGlobalSettingsPath()
+    {
+        File globalSettingsFile = new File( System.getProperty( ALT_GLOBAL_SETTINGS_XML_LOCATION ) + "" );
+
+        if ( !globalSettingsFile.exists() )
+        {
+            globalSettingsFile = defaultGlobalSettingsFile;
+        }
+
+        return globalSettingsFile;
+    }
+
+    /**
+     * Retrieve the local repository path using the followiwin search pattern:
+     * <p/>
+     * 1. System Property
+     * 2. localRepository specified in user settings file
+     * 3. ${user.home}/.m2/repository
+     */
+    public String getLocalRepositoryPath( Settings settings )
+    {
+        String localRepositoryPath = System.getProperty( ALT_LOCAL_REPOSITORY_LOCATION );
+
+        if ( localRepositoryPath == null )
+        {
+            localRepositoryPath = settings.getLocalRepository();
+        }
+
+        if ( localRepositoryPath == null )
+        {
+            localRepositoryPath = defaultUserLocalRepository.getAbsolutePath();
+        }
+
+        return localRepositoryPath;
     }
 
     // ----------------------------------------------------------------------------

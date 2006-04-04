@@ -634,4 +634,19 @@ public class MavenEmbedder
                                                  usePluginRegistry,
                                                  pluginUpdateOverride );
     }
+
+    public File getUserSettingsPath( String optionalSettingsPath )
+    {
+        return mavenTools.getUserSettingsPath( optionalSettingsPath );
+    }
+
+    public File getGlobalSettingsPath()
+    {
+        return mavenTools.getGlobalSettingsPath();
+    }
+
+    public String getLocalRepositoryPath( Settings settings )
+    {
+        return mavenTools.getLocalRepositoryPath( settings );
+    }
 }
