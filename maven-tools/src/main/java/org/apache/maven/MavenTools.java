@@ -1,12 +1,10 @@
 package org.apache.maven;
 
-import org.apache.maven.artifact.repository.ArtifactRepository;
-import org.apache.maven.artifact.repository.ArtifactRepositoryPolicy;
 import org.apache.maven.artifact.InvalidRepositoryException;
-import org.apache.maven.settings.Settings;
+import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.model.DeploymentRepository;
 import org.apache.maven.model.Repository;
-import org.apache.maven.model.RepositoryPolicy;
+import org.apache.maven.settings.Settings;
 
 import java.io.File;
 import java.util.List;
@@ -48,17 +46,10 @@ public interface MavenTools
     //
     // ----------------------------------------------------------------------------
 
-    ArtifactRepository createLocalRepository( File localRepositoryPath,
-                                              boolean offline,
-                                              boolean updateSnapshots,
-                                              String globalChecksumPolicy );
+    ArtifactRepository createDefaultLocalRepository()
+        throws SettingsConfigurationException;
 
-    ArtifactRepository createRepository( String repositoryId,
-                                         String repositoryUrl,
-                                         boolean offline,
-                                         boolean updateSnapshots,
-                                         String globalChecksumPolicy );
-
+    ArtifactRepository createLocalRepository( File localRepositoryPath );
 
     Settings buildSettings( File userSettingsPath,
                             File globalSettingsPath,
@@ -77,6 +68,9 @@ public interface MavenTools
     File getGlobalSettingsPath();
 
     String getLocalRepositoryPath( Settings settings );
+
+    String getLocalRepositoryPath()
+        throws SettingsConfigurationException;
 
     // ----------------------------------------------------------------------------
     // Methods taken from ProjectUtils

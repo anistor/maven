@@ -791,8 +791,6 @@ public class DefaultMavenProjectBuilder
     {
         try
         {
-            System.out.println( "mavenTools = " + mavenTools );
-
             return mavenTools.buildArtifactRepositories( model.getRepositories() );
         }
         catch ( InvalidRepositoryException e )

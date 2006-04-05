@@ -46,10 +46,13 @@ public class DefaultMavenTools
     // ArtifactRepository
     // ----------------------------------------------------------------------------
 
-    public ArtifactRepository createLocalRepository( File directory,
-                                                     boolean offline,
-                                                     boolean updateSnapshots,
-                                                     String globalChecksumPolicy )
+    public ArtifactRepository createDefaultLocalRepository()
+        throws SettingsConfigurationException
+    {
+        return createLocalRepository( new File( getLocalRepositoryPath() ) );
+    }
+
+    public ArtifactRepository createLocalRepository( File directory )
     {
         String localRepositoryUrl = directory.getAbsolutePath();
 
@@ -253,10 +256,6 @@ public class DefaultMavenTools
      */
     public File getUserSettingsPath( String optionalSettingsPath )
     {
-
-
-        
-
         File userSettingsPath = new File( System.getProperty( ALT_USER_SETTINGS_XML_LOCATION ) + "" );
 
         if ( !userSettingsPath.exists() )
@@ -324,6 +323,23 @@ public class DefaultMavenTools
         }
 
         return localRepositoryPath;
+    }
+
+    public String getLocalRepositoryPath()
+        throws SettingsConfigurationException
+    {
+        return getLocalRepositoryPath( buildSettings( getUserSettingsPath( null ),
+                                                      getGlobalSettingsPath(),
+                                                      false,
+                                                      true,
+                                                      false,
+                                                      Boolean.FALSE) );
+    }
+
+    public ArtifactRepository getLocalRepository()
+        throws SettingsConfigurationException
+    {
+        return createLocalRepository( new File( getLocalRepositoryPath() ) );
     }
 
     // ----------------------------------------------------------------------------
