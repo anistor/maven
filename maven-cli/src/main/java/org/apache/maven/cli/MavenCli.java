@@ -113,13 +113,11 @@ public class MavenCli
 
         //** use CLI option values directly in request where possible
 
-        MavenEmbedder mavenEmbedder = new MavenEmbedder();
+        MavenEmbedder mavenEmbedder;
 
         try
         {
-            mavenEmbedder.setClassWorld( classWorld );
-
-            mavenEmbedder.start();
+            mavenEmbedder = new MavenEmbedder( classWorld );
         }
         catch ( MavenEmbedderException e )
         {
@@ -162,14 +160,7 @@ public class MavenCli
         {
             List goals = commandLine.getArgList();
 
-            boolean recursive = true;
-
             String reactorFailureBehaviour = null;
-
-            if ( commandLine.hasOption( CLIManager.NON_RECURSIVE ) )
-            {
-                recursive = false;
-            }
 
             if ( commandLine.hasOption( CLIManager.FAIL_FAST ) )
             {
@@ -353,21 +344,19 @@ public class MavenCli
                 .setGoals( goals )
                 .setLocalRepositoryPath( localRepositoryPath )
                 .setProperties( executionProperties )
-                .setFailureBehavior( reactorFailureBehaviour )
-                .setRecursive( recursive )
-                .setReactorActive( reactorActive )
+                .setReactorFailureBehavior( reactorFailureBehaviour )
+                .setUseReactor( reactorActive )
                 .setPomFile( alternatePomFile )
                 .setShowErrors( showErrors )
-                .setInteractive( interactive )
+                .setInteractiveMode( interactive )
                 .addActiveProfiles( activeProfiles )
                 .addInactiveProfiles( inactiveProfiles )
                 .setLoggingLevel( loggingLevel )
-                .activateDefaultEventMonitor()
                 .setSettings( settings )
                 .setTransferListener( transferListener )
                 .setOffline( offline )
                 .setUpdateSnapshots( updateSnapshots )
-                .setGlobalChecksumPolicy( globalChecksumPolicy );
+                .setGlobalChecksumPolicy( globalChecksumPolicy );                                
 
             mavenEmbedder.execute( request );
         }

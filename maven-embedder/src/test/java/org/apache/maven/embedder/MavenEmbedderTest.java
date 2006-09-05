@@ -8,18 +8,24 @@ import org.apache.maven.monitor.event.DefaultEventMonitor;
 import org.apache.maven.monitor.event.EventMonitor;
 import org.apache.maven.plugin.descriptor.PluginDescriptor;
 import org.apache.maven.project.MavenProject;
+import org.apache.maven.execution.MavenExecutionRequest;
+import org.apache.maven.execution.DefaultMavenExecutionRequest;
+import org.apache.maven.execution.MavenExecutionResult;
 import org.codehaus.plexus.util.FileUtils;
+import org.codehaus.classworlds.ClassWorld;
 
 import java.io.File;
 import java.util.List;
 import java.util.Set;
+import java.net.URLClassLoader;
+import java.net.URL;
 
 public class MavenEmbedderTest
     extends TestCase
 {
     private String basedir;
 
-    private MavenEmbedder maven;
+    private MavenEmbedder embedder;
 
     protected void setUp()
         throws Exception
@@ -30,19 +36,35 @@ public class MavenEmbedderTest
 
         ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
 
-        maven = new MavenEmbedder();
+        //checkClassLoader( classLoader );
 
-        maven.setClassLoader( classLoader );
+        embedder = new MavenEmbedder( new ClassWorld( "plexus.core", classLoader ),
+                                      new MavenEmbedderConsoleLogger() );
+    }
 
-        maven.setLogger( new MavenEmbedderConsoleLogger() );
+    public void checkClassLoader( ClassLoader classLoader )
+    {
+        System.out.println( "classLoader = " + classLoader );
 
-        maven.start();
+        if ( classLoader instanceof URLClassLoader )
+        {
+            URLClassLoader loader = (URLClassLoader) classLoader;
+
+            URL[] urls = loader.getURLs();
+
+            for ( int i = 0; i < urls.length; i++ )
+            {
+                URL url = urls[i];
+
+                System.out.println( "url = " + url );
+            }
+        }
     }
 
     protected void tearDown()
         throws Exception
     {
-        maven.stop();
+        embedder.stop();
     }
 
     public void xtestMavenEmbedder()
@@ -57,7 +79,7 @@ public class MavenEmbedderTest
     // Goal/Phase execution tests
     // ----------------------------------------------------------------------
 
-    public void xtestPhaseExecution()
+    public void testPhaseExecution()
         throws Exception
     {
         File testDirectory = new File( basedir, "src/test/embedder-test-project" );
@@ -68,52 +90,74 @@ public class MavenEmbedderTest
 
         File pomFile = new File( targetDirectory, "pom.xml" );
 
-        MavenProject pom = maven.readProjectWithDependencies( pomFile );
+        EventMonitor eventMonitor =
+            new DefaultEventMonitor( new PlexusLoggerAdapter( new MavenEmbedderConsoleLogger() ) );
 
-        EventMonitor eventMonitor = new DefaultEventMonitor( new PlexusLoggerAdapter( new MavenEmbedderConsoleLogger() ) );
+        MavenExecutionRequest request = createRequest();
 
-        /*
-        maven.execute( pom,
-                       Collections.singletonList( "package" ),
-                       eventMonitor,
-                       new ConsoleDownloadMonitor(),
-                       new Properties(),
-                       targetDirectory );
-                       */
+        MavenExecutionResult result = embedder.execute( request );
 
         File jar = new File( targetDirectory, "target/embedder-test-project-1.0-SNAPSHOT.jar" );
 
         assertTrue( jar.exists() );
     }
 
+    protected MavenExecutionRequest createRequest()
+    {
+        MavenExecutionRequest request = new DefaultMavenExecutionRequest()
+            .setBasedir( baseDirectory )
+            .setGoals( goals )
+            .setLocalRepositoryPath( localRepositoryPath )
+            .setProperties( executionProperties )
+            .setFailureBehavior( reactorFailureBehaviour )
+            .setRecursive( recursive )
+            .setReactorActive( reactorActive )
+            .setPomFile( alternatePomFile )
+            .setShowErrors( showErrors )
+            .setInteractive( interactive )
+            .addActiveProfiles( activeProfiles )
+            .addInactiveProfiles( inactiveProfiles )
+            .setLoggingLevel( loggingLevel )
+            .activateDefaultEventMonitor()
+            .setSettings( settings )
+            .setTransferListener( transferListener )
+            .setOffline( offline )
+            .setUpdateSnapshots( updateSnapshots )
+            .setGlobalChecksumPolicy( globalChecksumPolicy );
+
+        return request;
+    }
+
     // ----------------------------------------------------------------------
     // Test mock plugin metadata
     // ----------------------------------------------------------------------
 
+    // Disable as the mock data appears to be missing now.
+
     public void xtestMockPluginMetadata()
         throws Exception
     {
-        List plugins = maven.getAvailablePlugins();
+        List plugins = embedder.getAvailablePlugins();
 
         SummaryPluginDescriptor spd = (SummaryPluginDescriptor) plugins.get( 0 );
 
         assertNotNull( spd );
 
-        PluginDescriptor pd = maven.getPluginDescriptor( spd );
+        PluginDescriptor pd = embedder.getPluginDescriptor( spd );
 
         assertNotNull( pd );
 
-        assertEquals( "org.apache.maven.plugins", pd.getGroupId() );
+        assertEquals( "org.apache.embedder.plugins", pd.getGroupId() );
     }
 
     // ----------------------------------------------------------------------
     // Lifecycle phases
     // ----------------------------------------------------------------------
 
-    public void xtestRetrievingLifecyclePhases()
+    public void testRetrievingLifecyclePhases()
         throws Exception
     {
-        List phases = maven.getLifecyclePhases();       
+        List phases = embedder.getLifecyclePhases();
 
         assertEquals( "validate", (String) phases.get( 0 ) );
 
@@ -126,12 +170,11 @@ public class MavenEmbedderTest
     // Repository
     // ----------------------------------------------------------------------
 
-    public void xtestLocalRepositoryRetrieval()
+    public void testLocalRepositoryRetrieval()
         throws Exception
     {
-        assertNotNull( maven.getLocalRepository().getBasedir() );
+        assertNotNull( embedder.getLocalRepository().getBasedir() );
     }
-
 
     // ----------------------------------------------------------------------
     //
@@ -144,17 +187,18 @@ public class MavenEmbedderTest
         // Test model reading
         // ----------------------------------------------------------------------
 
-        Model model = maven.readModel( getPomFile() );
+        Model model = embedder.readModel( getPomFile() );
 
-        assertEquals( "org.apache.maven", model.getGroupId() );
+        assertEquals( "org.apache.embedder", model.getGroupId() );
     }
 
     protected void projectReadingTest()
         throws Exception
     {
-        MavenProject project = maven.readProjectWithDependencies( getPomFile() );
+        //MavenProject project = embedder.readProjectWithDependencies( getPomFile() );
+        MavenProject project = null;
 
-        assertEquals( "org.apache.maven", project.getGroupId() );
+        assertEquals( "org.apache.embedder", project.getGroupId() );
 
         Set artifacts = project.getArtifacts();
 
@@ -170,9 +214,5 @@ public class MavenEmbedderTest
     protected File getPomFile()
     {
         return new File( basedir, "src/test/resources/pom.xml" );
-    }
-
-    public void testNothing()
-    {
     }
 }

@@ -16,7 +16,6 @@ package org.apache.maven.embedder;
  */
 
 import java.io.File;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -24,14 +23,13 @@ import java.util.Properties;
 import org.apache.maven.settings.Settings;
 
 /**
- * Default implementation of MavenEmbedRequest intefrace.
+ * Default implementation of MavenEmbedderConfiguration intefrace.
  *
  * @author mkleint
  */
-public class DefaultMavenEmbedRequest
-    implements MavenEmbedRequest
+public class DefaultMavenEmbedderConfiguration
+    implements MavenEmbedderConfiguration
 {
-
     private List inactives;
 
     private List actives;
@@ -47,31 +45,31 @@ public class DefaultMavenEmbedRequest
     private Properties systemProperties;
 
     /**
-     * Creates a new instance of DefaultMavenEmbedRequest
+     * Creates a new instance of DefaultMavenEmbedderConfiguration
      */
-    public DefaultMavenEmbedRequest()
+    public DefaultMavenEmbedderConfiguration()
     {
     }
 
-    public MavenEmbedRequest addActiveProfile( String profile )
+    public MavenEmbedderConfiguration addActiveProfile( String profile )
     {
         getActiveProfiles().add( profile );
         return this;
     }
 
-    public MavenEmbedRequest addInactiveProfile( String profile )
+    public MavenEmbedderConfiguration addInactiveProfile( String profile )
     {
         getInactiveProfiles().add( profile );
         return this;
     }
 
-    public MavenEmbedRequest addActiveProfiles( List profiles )
+    public MavenEmbedderConfiguration addActiveProfiles( List profiles )
     {
         getActiveProfiles().addAll( profiles );
         return this;
     }
 
-    public MavenEmbedRequest addInactiveProfiles( List profiles )
+    public MavenEmbedderConfiguration addInactiveProfiles( List profiles )
     {
         getInactiveProfiles().addAll( profiles );
         return this;
@@ -95,13 +93,13 @@ public class DefaultMavenEmbedRequest
         return inactives;
     }
 
-    public MavenEmbedRequest setUserSettingsFile( File user )
+    public MavenEmbedderConfiguration setUserSettingsFile( File user )
     {
         userSettings = user;
         return this;
     }
 
-    public MavenEmbedRequest setGlobalSettingsFile( File global )
+    public MavenEmbedderConfiguration setGlobalSettingsFile( File global )
     {
         globalSettings = global;
         return this;
@@ -117,7 +115,7 @@ public class DefaultMavenEmbedRequest
         return globalSettings;
     }
 
-    public MavenEmbedRequest setConfigurationCustomizer( ContainerCustomizer customizer )
+    public MavenEmbedderConfiguration setConfigurationCustomizer( ContainerCustomizer customizer )
     {
         this.customizer = customizer;
         return this;
@@ -128,15 +126,14 @@ public class DefaultMavenEmbedRequest
         return customizer;
     }
 
-    public MavenEmbedRequest setSystemProperties(Properties properties) 
+    public MavenEmbedderConfiguration setSystemProperties( Properties properties )
     {
         systemProperties = properties;
         return this;
     }
 
-    public Properties getSystemProperties() 
+    public Properties getSystemProperties()
     {
         return systemProperties != null ? systemProperties : System.getProperties();
     }
-
 }

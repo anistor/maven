@@ -33,7 +33,6 @@ public class MavenPluginCollector
     extends AbstractLogEnabled
     implements ComponentDiscoveryListener
 {
-
     private Set pluginsInProcess = new HashSet();
 
     private Map pluginDescriptors = new HashMap();
@@ -49,11 +48,13 @@ public class MavenPluginCollector
 
         if ( componentSetDescriptor instanceof PluginDescriptor )
         {
+            System.out.println( "event = " + event.getComponentSetDescriptor() );
+
             PluginDescriptor pluginDescriptor = (PluginDescriptor) componentSetDescriptor;
             
             // TODO: see comment in getPluginDescriptor
             String key = Plugin.constructKey( pluginDescriptor.getGroupId(), pluginDescriptor.getArtifactId() );
-            
+
             if ( !pluginsInProcess.contains( key ) )
             {
                 pluginsInProcess.add( key );
@@ -72,6 +73,10 @@ public class MavenPluginCollector
 
     public PluginDescriptor getPluginDescriptor( Plugin plugin )
     {
+        System.out.println( "this = " + this );
+
+        System.out.println( "pluginDescriptors = " + pluginDescriptors );
+
         // TODO: include version, but can't do this in the plugin manager as it is not resolved to the right version
         // at that point. Instead, move the duplication check to the artifact container, or store it locally based on
         // the unresolved version?
@@ -105,4 +110,8 @@ public class MavenPluginCollector
         }
     }
 
+    public String getId()
+    {
+        return MavenPluginCollector.class.getName();
+    }
 }
