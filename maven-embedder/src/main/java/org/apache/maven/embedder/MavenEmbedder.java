@@ -16,13 +16,12 @@ package org.apache.maven.embedder;
  * limitations under the License.
  */
 
+import org.apache.maven.BuildFailureException;
 import org.apache.maven.Maven;
 import org.apache.maven.MavenTools;
 import org.apache.maven.SettingsConfigurationException;
-import org.apache.maven.BuildFailureException;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.factory.ArtifactFactory;
-import org.apache.maven.artifact.manager.WagonManager;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.artifact.repository.ArtifactRepositoryFactory;
 import org.apache.maven.artifact.repository.ArtifactRepositoryPolicy;
@@ -34,18 +33,17 @@ import org.apache.maven.execution.DefaultMavenExecutionResult;
 import org.apache.maven.execution.MavenExecutionRequest;
 import org.apache.maven.execution.MavenExecutionResult;
 import org.apache.maven.execution.MavenSession;
-import org.apache.maven.lifecycle.LifecycleExecutor;
 import org.apache.maven.lifecycle.LifecycleExecutionException;
-import org.apache.maven.lifecycle.mapping.Lifecycle;
+import org.apache.maven.lifecycle.LifecycleExecutor;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
 import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
+import org.apache.maven.plugin.MojoExecution;
+import org.apache.maven.plugin.PluginManager;
+import org.apache.maven.plugin.PluginNotFoundException;
+import org.apache.maven.plugin.descriptor.MojoDescriptor;
 import org.apache.maven.plugin.descriptor.PluginDescriptor;
 import org.apache.maven.plugin.descriptor.PluginDescriptorBuilder;
-import org.apache.maven.plugin.descriptor.MojoDescriptor;
-import org.apache.maven.plugin.MojoExecution;
-import org.apache.maven.plugin.PluginNotFoundException;
-import org.apache.maven.plugin.PluginManager;
 import org.apache.maven.profiles.DefaultProfileManager;
 import org.apache.maven.profiles.ProfileManager;
 import org.apache.maven.project.MavenProject;
@@ -63,8 +61,8 @@ import org.codehaus.plexus.component.repository.exception.ComponentLookupExcepti
 import org.codehaus.plexus.configuration.PlexusConfiguration;
 import org.codehaus.plexus.configuration.PlexusConfigurationException;
 import org.codehaus.plexus.configuration.xml.XmlPlexusConfiguration;
-import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
+import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
 import java.io.File;
 import java.io.FileReader;
@@ -74,12 +72,11 @@ import java.io.InputStreamReader;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
-import java.util.Iterator;
-import java.util.Map;
 import java.util.Date;
-import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 // collapse embed request into request
 // take the stuff out of the start() and make it part of the request
@@ -89,7 +86,7 @@ import java.util.LinkedHashMap;
 /**
  * Class intended to be used by clients who wish to embed Maven into their applications
  *
- * @author <a href="mailto:jason@maven.org">Jason van Zyl</a>
+ * @author Jason van Zyl
  */
 public class MavenEmbedder
 {
@@ -112,8 +109,6 @@ public class MavenEmbedder
     private MavenProjectBuilder mavenProjectBuilder;
 
     private ArtifactRepositoryFactory artifactRepositoryFactory;
-
-    private WagonManager wagonManager;
 
     private MavenXpp3Reader modelReader;
 
@@ -166,6 +161,8 @@ public class MavenEmbedder
         try
         {
             container = new DefaultPlexusContainer( null, null, null, classWorld );
+
+            container.getContainerRealm().display();
         }
         catch ( PlexusContainerException e )
         {
@@ -212,8 +209,6 @@ public class MavenEmbedder
             defaultArtifactRepositoryLayout =
                 (ArtifactRepositoryLayout) container.lookup( ArtifactRepositoryLayout.ROLE, DEFAULT_LAYOUT_ID );
 
-            wagonManager = (WagonManager) container.lookup( WagonManager.ROLE );
-
             // Components for looking up plugin metadata
 
             lifecycleExecutor = (LifecycleExecutor) container.lookup( LifecycleExecutor.ROLE );
@@ -230,16 +225,6 @@ public class MavenEmbedder
     // ----------------------------------------------------------------------
     // Accessors
     // ----------------------------------------------------------------------
-
-    public void setClassWorld( ClassWorld classWorld )
-    {
-        this.classWorld = classWorld;
-    }
-
-    public ClassWorld getClassWorld()
-    {
-        return classWorld;
-    }
 
     public File getLocalRepositoryDirectory()
     {
@@ -444,6 +429,72 @@ public class MavenEmbedder
         return phases;
     }
 
+    public Map getLifecycleMappings( MavenProject project,
+                                     String lifecycle,
+                                     String lastPhase )
+        throws LifecycleExecutionException, BuildFailureException, PluginNotFoundException
+    {
+        MavenSession session =
+            new MavenSession( container, settings, getLocalRepository(), null, null, null, null, null, new Date() );
+
+        Map lifecycleMappings = lifecycleExecutor.constructLifecycleMappings( session, project, lifecycle, lastPhase );
+
+        Map phases = new LinkedHashMap();
+
+        for ( Iterator i = lifecycleMappings.keySet().iterator(); i.hasNext(); )
+        {
+            String lifecycleId = (String) i.next();
+
+            List mojos = (List) lifecycleMappings.get( lifecycleId );
+
+            Map executions = new LinkedHashMap();
+
+            String groupId;
+
+            String artifactId;
+
+            String goalId;
+
+            for ( Iterator j = mojos.iterator(); j.hasNext(); )
+            {
+                MojoExecution mojoExecution = (MojoExecution) j.next();
+
+                MojoDescriptor mojoDescriptor = mojoExecution.getMojoDescriptor();
+
+                goalId = mojoDescriptor.getGoal();
+
+                groupId = mojoDescriptor.getPluginDescriptor().getGroupId();
+
+                artifactId = mojoDescriptor.getPluginDescriptor().getArtifactId();
+
+                String executionId = mojoExecution.getExecutionId();
+
+                Xpp3Dom goalConfigurationDom = project.getGoalConfiguration( groupId, artifactId, executionId, goalId );
+
+                XmlPlexusConfiguration pomConfiguration;
+
+                if ( goalConfigurationDom == null )
+                {
+                    pomConfiguration = new XmlPlexusConfiguration( "configuration" );
+                }
+                else
+                {
+                    pomConfiguration = new XmlPlexusConfiguration( goalConfigurationDom );
+                }
+
+                PlexusConfiguration mergedConfiguration =
+                    pluginManager.mergeMojoConfiguration( pomConfiguration, mojoDescriptor );
+
+                executions.put( groupId + ":" + artifactId + ":" + goalId, mergedConfiguration );
+
+            }
+
+            phases.put( lifecycleId, executions );
+        }
+
+        return lifecycleMappings;
+    }
+
     // ----------------------------------------------------------------------
     // Remote Repository
     // ----------------------------------------------------------------------
@@ -577,76 +628,6 @@ public class MavenEmbedder
     public String getLocalRepositoryPath( Settings settings )
     {
         return mavenTools.getLocalRepositoryPath( settings );
-    }
-
-    // ----------------------------------------------------------------------------
-    // Lifecycle Metadata
-    // ----------------------------------------------------------------------------
-
-    public Map getLifecycleMappings( MavenProject project,
-                                     String lifecycle,
-                                     String lastPhase )
-        throws LifecycleExecutionException, BuildFailureException, PluginNotFoundException
-    {
-        MavenSession session =
-            new MavenSession( container, settings, getLocalRepository(), null, null, null, null, null, new Date() );
-
-        Map lifecycleMappings = lifecycleExecutor.constructLifecycleMappings( session, project, lifecycle, lastPhase );
-
-        Map phases = new LinkedHashMap();
-
-        for ( Iterator i = lifecycleMappings.keySet().iterator(); i.hasNext(); )
-        {
-            String lifecycleId = (String) i.next();
-
-            List mojos = (List) lifecycleMappings.get( lifecycleId );
-
-            Map executions = new LinkedHashMap();
-
-            String groupId;
-
-            String artifactId;
-
-            String goalId;
-
-            for ( Iterator j = mojos.iterator(); j.hasNext(); )
-            {
-                MojoExecution mojoExecution = (MojoExecution) j.next();
-
-                MojoDescriptor mojoDescriptor = mojoExecution.getMojoDescriptor();
-
-                goalId = mojoDescriptor.getGoal();
-
-                groupId = mojoDescriptor.getPluginDescriptor().getGroupId();
-
-                artifactId = mojoDescriptor.getPluginDescriptor().getArtifactId();
-
-                String executionId = mojoExecution.getExecutionId();
-
-                Xpp3Dom goalConfigurationDom = project.getGoalConfiguration( groupId, artifactId, executionId, goalId );
-
-                XmlPlexusConfiguration pomConfiguration;
-
-                if ( goalConfigurationDom == null )
-                {
-                    pomConfiguration = new XmlPlexusConfiguration( "configuration" );
-                }
-                else
-                {
-                    pomConfiguration = new XmlPlexusConfiguration( goalConfigurationDom );
-                }
-
-                PlexusConfiguration mergedConfiguration =
-                    pluginManager.mergeMojoConfiguration( pomConfiguration, mojoDescriptor );
-
-                executions.put( groupId + ":" + artifactId + ":" + goalId, mergedConfiguration );
-
-            }
-
-            phases.put( lifecycleId, executions );
-        }
-
-        return lifecycleMappings;
     }
 }
 

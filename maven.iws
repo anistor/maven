@@ -17,8 +17,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" name="Default" comment="">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/maven-core/src/main/java/org/apache/maven/plugin/DefaultPluginManager.java" afterPath="$PROJECT_DIR$/maven-core/src/main/java/org/apache/maven/plugin/DefaultPluginManager.java" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/maven-cli/src/main/java/org/apache/maven/cli/MavenCli.java" afterPath="$PROJECT_DIR$/maven-cli/src/main/java/org/apache/maven/cli/MavenCli.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/maven-core/src/main/java/org/apache/maven/plugin/DefaultPluginManager.java" afterPath="$PROJECT_DIR$/maven-core/src/main/java/org/apache/maven/plugin/DefaultPluginManager.java" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/maven-embedder/src/main/java/org/apache/maven/embedder/MavenEmbedder.java" afterPath="$PROJECT_DIR$/maven-embedder/src/main/java/org/apache/maven/embedder/MavenEmbedder.java" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/maven-core/src/main/java/org/apache/maven/lifecycle/DefaultLifecycleExecutor.java" afterPath="$PROJECT_DIR$/maven-core/src/main/java/org/apache/maven/lifecycle/DefaultLifecycleExecutor.java" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/maven-core/src/main/java/org/apache/maven/lifecycle/LifecycleExecutor.java" afterPath="$PROJECT_DIR$/maven-core/src/main/java/org/apache/maven/lifecycle/LifecycleExecutor.java" />
@@ -142,10 +142,10 @@
   <component name="FavoritesProjectViewPane" />
   <component name="FileEditorManager">
     <leaf>
-      <file leaf-file-name="MavenEmbedder.java" pinned="false" current="true" current-in-tab="true">
+      <file leaf-file-name="MavenEmbedder.java" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/maven-embedder/src/main/java/org/apache/maven/embedder/MavenEmbedder.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="266" column="0" selection-start="9768" selection-end="9768" vertical-scroll-proportion="0.13649851">
+            <state line="194" column="35" selection-start="7285" selection-end="7285" vertical-scroll-proportion="-1.2967359">
               <folding>
                 <element signature="imports" expanded="true" />
               </folding>
@@ -153,13 +153,31 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="SettingsAdapter.java" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/maven-embedder/src/main/java/org/apache/maven/embedder/user/SettingsAdapter.java">
+      <file leaf-file-name="MavenCli.java" pinned="false" current="true" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/maven-cli/src/main/java/org/apache/maven/cli/MavenCli.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="12" column="13" selection-start="313" selection-end="313" vertical-scroll-proportion="0.21364985">
+            <state line="495" column="55" selection-start="17564" selection-end="17564" vertical-scroll-proportion="0.78635013">
               <folding>
                 <element signature="imports" expanded="true" />
               </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="CLIManager.java" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/maven-cli/src/main/java/org/apache/maven/cli/CLIManager.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="-0.054628223">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="SystemPropertyProfileActivator.java" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/maven-project/src/main/java/org/apache/maven/profiles/activation/SystemPropertyProfileActivator.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="-0.17804155">
+              <folding />
             </state>
           </provider>
         </entry>
@@ -167,27 +185,7 @@
       <file leaf-file-name="MavenEmbedderTest.java" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/maven-embedder/src/test/java/org/apache/maven/embedder/MavenEmbedderTest.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="210" column="30" selection-start="6597" selection-end="6597" vertical-scroll-proportion="0.89317507">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="DefaultLifecycleExecutor.java" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/maven-core/src/main/java/org/apache/maven/lifecycle/DefaultLifecycleExecutor.java">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="1353" column="17" selection-start="54644" selection-end="54644" vertical-scroll-proportion="0.3323217">
-              <folding>
-                <element signature="imports" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="LifecycleExecutor.java" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/maven-core/src/main/java/org/apache/maven/lifecycle/LifecycleExecutor.java">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="39" column="17" selection-start="1415" selection-end="1415" vertical-scroll-proportion="0.56973296">
+            <state line="94" column="27" selection-start="2774" selection-end="2774" vertical-scroll-proportion="1.2848665">
               <folding />
             </state>
           </provider>
@@ -894,7 +892,7 @@
     </todo-panel>
   </component>
   <component name="ToolWindowManager">
-    <frame x="1" y="22" width="1440" height="821" extended-state="0" />
+    <frame x="0" y="22" width="1440" height="821" extended-state="6" />
     <editor active="true" />
     <layout>
       <window_info id="UI Designer" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" order="3" />
@@ -1005,29 +1003,6 @@
     <option name="myLastEditedConfigurable" />
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/maven-tools/src/main/java/org/apache/maven/DefaultMavenTools.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/maven-cli/src/main/java/org/apache/maven/cli/MavenCli.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="44" column="13" selection-start="1647" selection-end="1647" vertical-scroll-proportion="-0.64688426">
-          <folding>
-            <element signature="imports" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/maven-core/src/main/java/org/apache/maven/DefaultMaven.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="85" column="13" selection-start="3897" selection-end="3897" vertical-scroll-proportion="0.3323442">
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/maven-embedder/src/main/java/org/apache/maven/embedder/MavenEmbedderException.java">
       <provider selected="true" editor-type-id="text-editor">
         <state line="22" column="13" selection-start="810" selection-end="810" vertical-scroll-proportion="0.3916914">
@@ -1110,14 +1085,37 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/maven-embedder/src/test/java/org/apache/maven/embedder/MavenEmbedderTest.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="210" column="30" selection-start="6597" selection-end="6597" vertical-scroll-proportion="0.89317507">
+        <state line="94" column="27" selection-start="2774" selection-end="2774" vertical-scroll-proportion="1.2848665">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/maven-project/src/main/java/org/apache/maven/profiles/activation/SystemPropertyProfileActivator.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="-0.17804155">
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/maven-embedder/src/main/java/org/apache/maven/embedder/MavenEmbedder.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="266" column="0" selection-start="9768" selection-end="9768" vertical-scroll-proportion="0.13649851">
+        <state line="194" column="35" selection-start="7285" selection-end="7285" vertical-scroll-proportion="-1.2967359">
+          <folding>
+            <element signature="imports" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/maven-cli/src/main/java/org/apache/maven/cli/CLIManager.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="-0.054628223">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/maven-cli/src/main/java/org/apache/maven/cli/MavenCli.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="495" column="55" selection-start="17564" selection-end="17564" vertical-scroll-proportion="0.78635013">
           <folding>
             <element signature="imports" expanded="true" />
           </folding>
