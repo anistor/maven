@@ -94,6 +94,8 @@ public class DefaultMavenExecutionRequest
 
     private String globalChecksumPolicy;
 
+    private boolean recursive;
+
     // ----------------------------------------------------------------------
     //
     // ----------------------------------------------------------------------
@@ -199,6 +201,11 @@ public class DefaultMavenExecutionRequest
     public String getGlobalChecksumPolicy()
     {
         return globalChecksumPolicy;
+    }
+
+    public boolean isRecursive()
+    {
+        return recursive;
     }
 
     // ----------------------------------------------------------------------
@@ -451,4 +458,12 @@ public class DefaultMavenExecutionRequest
 
         return this;
     }
+
+    public MavenExecutionRequest setRecursive( boolean recursive )
+    {
+        this.recursive = recursive;
+
+        return this;
+    }
+
 }

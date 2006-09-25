@@ -67,6 +67,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Stack;
 import java.util.StringTokenizer;
+import java.util.LinkedHashMap;
 
 /**
  * @author <a href="mailto:jason@maven.org">Jason van Zyl</a>
@@ -992,7 +993,7 @@ public class DefaultLifecycleExecutor
 
         List optionalMojos = findOptionalMojosForLifecycle( session, project, lifecycle );
 
-        Map lifecycleMappings = new HashMap();
+        Map lifecycleMappings = new LinkedHashMap();
 
         for ( Iterator i = lifecycle.getPhases().iterator(); i.hasNext(); )
         {

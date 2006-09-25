@@ -108,6 +108,11 @@ public interface MavenExecutionRequest
 
     boolean useReactor();
 
+    // Recursive (really to just process the top-level POM)
+    MavenExecutionRequest setRecursive( boolean recursive );
+
+    boolean isRecursive();
+
     // Event monitors
     MavenExecutionRequest addEventMonitor( EventMonitor monitor );
 
