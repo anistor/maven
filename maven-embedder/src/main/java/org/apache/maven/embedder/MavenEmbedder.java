@@ -19,6 +19,7 @@ package org.apache.maven.embedder;
 import org.apache.maven.Maven;
 import org.apache.maven.MavenTools;
 import org.apache.maven.SettingsConfigurationException;
+import org.apache.maven.BuildFailureException;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.factory.ArtifactFactory;
 import org.apache.maven.artifact.manager.WagonManager;
@@ -32,12 +33,19 @@ import org.apache.maven.artifact.resolver.ArtifactResolver;
 import org.apache.maven.execution.DefaultMavenExecutionResult;
 import org.apache.maven.execution.MavenExecutionRequest;
 import org.apache.maven.execution.MavenExecutionResult;
+import org.apache.maven.execution.MavenSession;
 import org.apache.maven.lifecycle.LifecycleExecutor;
+import org.apache.maven.lifecycle.LifecycleExecutionException;
+import org.apache.maven.lifecycle.mapping.Lifecycle;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
 import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
 import org.apache.maven.plugin.descriptor.PluginDescriptor;
 import org.apache.maven.plugin.descriptor.PluginDescriptorBuilder;
+import org.apache.maven.plugin.descriptor.MojoDescriptor;
+import org.apache.maven.plugin.MojoExecution;
+import org.apache.maven.plugin.PluginNotFoundException;
+import org.apache.maven.plugin.PluginManager;
 import org.apache.maven.profiles.DefaultProfileManager;
 import org.apache.maven.profiles.ProfileManager;
 import org.apache.maven.project.MavenProject;
@@ -54,7 +62,9 @@ import org.codehaus.plexus.component.repository.exception.ComponentLifecycleExce
 import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
 import org.codehaus.plexus.configuration.PlexusConfiguration;
 import org.codehaus.plexus.configuration.PlexusConfigurationException;
+import org.codehaus.plexus.configuration.xml.XmlPlexusConfiguration;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
+import org.codehaus.plexus.util.xml.Xpp3Dom;
 
 import java.io.File;
 import java.io.FileReader;
@@ -65,6 +75,11 @@ import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 
 // collapse embed request into request
 // take the stuff out of the start() and make it part of the request
@@ -118,6 +133,10 @@ public class MavenEmbedder
 
     private ArtifactRepository localRepository;
 
+    private LifecycleExecutor lifecycleExecutor;
+
+    private PluginManager pluginManager;
+
     // ----------------------------------------------------------------------
     // Configuration
     // ----------------------------------------------------------------------
@@ -130,14 +149,82 @@ public class MavenEmbedder
     // Constructor
     // ----------------------------------------------------------------------------
 
-    public MavenEmbedder( ClassWorld classWorld, MavenEmbedderLogger logger )
+    public MavenEmbedder( ClassWorld classWorld,
+                          MavenEmbedderLogger logger )
         throws MavenEmbedderException
     {
         this.classWorld = classWorld;
 
         this.logger = logger;
 
-        start();
+        if ( classWorld == null )
+        {
+            throw new IllegalStateException(
+                "A classWorld or classloader must be specified using setClassLoader|World(ClassLoader)." );
+        }
+
+        try
+        {
+            container = new DefaultPlexusContainer( null, null, null, classWorld );
+        }
+        catch ( PlexusContainerException e )
+        {
+            throw new MavenEmbedderException( "Error starting Maven embedder.", e );
+        }
+
+        if ( logger != null )
+        {
+            container.setLoggerManager( new MavenEmbedderLoggerManager( new PlexusLoggerAdapter( logger ) ) );
+        }
+
+        try
+        {
+            // ----------------------------------------------------------------------
+            // Lookup each of the components we need to provide the desired
+            // client interface.
+            // ----------------------------------------------------------------------
+
+            //TODO needs to be a component
+            modelReader = new MavenXpp3Reader();
+
+            //TODO needs to be a component
+            modelWriter = new MavenXpp3Writer();
+
+            maven = (Maven) container.lookup( Maven.ROLE );
+
+            mavenTools = (MavenTools) container.lookup( MavenTools.ROLE );
+
+            //TODO needs to be a component
+            pluginDescriptorBuilder = new PluginDescriptorBuilder();
+
+            mavenProjectBuilder = (MavenProjectBuilder) container.lookup( MavenProjectBuilder.ROLE );
+
+            // ----------------------------------------------------------------------
+            // Artifact related components
+            // ----------------------------------------------------------------------
+
+            artifactRepositoryFactory = (ArtifactRepositoryFactory) container.lookup( ArtifactRepositoryFactory.ROLE );
+
+            artifactFactory = (ArtifactFactory) container.lookup( ArtifactFactory.ROLE );
+
+            artifactResolver = (ArtifactResolver) container.lookup( ArtifactResolver.ROLE );
+
+            defaultArtifactRepositoryLayout =
+                (ArtifactRepositoryLayout) container.lookup( ArtifactRepositoryLayout.ROLE, DEFAULT_LAYOUT_ID );
+
+            wagonManager = (WagonManager) container.lookup( WagonManager.ROLE );
+
+            // Components for looking up plugin metadata
+
+            lifecycleExecutor = (LifecycleExecutor) container.lookup( LifecycleExecutor.ROLE );
+
+            pluginManager = (PluginManager) container.lookup( PluginManager.ROLE );
+        }
+        catch ( ComponentLookupException e )
+        {
+            throw new MavenEmbedderException( "Cannot lookup required component.", e );
+        }
+
     }
 
     // ----------------------------------------------------------------------
@@ -177,18 +264,12 @@ public class MavenEmbedder
     // Model
     // ----------------------------------------------------------------------
 
-    /**
-     * read the model.
-     */
     public Model readModel( File model )
         throws XmlPullParserException, IOException
     {
         return modelReader.read( new FileReader( model ) );
     }
 
-    /**
-     * write the model.
-     */
     public void writeModel( Writer writer,
                             Model model )
         throws IOException
@@ -232,8 +313,8 @@ public class MavenEmbedder
         try
         {
             project = mavenProjectBuilder.buildWithDependencies( new File( request.getPomFile() ),
-                                                                 request.getLocalRepository(),
-                                                                 profileManager, request.getTransferListener() );
+                                                                 request.getLocalRepository(), profileManager,
+                                                                 request.getTransferListener() );
         }
         catch ( ProjectBuildingException e )
         {
@@ -303,8 +384,13 @@ public class MavenEmbedder
 
         try
         {
-            InputStream is =
-                container.getContainerRealm().getResourceAsStream( "/plugins/" + summaryPluginDescriptor.getArtifactId() + ".xml" );
+            InputStream is = container.getContainerRealm().getResourceAsStream(
+                "/plugins/" + summaryPluginDescriptor.getArtifactId() + ".xml" );
+
+            if ( is == null )
+            {
+                throw new MavenEmbedderException( "Cannot find summary plugin descriptor." );
+            }
 
             pluginDescriptor = pluginDescriptorBuilder.build( new InputStreamReader( is ) );
         }
@@ -418,94 +504,18 @@ public class MavenEmbedder
     //  Lifecycle
     // ----------------------------------------------------------------------
 
-    protected void start()
-        throws MavenEmbedderException
-    {
-        // As the PlexusContainer is optimized we can do more things up front here
-        // but in order to be threadsafe we'll need to look things up everytime
-        // Maven is invoked. We'll go the safe route first, write tests, and then
-        // start optimizing.
-
-        // ----------------------------------------------------------------------
-        // Set the maven.home system property which is need by components like
-        // the plugin registry builder.
-        // ----------------------------------------------------------------------
-
-        if ( classWorld == null )
-        {
-            throw new IllegalStateException(
-                "A classWorld or classloader must be specified using setClassLoader|World(ClassLoader)." );
-        }
-    }
-
     public MavenExecutionResult execute( MavenExecutionRequest request )
         throws MavenEmbedderException, MavenExecutionException
     {
-        try
-        {
-            container = new DefaultPlexusContainer( null, null, null, classWorld );
-        }
-        catch ( PlexusContainerException e )
-        {
-            throw new MavenEmbedderException( "Error starting Maven embedder.", e );
-        }
+        profileManager = new DefaultProfileManager( container, request.getProperties() );
 
-        if ( logger != null )
-        {
-            container.setLoggerManager( new MavenEmbedderLoggerManager( new PlexusLoggerAdapter( logger ) ) );
-        }
+        profileManager.loadSettingsProfiles( settings );
 
-        try
-        {
-            // ----------------------------------------------------------------------
-            // Lookup each of the components we need to provide the desired
-            // client interface.
-            // ----------------------------------------------------------------------
+        localRepository = createLocalRepository( settings );
 
-            //TODO needs to be a component
-            modelReader = new MavenXpp3Reader();
+        profileManager.explicitlyActivate( request.getActiveProfiles() );
 
-            //TODO needs to be a component
-            modelWriter = new MavenXpp3Writer();
-
-            maven = (Maven) container.lookup( Maven.ROLE );
-
-            mavenTools = (MavenTools) container.lookup( MavenTools.ROLE );
-
-            //TODO needs to be a component
-            pluginDescriptorBuilder = new PluginDescriptorBuilder();
-
-            profileManager = new DefaultProfileManager( container, request.getProperties() );
-
-            mavenProjectBuilder = (MavenProjectBuilder) container.lookup( MavenProjectBuilder.ROLE );
-
-            // ----------------------------------------------------------------------
-            // Artifact related components
-            // ----------------------------------------------------------------------
-
-            artifactRepositoryFactory = (ArtifactRepositoryFactory) container.lookup( ArtifactRepositoryFactory.ROLE );
-
-            artifactFactory = (ArtifactFactory) container.lookup( ArtifactFactory.ROLE );
-
-            artifactResolver = (ArtifactResolver) container.lookup( ArtifactResolver.ROLE );
-
-            defaultArtifactRepositoryLayout =
-                (ArtifactRepositoryLayout) container.lookup( ArtifactRepositoryLayout.ROLE, DEFAULT_LAYOUT_ID );
-
-            wagonManager = (WagonManager) container.lookup( WagonManager.ROLE );
-
-            profileManager.loadSettingsProfiles( settings );
-
-            localRepository = createLocalRepository( settings );
-
-            profileManager.explicitlyActivate( request.getActiveProfiles() );
-
-            profileManager.explicitlyDeactivate( request.getInactiveProfiles() );
-        }
-        catch ( ComponentLookupException e )
-        {
-            throw new MavenEmbedderException( "Cannot lookup required component.", e );
-        }
+        profileManager.explicitlyDeactivate( request.getInactiveProfiles() );
 
         return maven.execute( request );
     }
@@ -519,6 +529,7 @@ public class MavenEmbedder
     {
         try
         {
+            System.out.println( "container = " + container );
             container.release( mavenProjectBuilder );
 
             container.release( artifactRepositoryFactory );
@@ -567,4 +578,75 @@ public class MavenEmbedder
     {
         return mavenTools.getLocalRepositoryPath( settings );
     }
+
+    // ----------------------------------------------------------------------------
+    // Lifecycle Metadata
+    // ----------------------------------------------------------------------------
+
+    public Map getLifecycleMappings( MavenProject project,
+                                     String lifecycle,
+                                     String lastPhase )
+        throws LifecycleExecutionException, BuildFailureException, PluginNotFoundException
+    {
+        MavenSession session =
+            new MavenSession( container, settings, getLocalRepository(), null, null, null, null, null, new Date() );
+
+        Map lifecycleMappings = lifecycleExecutor.constructLifecycleMappings( session, project, lifecycle, lastPhase );
+
+        Map phases = new LinkedHashMap();
+
+        for ( Iterator i = lifecycleMappings.keySet().iterator(); i.hasNext(); )
+        {
+            String lifecycleId = (String) i.next();
+
+            List mojos = (List) lifecycleMappings.get( lifecycleId );
+
+            Map executions = new LinkedHashMap();
+
+            String groupId;
+
+            String artifactId;
+
+            String goalId;
+
+            for ( Iterator j = mojos.iterator(); j.hasNext(); )
+            {
+                MojoExecution mojoExecution = (MojoExecution) j.next();
+
+                MojoDescriptor mojoDescriptor = mojoExecution.getMojoDescriptor();
+
+                goalId = mojoDescriptor.getGoal();
+
+                groupId = mojoDescriptor.getPluginDescriptor().getGroupId();
+
+                artifactId = mojoDescriptor.getPluginDescriptor().getArtifactId();
+
+                String executionId = mojoExecution.getExecutionId();
+
+                Xpp3Dom goalConfigurationDom = project.getGoalConfiguration( groupId, artifactId, executionId, goalId );
+
+                XmlPlexusConfiguration pomConfiguration;
+
+                if ( goalConfigurationDom == null )
+                {
+                    pomConfiguration = new XmlPlexusConfiguration( "configuration" );
+                }
+                else
+                {
+                    pomConfiguration = new XmlPlexusConfiguration( goalConfigurationDom );
+                }
+
+                PlexusConfiguration mergedConfiguration =
+                    pluginManager.mergeMojoConfiguration( pomConfiguration, mojoDescriptor );
+
+                executions.put( groupId + ":" + artifactId + ":" + goalId, mergedConfiguration );
+
+            }
+
+            phases.put( lifecycleId, executions );
+        }
+
+        return lifecycleMappings;
+    }
 }
+

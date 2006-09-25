@@ -17,9 +17,13 @@ package org.apache.maven.lifecycle;
  */
 
 import org.apache.maven.BuildFailureException;
+import org.apache.maven.plugin.PluginNotFoundException;
+import org.apache.maven.project.MavenProject;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.execution.ReactorManager;
 import org.apache.maven.monitor.event.EventDispatcher;
+
+import java.util.Map;
 
 /**
  * @author <a href="mailto:jason@maven.org">Jason van Zyl</a>
@@ -29,7 +33,14 @@ public interface LifecycleExecutor
 {
     String ROLE = LifecycleExecutor.class.getName();
 
-    void execute( MavenSession session, ReactorManager rm, EventDispatcher dispatcher )
+    void execute( MavenSession session,
+                  ReactorManager rm,
+                  EventDispatcher dispatcher )
         throws LifecycleExecutionException, BuildFailureException;
 
+    public Map constructLifecycleMappings( MavenSession session,
+                                           MavenProject project,
+                                           String lifecycleId,
+                                           String selectedPhase )
+        throws LifecycleExecutionException, BuildFailureException, PluginNotFoundException;
 }

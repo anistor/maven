@@ -68,6 +68,7 @@ import java.util.Map;
 import java.util.Stack;
 import java.util.StringTokenizer;
 import java.util.LinkedHashMap;
+import java.util.Date;
 
 /**
  * @author <a href="mailto:jason@maven.org">Jason van Zyl</a>
@@ -450,6 +451,7 @@ public class DefaultLifecycleExecutor
                 Lifecycle lifecycle = getLifecycleForPhase( task );
 
                 // we have a lifecycle phase, so lets bind all the necessary goals
+                // session, phase, project, lifecycle
                 Map lifecycleMappings = constructLifecycleMappings( session, task, project, lifecycle );
                 executeGoalWithLifecycle( task, forkEntryPoints, session, lifecycleMappings, project, lifecycle );
             }
@@ -965,6 +967,14 @@ public class DefaultLifecycleExecutor
                 }
             }
         }
+    }
+
+    public Map constructLifecycleMappings( MavenSession session, MavenProject project, String selectedPhase, String lifecycleId )
+        throws LifecycleExecutionException, BuildFailureException, PluginNotFoundException
+    {
+        Lifecycle lifecycle = getLifecycleForPhase( selectedPhase );
+
+        return constructLifecycleMappings( session, selectedPhase, project, lifecycle );
     }
 
     private Map constructLifecycleMappings( MavenSession session, String selectedPhase, MavenProject project,

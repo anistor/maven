@@ -73,10 +73,6 @@ public class MavenPluginCollector
 
     public PluginDescriptor getPluginDescriptor( Plugin plugin )
     {
-        System.out.println( "this = " + this );
-
-        System.out.println( "pluginDescriptors = " + pluginDescriptors );
-
         // TODO: include version, but can't do this in the plugin manager as it is not resolved to the right version
         // at that point. Instead, move the duplication check to the artifact container, or store it locally based on
         // the unresolved version?

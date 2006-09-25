@@ -22,6 +22,7 @@ import org.apache.maven.MavenTransferListener;
 import org.apache.maven.SettingsConfigurationException;
 import org.apache.maven.embedder.MavenEmbedder;
 import org.apache.maven.embedder.MavenEmbedderException;
+import org.apache.maven.embedder.MavenEmbedderLogger;
 import org.apache.maven.execution.DefaultMavenExecutionRequest;
 import org.apache.maven.execution.MavenExecutionRequest;
 import org.apache.maven.reactor.MavenExecutionException;
@@ -46,7 +47,8 @@ public class MavenCli
     /**
      * @noinspection ConfusingMainMethod
      */
-    public static int main( String[] args, ClassWorld classWorld )
+    public static int main( String[] args,
+                            ClassWorld classWorld )
     {
         // ----------------------------------------------------------------------
         // Setup the command line parser
@@ -117,7 +119,7 @@ public class MavenCli
 
         try
         {
-            mavenEmbedder = new MavenEmbedder( classWorld );
+            mavenEmbedder = new MavenEmbedder( classWorld, null );
         }
         catch ( MavenEmbedderException e )
         {
@@ -159,6 +161,13 @@ public class MavenCli
         try
         {
             List goals = commandLine.getArgList();
+
+            boolean recursive = true;
+
+            if ( commandLine.hasOption( CLIManager.NON_RECURSIVE ) )
+            {
+                recursive = false;
+            }
 
             String reactorFailureBehaviour = null;
 
@@ -320,17 +329,14 @@ public class MavenCli
             }
 
             Properties executionProperties = getExecutionProperties( commandLine );
-            
-            File userSettingsPath = mavenEmbedder.getUserSettingsPath( commandLine.getOptionValue( CLIManager.ALTERNATE_USER_SETTINGS ) );
+
+            File userSettingsPath =
+                mavenEmbedder.getUserSettingsPath( commandLine.getOptionValue( CLIManager.ALTERNATE_USER_SETTINGS ) );
 
             File globalSettingsFile = mavenEmbedder.getGlobalSettingsPath();
 
-            Settings settings = mavenEmbedder.buildSettings( userSettingsPath,
-                                                             globalSettingsFile,
-                                                             interactive,
-                                                             offline,
-                                                             usePluginRegistry,
-                                                             pluginUpdateOverride );
+            Settings settings = mavenEmbedder.buildSettings( userSettingsPath, globalSettingsFile, interactive, offline,
+                                                             usePluginRegistry, pluginUpdateOverride );
 
             String localRepositoryPath = mavenEmbedder.getLocalRepositoryPath( settings );
 
@@ -345,6 +351,7 @@ public class MavenCli
                 .setLocalRepositoryPath( localRepositoryPath )
                 .setProperties( executionProperties )
                 .setReactorFailureBehavior( reactorFailureBehaviour )
+                .setRecursive( recursive )
                 .setUseReactor( reactorActive )
                 .setPomFile( alternatePomFile )
                 .setShowErrors( showErrors )
@@ -356,7 +363,7 @@ public class MavenCli
                 .setTransferListener( transferListener )
                 .setOffline( offline )
                 .setUpdateSnapshots( updateSnapshots )
-                .setGlobalChecksumPolicy( globalChecksumPolicy );                                
+                .setGlobalChecksumPolicy( globalChecksumPolicy );
 
             mavenEmbedder.execute( request );
         }
@@ -366,9 +373,15 @@ public class MavenCli
 
             return 1;
         }
+        catch ( MavenEmbedderException e )
+        {
+            showFatalError( "Unable to configure the Maven application.", e, showErrors );
+
+            return 1;
+        }
         catch ( MavenExecutionException e )
         {
-            showFatalError( "Unable to configure the Maven application", e, showErrors );
+            showFatalError( "Unable to configure the Maven application.", e, showErrors );
 
             return 1;
         }
@@ -376,7 +389,9 @@ public class MavenCli
         return 0;
     }
 
-    private static void showFatalError( String message, Exception e, boolean show )
+    private static void showFatalError( String message,
+                                        Exception e,
+                                        boolean show )
     {
         System.err.println( "FATAL ERROR: " + message );
         if ( show )
@@ -391,7 +406,9 @@ public class MavenCli
         }
     }
 
-    private static void showError( String message, Exception e, boolean show )
+    private static void showError( String message,
+                                   Exception e,
+                                   boolean show )
     {
         System.err.println( message );
         if ( show )
@@ -414,8 +431,8 @@ public class MavenCli
 
             if ( properties.getProperty( "builtOn" ) != null )
             {
-                System.out.println( "Maven version: " + properties.getProperty( "version", "unknown" )
-                    + " built on " + properties.getProperty( "builtOn" ) );
+                System.out.println( "Maven version: " + properties.getProperty( "version", "unknown" ) + " built on " +
+                    properties.getProperty( "builtOn" ) );
             }
             else
             {
@@ -457,7 +474,8 @@ public class MavenCli
         return executionProperties;
     }
 
-    private static void setCliProperty( String property, Properties executionProperties )
+    private static void setCliProperty( String property,
+                                        Properties executionProperties )
     {
         String name;
 
