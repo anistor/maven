@@ -1,5 +1,11 @@
 package org.apache.maven;
 
+//languages like java, .net, ruby, c++                                                                
+//device specific like j2me where there are profiles for different devices
+//groups where you have 1.4, 1.5
+//versions where you have things like 1.4_003 and 1.5_006
+//app servers possibly
+
 /**
  * @author Milos Kleint
  * @author Jason van Zyl
@@ -12,11 +18,21 @@ public interface Toolchain
 
     String getVendor();
 
-    String getSpecification();
+    String getSpecificationVersion();
+
+    String getVersion();
 
     Map getProperties();
 
     Map getSystemProperties();
+
+    /**
+     * Gets the platform tool executable.
+     *
+     * @param toolName the tool platform independent tool name.
+     * @return file representing the tool executable, or null if the tool can not be found
+     */
+    String findTool( String toolName );
 
     //JAVA
     /**
@@ -34,14 +50,6 @@ public interface Toolchain
      * it corresponds to contents of CLASSPATH environment variable.
      */
     List getStandardLibraries();
-
-    /**
-     * Gets the platform tool executable.
-     *
-     * @param toolName the tool platform independent tool name.
-     * @return file representing the tool executable, or null if the tool can not be found
-     */
-    String findTool( String toolName );
 
     //JAVA
     /**
