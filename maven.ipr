@@ -287,6 +287,7 @@
       <module fileurl="file://$PROJECT_DIR$/maven-script/maven-script-ant/maven-script-ant.iml" filepath="$PROJECT_DIR$/maven-script/maven-script-ant/maven-script-ant.iml" />
       <module fileurl="file://$PROJECT_DIR$/maven-script/maven-script-beanshell/maven-script-beanshell.iml" filepath="$PROJECT_DIR$/maven-script/maven-script-beanshell/maven-script-beanshell.iml" />
       <module fileurl="file://$PROJECT_DIR$/maven-settings/maven-settings.iml" filepath="$PROJECT_DIR$/maven-settings/maven-settings.iml" />
+      <module fileurl="file://$PROJECT_DIR$/maven-toolchain/maven-toolchain.iml" filepath="$PROJECT_DIR$/maven-toolchain/maven-toolchain.iml" />
       <module fileurl="file://$PROJECT_DIR$/maven-tools/maven-tools.iml" filepath="$PROJECT_DIR$/maven-tools/maven-tools.iml" />
     </modules>
   </component>
@@ -300,7 +301,10 @@
     <option name="ADDITIONAL_OPTIONS_STRING" value="" />
   </component>
   <component name="StarteamVcsAdapter" />
-  <component name="VssVcs" />
+  <component name="VssVcs">
+    <SourceSafePersistencyRemovedFolder>/Users/jvanzyl/js/org/codehaus/plexus/trunk/plexus-sandbox/plexus-classworlds/src/test/java/org/codehaus/classworlds/configurator</SourceSafePersistencyRemovedFolder>
+    <SourceSafePersistencyRemovedFolder>/Users/jvanzyl/js/org/codehaus/plexus/trunk/plexus-sandbox/plexus-classworlds/src/main/java/org/codehaus/classworlds/configurator</SourceSafePersistencyRemovedFolder>
+  </component>
   <component name="com.intellij.jsf.UserDefinedFacesConfigs">
     <option name="USER_DEFINED_CONFIGS">
       <value>
