@@ -17,7 +17,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" name="Default" comment="">
-      <change type="DELETED" beforePath="$PROJECT_DIR$/maven-toolchain/src/main/java/org/apache/maven/Toolchain.java" afterPath="" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/maven.ipr" afterPath="$PROJECT_DIR$/maven.ipr" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/maven.iws" afterPath="$PROJECT_DIR$/maven.iws" />
     </list>
   </component>
@@ -137,7 +137,7 @@
       <file leaf-file-name="MavenCli.java" pinned="false" current="true" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/maven-cli/src/main/java/org/apache/maven/cli/MavenCli.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="140" column="33" selection-start="4632" selection-end="4632" vertical-scroll-proportion="-4.166172">
+            <state line="140" column="33" selection-start="4632" selection-end="4632" vertical-scroll-proportion="0.8011869">
               <folding>
                 <element signature="imports" expanded="true" />
               </folding>
@@ -186,7 +186,7 @@
       <file leaf-file-name="MavenPluginCollector.java" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/maven-core/src/main/java/org/apache/maven/plugin/MavenPluginCollector.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="73" column="52" selection-start="2888" selection-end="2888" vertical-scroll-proportion="0.21958457">
+            <state line="73" column="52" selection-start="2888" selection-end="2888" vertical-scroll-proportion="0.21661721">
               <folding />
             </state>
           </provider>
@@ -195,7 +195,7 @@
       <file leaf-file-name="Plugin.java" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/maven-model/target/generated-sources/modello/org/apache/maven/model/Plugin.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="290" column="25" selection-start="6759" selection-end="6759" vertical-scroll-proportion="0.23823975">
+            <state line="290" column="25" selection-start="6759" selection-end="6759" vertical-scroll-proportion="0.23520486">
               <folding />
             </state>
           </provider>
@@ -204,7 +204,7 @@
       <file leaf-file-name="PluginManager.java" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/maven-core/src/main/java/org/apache/maven/plugin/PluginManager.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="81" column="4" selection-start="4054" selection-end="4054" vertical-scroll-proportion="0.84273">
+            <state line="81" column="4" selection-start="4054" selection-end="4054" vertical-scroll-proportion="0.8397626">
               <folding />
             </state>
           </provider>
@@ -602,7 +602,7 @@
     </subPane>
   </component>
   <component name="ProjectReloadState">
-    <option name="STATE" value="0" />
+    <option name="STATE" value="2" />
   </component>
   <component name="ProjectView">
     <navigator currentView="ProjectPane" proportions="0.11111111" version="1" splitterProportion="0.5">
@@ -777,14 +777,14 @@
     </todo-panel>
   </component>
   <component name="ToolWindowManager">
-    <frame x="4" y="22" width="1440" height="821" extended-state="0" />
-    <editor active="false" />
+    <frame x="0" y="22" width="1440" height="821" extended-state="6" />
+    <editor active="true" />
     <layout>
       <window_info id="UI Designer" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" order="3" />
       <window_info id="CVS" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" order="8" />
       <window_info id="IDEtalk" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" order="3" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32872927" order="7" />
-      <window_info id="Project" active="true" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.24946082" order="0" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.24946082" order="0" />
       <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32872927" order="1" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.24946082" order="1" />
       <window_info id="Messages" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32872927" order="8" />
@@ -963,21 +963,21 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/maven-core/src/main/java/org/apache/maven/plugin/MavenPluginCollector.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="73" column="52" selection-start="2888" selection-end="2888" vertical-scroll-proportion="0.21958457">
+        <state line="73" column="52" selection-start="2888" selection-end="2888" vertical-scroll-proportion="0.21661721">
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/maven-model/target/generated-sources/modello/org/apache/maven/model/Plugin.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="290" column="25" selection-start="6759" selection-end="6759" vertical-scroll-proportion="0.23823975">
+        <state line="290" column="25" selection-start="6759" selection-end="6759" vertical-scroll-proportion="0.23520486">
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/maven-core/src/main/java/org/apache/maven/plugin/PluginManager.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="81" column="4" selection-start="4054" selection-end="4054" vertical-scroll-proportion="0.84273">
+        <state line="81" column="4" selection-start="4054" selection-end="4054" vertical-scroll-proportion="0.8397626">
           <folding />
         </state>
       </provider>
@@ -993,7 +993,7 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/maven-cli/src/main/java/org/apache/maven/cli/MavenCli.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="140" column="33" selection-start="4632" selection-end="4632" vertical-scroll-proportion="-4.166172">
+        <state line="140" column="33" selection-start="4632" selection-end="4632" vertical-scroll-proportion="0.8011869">
           <folding>
             <element signature="imports" expanded="true" />
           </folding>
