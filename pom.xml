@@ -132,7 +132,6 @@
     <module>maven-cli</module>
     <module>maven-embedder</module>
     <module>maven-tools</module>
-    <module>maven-toolchain</module>
   </modules>
   <dependencies>
     <dependency>
