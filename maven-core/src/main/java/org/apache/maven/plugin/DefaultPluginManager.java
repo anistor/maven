@@ -411,9 +411,7 @@ public class DefaultPluginManager
 
         try
         {
-            // TODO - WE NEED TO TIDY THIS CLASSLOADER STUFF - NASTY CASTING
-            Thread.currentThread().setContextClassLoader( (ClassLoader)
-                mojoDescriptor.getPluginDescriptor().getClassRealm().getStrategy() );
+            Thread.currentThread().setContextClassLoader( mojoDescriptor.getPluginDescriptor().getClassRealm() );
 
             plugin.execute();
 
