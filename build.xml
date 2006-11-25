@@ -111,9 +111,9 @@
     <pull orgpath="org/apache/maven/wagon/wagon-ssh-external" version="1.0-alpha-6" name="wagon-ssh-external"/>
     <pull orgpath="org/apache/maven/wagon/wagon-ssh" version="1.0-alpha-7" name="wagon-ssh"/>
     <pull orgpath="org/apache/maven/doxia/doxia-sink-api" version="1.0-alpha-9-SNAPSHOT" name="doxia-sink-api"/>
-    <pull orgpath="org/codehaus/modello/modello-core" version="1.0-alpha-7" name="modello-core"/>
-    <pull orgpath="org/codehaus/modello/modello-plugin-xml" version="1.0-alpha-8" name="modello-plugin-xml"/>
-    <pull orgpath="org/codehaus/modello/modello-plugin-xpp3" version="1.0-alpha-8" name="modello-plugin-xpp3"/>
+    <pull orgpath="org/codehaus/modello/modello-core" version="1.0-alpha-12-SNAPSHOT" name="modello-core"/>
+    <pull orgpath="org/codehaus/modello/modello-plugin-xml" version="1.0-alpha-12-SNAPSHOT" name="modello-plugin-xml"/>
+    <pull orgpath="org/codehaus/modello/modello-plugin-xpp3" version="1.0-alpha-12-SNAPSHOT" name="modello-plugin-xpp3"/>
     <pull orgpath="junit/junit" version="3.8.1" name="junit"/>
   </target>
 
@@ -139,9 +139,9 @@
          need different versions of modello.  -->
     <path id="modello.classpath">
       <path refid="pre.classpath"/>
-      <pathelement location="${maven.repo.local}/org/codehaus/modello/modello-core/1.0-alpha-7/modello-core-1.0-alpha-7.jar"/>
-      <pathelement location="${maven.repo.local}/org/codehaus/modello/modello-plugin-xml/1.0-alpha-8/modello-plugin-xml-1.0-alpha-8.jar"/>
-      <pathelement location="${maven.repo.local}/org/codehaus/modello/modello-plugin-xpp3/1.0-alpha-8/modello-plugin-xpp3-1.0-alpha-8.jar"/>
+      <pathelement location="${maven.repo.local}/org/codehaus/modello/modello-core/1.0-alpha-12-SNAPSHOT/modello-core-1.0-alpha-12-SNAPSHOT.jar"/>
+      <pathelement location="${maven.repo.local}/org/codehaus/modello/modello-plugin-xml/1.0-alpha-12-SNAPSHOT/modello-plugin-xml-1.0-alpha-12-SNAPSHOT.jar"/>
+      <pathelement location="${maven.repo.local}/org/codehaus/modello/modello-plugin-xpp3/1.0-alpha-12-SNAPSHOT/modello-plugin-xpp3-1.0-alpha-12-SNAPSHOT.jar"/>
     </path>
     <!-- DGF pathconvert immediately so we can validate the classpath -->
     <pathconvert property="pre.classpath.str" refid="pre.classpath" pathsep="&#xa;"/>
