@@ -70,6 +70,11 @@ public class MavenPluginCollector
         }
     }
 
+    public String getId()
+    {
+        return "maven-plugin-collector";    
+    }
+
     public PluginDescriptor getPluginDescriptor( Plugin plugin )
     {
         // TODO: include version, but can't do this in the plugin manager as it is not resolved to the right version
