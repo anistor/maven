@@ -59,14 +59,14 @@
     <dependencySet>
       <outputDirectory>core/boot</outputDirectory>
       <includes>
-        <include>classworlds:classworlds</include>
+        <include>org.codehaus.plexus:plexus-classworlds</include>
       </includes>
     </dependencySet>
     <dependencySet>
       <outputDirectory>lib</outputDirectory>
       <excludes>
         <exclude>org.codehaus.plexus:plexus-container-default</exclude>
-        <exclude>classworlds:classworlds</exclude>
+        <exclude>org.codehaus.plexus:plexus-classworlds</exclude>
         <exclude>org.codehaus.plexus:plexus-utils</exclude>
         <!-- transitively picked up via default container - not needed -->
         <exclude>plexus:plexus-utils</exclude>
