@@ -138,10 +138,13 @@
     <!-- DGF Need to keep these modello classes out of the system classpath at runtime, because different parts of the build
          need different versions of modello.  -->
     <path id="modello.classpath">
+      <!--
       <path refid="pre.classpath"/>
       <pathelement location="${maven.repo.local}/org/codehaus/modello/modello-core/1.0-alpha-12-SNAPSHOT/modello-core-1.0-alpha-12-SNAPSHOT.jar"/>
       <pathelement location="${maven.repo.local}/org/codehaus/modello/modello-plugin-xml/1.0-alpha-12-SNAPSHOT/modello-plugin-xml-1.0-alpha-12-SNAPSHOT.jar"/>
       <pathelement location="${maven.repo.local}/org/codehaus/modello/modello-plugin-xpp3/1.0-alpha-12-SNAPSHOT/modello-plugin-xpp3-1.0-alpha-12-SNAPSHOT.jar"/>
+      -->
+      <pathelement location="modello.jar"/>
     </path>
     <!-- DGF pathconvert immediately so we can validate the classpath -->
     <pathconvert property="pre.classpath.str" refid="pre.classpath" pathsep="&#xa;"/>
@@ -159,7 +162,7 @@
       <attribute name="mode"/>
       <attribute name="version"/>
       <sequential>
-        <java fork="false" classname="org.codehaus.modello.ModelloCli" failonerror="true">
+        <java fork="fork" classname="org.codehaus.modello.ModelloCli" failonerror="true">
           <classpath refid="modello.classpath"/>
           <arg file="@{file}"/>
           <arg value="@{mode}"/>
