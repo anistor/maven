@@ -74,6 +74,7 @@ import org.codehaus.plexus.personality.plexus.lifecycle.phase.Contextualizable;
 import org.codehaus.plexus.personality.plexus.lifecycle.phase.Initializable;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
+import org.codehaus.plexus.classworlds.realm.ClassRealm;
 
 import java.io.File;
 import java.net.URL;
@@ -282,13 +283,12 @@ public class DefaultPluginManager
                               ArtifactRepository localRepository )
         throws PluginManagerException, InvalidPluginException
     {
-        PlexusContainer child;
+        ClassRealm componentRealm;
+
         try
         {
-            child = container.createChildContainer( plugin.getKey(),
-                                                    Collections.singletonList( pluginArtifact.getFile() ),
-                                                    Collections.EMPTY_MAP,
-                                                    Collections.singletonList( pluginCollector ) );
+            componentRealm = container.createComponentRealm( plugin.getKey(),
+                                                             Collections.singletonList( pluginArtifact.getFile() ) );
         }
         catch ( PlexusContainerException e )
         {
@@ -298,20 +298,21 @@ public class DefaultPluginManager
 
         // this plugin's descriptor should have been discovered in the child creation, so we should be able to
         // circle around and set the artifacts and class realm
-        PluginDescriptor addedPlugin = pluginCollector.getPluginDescriptor( plugin );
+        PluginDescriptor pluginDescriptor = pluginCollector.getPluginDescriptor( plugin );
 
-        if ( addedPlugin == null )
+        if ( pluginDescriptor == null )
         {
             throw new IllegalStateException(
                 "The PluginDescriptor for the plugin " + plugin.getKey() + " was not found" );
         }
 
-        addedPlugin.setClassRealm( child.getContainerRealm() );
+        //pluginDescriptor.setClassRealm( child.getContainerRealm() );
+        pluginDescriptor.setClassRealm( componentRealm );
 
         // we're only setting the plugin's artifact itself as the artifact list, to allow it to be retrieved
         // later when the plugin is first invoked. Retrieving this artifact will in turn allow us to
         // transitively resolve its dependencies, and add them to the plugin container...
-        addedPlugin.setArtifacts( Collections.singletonList( pluginArtifact ) );
+        pluginDescriptor.setArtifacts( Collections.singletonList( pluginArtifact ) );
 
         try
         {
@@ -328,10 +329,7 @@ public class DefaultPluginManager
             Set artifacts = MavenMetadataSource.createArtifacts( artifactFactory, projectPlugin.getDependencies(), null,
                                                                  null, project );
 
-//            Set artifacts =
-//                MavenMetadataSource.createArtifacts( artifactFactory, plugin.getDependencies(), null, null, project );
-
-            addedPlugin.setIntroducedDependencyArtifacts( artifacts );
+            pluginDescriptor.setIntroducedDependencyArtifacts( artifacts );
         }
         catch ( InvalidDependencyVersionException e )
         {
@@ -394,13 +392,21 @@ public class DefaultPluginManager
         Mojo plugin;
 
         PluginDescriptor pluginDescriptor = mojoDescriptor.getPluginDescriptor();
+
         String goalId = mojoDescriptor.getGoal();
+
         String groupId = pluginDescriptor.getGroupId();
+
         String artifactId = pluginDescriptor.getArtifactId();
+
         String executionId = mojoExecution.getExecutionId();
+
         Xpp3Dom dom = project.getGoalConfiguration( groupId, artifactId, executionId, goalId );
+
         Xpp3Dom reportDom = project.getReportConfiguration( groupId, artifactId, executionId );
+
         dom = Xpp3Dom.mergeXpp3Dom( dom, reportDom );
+
         if ( mojoExecution.getConfiguration() != null )
         {
             dom = Xpp3Dom.mergeXpp3Dom( dom, mojoExecution.getConfiguration() );
@@ -410,6 +416,7 @@ public class DefaultPluginManager
 
         // Event monitoring.
         String event = MavenEvents.MOJO_EXECUTION;
+        
         EventDispatcher dispatcher = session.getEventDispatcher();
 
         String goalExecId = goalName;
@@ -448,6 +455,7 @@ public class DefaultPluginManager
 
             Thread.currentThread().setContextClassLoader( oldClassLoader );
 
+            /*
             try
             {
                 PlexusContainer pluginContainer = getPluginContainer( mojoDescriptor.getPluginDescriptor() );
@@ -461,6 +469,7 @@ public class DefaultPluginManager
                     getLogger().error( "Error releasing plugin - ignoring.", e );
                 }
             }
+            */
         }
     }
 
@@ -512,6 +521,9 @@ public class DefaultPluginManager
     private PlexusContainer getPluginContainer( PluginDescriptor pluginDescriptor )
         throws PluginManagerException
     {
+        return container;
+
+        /*
         String pluginKey = pluginDescriptor.getPluginLookupKey();
 
         PlexusContainer pluginContainer = container.getChildContainer( pluginKey );
@@ -522,6 +534,7 @@ public class DefaultPluginManager
         }
 
         return pluginContainer;
+        */
     }
 
     private Mojo getConfiguredMojo( MavenSession session,
