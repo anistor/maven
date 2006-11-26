@@ -66,7 +66,8 @@
       <outputDirectory>lib</outputDirectory>
       <excludes>
         <exclude>org.codehaus.plexus:plexus-container-default</exclude>
-        <exclude>org.codehaus.plexus:plexus-classworlds</exclude>
+        <exclude>org.codehaus.plexus:plexus-component-api</exclude>        
+        <exclude>org.codehaus.plexus.plexus:plexus-classworlds</exclude>
         <exclude>org.codehaus.plexus:plexus-utils</exclude>
         <!-- transitively picked up via default container - not needed -->
         <exclude>plexus:plexus-utils</exclude>
