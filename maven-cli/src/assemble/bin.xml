@@ -65,11 +65,12 @@
     <dependencySet>
       <outputDirectory>lib</outputDirectory>
       <excludes>
+        <!-- Where is this coming from -->
+        <exclude>classworlds:classworlds</exclude>      
         <exclude>org.codehaus.plexus:plexus-container-default</exclude>
         <exclude>org.codehaus.plexus:plexus-component-api</exclude>        
-        <exclude>org.codehaus.plexus.plexus:plexus-classworlds</exclude>
+        <exclude>org.codehaus.plexus:plexus-classworlds</exclude>
         <exclude>org.codehaus.plexus:plexus-utils</exclude>
-        <!-- transitively picked up via default container - not needed -->
         <exclude>plexus:plexus-utils</exclude>
         <exclude>junit:junit</exclude>
       </excludes>
