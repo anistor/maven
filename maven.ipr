@@ -55,7 +55,7 @@
     <option name="OUTPUT_DIRECTORY" />
   </component>
   <component name="GUI Designer component loader factory" />
-  <component name="IdProvider" IDEtalkID="5D491B529C391AE91671E59B9275B4AC" />
+  <component name="IdProvider" IDEtalkID="5E032A0B5DD3C0D60306B469A71B9001" />
   <component name="ImportConfiguration">
     <option name="VENDOR" />
     <option name="RELEASE_TAG" />
@@ -257,6 +257,7 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/maven.iml" filepath="$PROJECT_DIR$/maven.iml" />
       <module fileurl="file://$PROJECT_DIR$/maven-artifact/maven-artifact.iml" filepath="$PROJECT_DIR$/maven-artifact/maven-artifact.iml" />
+      <module fileurl="file://$PROJECT_DIR$/maven-artifact-ant/maven-artifact-ant.iml" filepath="$PROJECT_DIR$/maven-artifact-ant/maven-artifact-ant.iml" />
       <module fileurl="file://$PROJECT_DIR$/maven-artifact-manager/maven-artifact-manager.iml" filepath="$PROJECT_DIR$/maven-artifact-manager/maven-artifact-manager.iml" />
       <module fileurl="file://$PROJECT_DIR$/maven-artifact-test/maven-artifact-test.iml" filepath="$PROJECT_DIR$/maven-artifact-test/maven-artifact-test.iml" />
       <module fileurl="file://$PROJECT_DIR$/maven-cli/maven-cli.iml" filepath="$PROJECT_DIR$/maven-cli/maven-cli.iml" />
@@ -281,7 +282,7 @@
       <module fileurl="file://$PROJECT_DIR$/maven-tools/maven-tools.iml" filepath="$PROJECT_DIR$/maven-tools/maven-tools.iml" />
     </modules>
   </component>
-  <component name="ProjectRootManager" version="2" assert-keyword="true" jdk-15="false" project-jdk-name="1.4" />
+  <component name="ProjectRootManager" version="2" assert-keyword="true" jdk-15="true" project-jdk-name="1.5" />
   <component name="ProjectRunConfigurationManager" />
   <component name="RmicSettings">
     <option name="IS_EANABLED" value="false" />
