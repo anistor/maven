@@ -267,6 +267,7 @@
 
   <target name="extract-assembly" depends="init,maven-assembly"
           description="extracts the maven assembly into maven.home">
+    <echo>Extracting assembly to ${maven.home.dirname} ...</echo>
     <delete dir="${maven.home}"/>
     <unzip src="${maven.assembly}" dest="${maven.home.dirname}"/>
     <chmod perm="+x">

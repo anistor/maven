@@ -10,7 +10,6 @@ import org.codehaus.plexus.component.repository.ComponentDescriptor;
 public class AntMojoComponentFactory
     extends AntComponentFactory
 {
-
     public Object newInstance( ComponentDescriptor descriptor, ClassRealm realm, PlexusContainer container )
         throws ComponentInstantiationException
     {
