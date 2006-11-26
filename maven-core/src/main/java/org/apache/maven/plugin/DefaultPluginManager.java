@@ -89,7 +89,9 @@ import java.util.Set;
 
 public class DefaultPluginManager
     extends AbstractLogEnabled
-    implements PluginManager, Initializable, Contextualizable
+    implements PluginManager,
+    Initializable,
+    Contextualizable
 {
     protected PlexusContainer container;
 
@@ -136,7 +138,9 @@ public class DefaultPluginManager
         return pluginCollector.getPluginDescriptorForPrefix( prefix );
     }
 
-    public Plugin getPluginDefinitionForPrefix( String prefix, MavenSession session, MavenProject project )
+    public Plugin getPluginDefinitionForPrefix( String prefix,
+                                                MavenSession session,
+                                                MavenProject project )
     {
         // TODO: since this is only used in the lifecycle executor, maybe it should be moved there? There is no other
         // use for the mapping manager in here
@@ -145,7 +149,9 @@ public class DefaultPluginManager
                                                  session.getLocalRepository() );
     }
 
-    public PluginDescriptor verifyPlugin( Plugin plugin, MavenProject project, Settings settings,
+    public PluginDescriptor verifyPlugin( Plugin plugin,
+                                          MavenProject project,
+                                          Settings settings,
                                           ArtifactRepository localRepository )
         throws ArtifactResolutionException, PluginVersionResolutionException, ArtifactNotFoundException,
         InvalidVersionSpecificationException, InvalidPluginException, PluginManagerException, PluginNotFoundException,
@@ -163,7 +169,8 @@ public class DefaultPluginManager
         return verifyVersionedPlugin( plugin, project, localRepository );
     }
 
-    private PluginDescriptor verifyVersionedPlugin( Plugin plugin, MavenProject project,
+    private PluginDescriptor verifyVersionedPlugin( Plugin plugin,
+                                                    MavenProject project,
                                                     ArtifactRepository localRepository )
         throws PluginVersionResolutionException, ArtifactNotFoundException, ArtifactResolutionException,
         InvalidVersionSpecificationException, InvalidPluginException, PluginManagerException, PluginNotFoundException
@@ -239,7 +246,9 @@ public class DefaultPluginManager
      * @todo would be better to store this in the plugin descriptor, but then it won't be available to the version
      * manager which executes before the plugin is instantiated
      */
-    private void checkRequiredMavenVersion( Plugin plugin, ArtifactRepository localRepository, List remoteRepositories )
+    private void checkRequiredMavenVersion( Plugin plugin,
+                                            ArtifactRepository localRepository,
+                                            List remoteRepositories )
         throws PluginVersionResolutionException, InvalidPluginException
     {
         try
@@ -267,7 +276,9 @@ public class DefaultPluginManager
         }
     }
 
-    protected void addPlugin( Plugin plugin, Artifact pluginArtifact, MavenProject project,
+    protected void addPlugin( Plugin plugin,
+                              Artifact pluginArtifact,
+                              MavenProject project,
                               ArtifactRepository localRepository )
         throws PluginManagerException, InvalidPluginException
     {
@@ -291,7 +302,8 @@ public class DefaultPluginManager
 
         if ( addedPlugin == null )
         {
-            throw new IllegalStateException( "The PluginDescriptor for the plugin " + plugin.getKey() + " was not found" );
+            throw new IllegalStateException(
+                "The PluginDescriptor for the plugin " + plugin.getKey() + " was not found" );
         }
 
         addedPlugin.setClassRealm( child.getContainerRealm() );
@@ -331,7 +343,9 @@ public class DefaultPluginManager
     // Mojo execution
     // ----------------------------------------------------------------------
 
-    public void executeMojo( MavenProject project, MojoExecution mojoExecution, MavenSession session )
+    public void executeMojo( MavenProject project,
+                             MojoExecution mojoExecution,
+                             MavenSession session )
         throws ArtifactResolutionException, MojoExecutionException, MojoFailureException, ArtifactNotFoundException,
         InvalidDependencyVersionException, PluginManagerException, PluginConfigurationException
     {
@@ -450,7 +464,9 @@ public class DefaultPluginManager
         }
     }
 
-    public MavenReport getReport( MavenProject project, MojoExecution mojoExecution, MavenSession session )
+    public MavenReport getReport( MavenProject project,
+                                  MojoExecution mojoExecution,
+                                  MavenSession session )
         throws ArtifactNotFoundException, PluginConfigurationException, PluginManagerException,
         ArtifactResolutionException
     {
@@ -466,7 +482,9 @@ public class DefaultPluginManager
         return (MavenReport) getConfiguredMojo( session, dom, project, true, mojoExecution );
     }
 
-    public PluginDescriptor verifyReportPlugin( ReportPlugin reportPlugin, MavenProject project, MavenSession session )
+    public PluginDescriptor verifyReportPlugin( ReportPlugin reportPlugin,
+                                                MavenProject project,
+                                                MavenSession session )
         throws PluginVersionResolutionException, ArtifactResolutionException, ArtifactNotFoundException,
         InvalidVersionSpecificationException, InvalidPluginException, PluginManagerException, PluginNotFoundException,
         PluginVersionNotFoundException
@@ -506,7 +524,10 @@ public class DefaultPluginManager
         return pluginContainer;
     }
 
-    private Mojo getConfiguredMojo( MavenSession session, Xpp3Dom dom, MavenProject project, boolean report,
+    private Mojo getConfiguredMojo( MavenSession session,
+                                    Xpp3Dom dom,
+                                    MavenProject project,
+                                    boolean report,
                                     MojoExecution mojoExecution )
         throws PluginConfigurationException, ArtifactNotFoundException, PluginManagerException,
         ArtifactResolutionException
@@ -586,8 +607,10 @@ public class DefaultPluginManager
         return plugin;
     }
 
-    private void ensurePluginContainerIsComplete( PluginDescriptor pluginDescriptor, PlexusContainer pluginContainer,
-                                                  MavenProject project, MavenSession session )
+    private void ensurePluginContainerIsComplete( PluginDescriptor pluginDescriptor,
+                                                  PlexusContainer pluginContainer,
+                                                  MavenProject project,
+                                                  MavenSession session )
         throws ArtifactNotFoundException, PluginManagerException, ArtifactResolutionException
     {
         // if the plugin's already been used once, don't re-do this step...
@@ -614,14 +637,13 @@ public class DefaultPluginManager
 
             Set dependencies = new HashSet( resolutionGroup.getArtifacts() );
             dependencies.addAll( pluginDescriptor.getIntroducedDependencyArtifacts() );
-            
+
             List repositories = new ArrayList();
             repositories.addAll( resolutionGroup.getResolutionRepositories() );
             repositories.addAll( project.getRemoteArtifactRepositories() );
 
             ArtifactResolutionResult result = artifactResolver.resolveTransitively( dependencies, pluginArtifact,
-                                                                                    localRepository,
-                                                                                    repositories,
+                                                                                    localRepository, repositories,
                                                                                     artifactMetadataSource,
                                                                                     artifactFilter );
 
@@ -664,7 +686,8 @@ public class DefaultPluginManager
         }
     }
 
-    private void resolveCoreArtifacts( List unresolved, ArtifactRepository localRepository,
+    private void resolveCoreArtifacts( List unresolved,
+                                       ArtifactRepository localRepository,
                                        List resolutionRepositories )
         throws ArtifactResolutionException, ArtifactNotFoundException
     {
@@ -749,7 +772,8 @@ public class DefaultPluginManager
         return extractedConfiguration;
     }
 
-    private void checkRequiredParameters( MojoDescriptor goal, PlexusConfiguration configuration,
+    private void checkRequiredParameters( MojoDescriptor goal,
+                                          PlexusConfiguration configuration,
                                           ExpressionEvaluator expressionEvaluator )
         throws PluginConfigurationException
     {
@@ -824,7 +848,8 @@ public class DefaultPluginManager
         }
     }
 
-    private void validatePomConfiguration( MojoDescriptor goal, PlexusConfiguration pomConfiguration )
+    private void validatePomConfiguration( MojoDescriptor goal,
+                                           PlexusConfiguration pomConfiguration )
         throws PluginConfigurationException
     {
         List parameters = goal.getParameters();
@@ -871,7 +896,8 @@ public class DefaultPluginManager
         }
     }
 
-    private PlexusConfiguration mergeMojoConfiguration( XmlPlexusConfiguration fromPom, MojoDescriptor mojoDescriptor )
+    private PlexusConfiguration mergeMojoConfiguration( XmlPlexusConfiguration fromPom,
+                                                        MojoDescriptor mojoDescriptor )
     {
         XmlPlexusConfiguration result = new XmlPlexusConfiguration( fromPom.getName() );
         result.setValue( fromPom.getValue( null ) );
@@ -929,15 +955,14 @@ public class DefaultPluginManager
 
                 if ( toAdd != null )
                 {
-                    if ( implementation != null
-                        && toAdd.getAttribute( "implementation", null ) == null )
+                    if ( implementation != null && toAdd.getAttribute( "implementation", null ) == null )
                     {
 
                         XmlPlexusConfiguration implementationConf = new XmlPlexusConfiguration( paramName );
 
                         implementationConf.setAttribute( "implementation", parameter.getImplementation() );
 
-                        toAdd = buildTopDownMergedConfiguration( toAdd, implementationConf  );
+                        toAdd = buildTopDownMergedConfiguration( toAdd, implementationConf );
                     }
 
                     result.addChild( toAdd );
@@ -1031,8 +1056,11 @@ public class DefaultPluginManager
     // Mojo Parameter Handling
     // ----------------------------------------------------------------------
 
-    private void populatePluginFields( Mojo plugin, MojoDescriptor mojoDescriptor, PlexusConfiguration configuration,
-                                       PlexusContainer pluginContainer, ExpressionEvaluator expressionEvaluator )
+    private void populatePluginFields( Mojo plugin,
+                                       MojoDescriptor mojoDescriptor,
+                                       PlexusConfiguration configuration,
+                                       PlexusContainer pluginContainer,
+                                       ExpressionEvaluator expressionEvaluator )
         throws PluginConfigurationException
     {
         ComponentConfigurator configurator = null;
@@ -1087,7 +1115,8 @@ public class DefaultPluginManager
         }
     }
 
-    public static String createPluginParameterRequiredMessage( MojoDescriptor mojo, Parameter parameter,
+    public static String createPluginParameterRequiredMessage( MojoDescriptor mojo,
+                                                               Parameter parameter,
                                                                String expression )
     {
         StringBuffer message = new StringBuffer();
@@ -1126,8 +1155,11 @@ public class DefaultPluginManager
     // Artifact resolution
     // ----------------------------------------------------------------------
 
-    private void resolveTransitiveDependencies( MavenSession context, ArtifactResolver artifactResolver, String scope,
-                                                ArtifactFactory artifactFactory, MavenProject project )
+    private void resolveTransitiveDependencies( MavenSession context,
+                                                ArtifactResolver artifactResolver,
+                                                String scope,
+                                                ArtifactFactory artifactFactory,
+                                                MavenProject project )
         throws ArtifactResolutionException, ArtifactNotFoundException, InvalidDependencyVersionException
     {
         ArtifactFilter filter = new ScopeArtifactFilter( scope );
@@ -1155,7 +1187,9 @@ public class DefaultPluginManager
     // Artifact downloading
     // ----------------------------------------------------------------------
 
-    private void downloadDependencies( MavenProject project, MavenSession context, ArtifactResolver artifactResolver )
+    private void downloadDependencies( MavenProject project,
+                                       MavenSession context,
+                                       ArtifactResolver artifactResolver )
         throws ArtifactResolutionException, ArtifactNotFoundException
     {
         ArtifactRepository localRepository = context.getLocalRepository();
@@ -1169,7 +1203,9 @@ public class DefaultPluginManager
         }
     }
 
-    public Object getPluginComponent( Plugin plugin, String role, String roleHint )
+    public Object getPluginComponent( Plugin plugin,
+                                      String role,
+                                      String roleHint )
         throws PluginManagerException, ComponentLookupException
     {
         PluginDescriptor pluginDescriptor = pluginCollector.getPluginDescriptor( plugin );
@@ -1179,7 +1215,8 @@ public class DefaultPluginManager
         return pluginContainer.lookup( role, roleHint );
     }
 
-    public Map getPluginComponents( Plugin plugin, String role )
+    public Map getPluginComponents( Plugin plugin,
+                                    String role )
         throws ComponentLookupException, PluginManagerException
     {
         PluginDescriptor pluginDescriptor = pluginCollector.getPluginDescriptor( plugin );
