@@ -96,8 +96,8 @@
     </macrodef>
     <pull orgpath="commons-cli/commons-cli" version="1.0" name="commons-cli"/>
     <pull orgpath="org/codehaus/plexus/plexus-utils" version="1.1" name="plexus-utils"/>
-    <pull orgpath="org/codehaus/plexus/plexus-container-default" version="1.0-alpha-12-SNAPSHOT" name="plexus-container-default"/>
-    <pull orgpath="org/codehaus/plexus/plexus-component-api" version="1.0-alpha-12-SNAPSHOT" name="plexus-component-api"/>
+    <pull orgpath="org/codehaus/plexus/plexus-container-default" version="1.0-alpha-12" name="plexus-container-default"/>
+    <pull orgpath="org/codehaus/plexus/plexus-component-api" version="1.0-alpha-12" name="plexus-component-api"/>
     <pull orgpath="org/codehaus/plexus/plexus-classworlds" version="1.2-alpha-5-SNAPSHOT" name="plexus-classworlds"/>
     <pull orgpath="org/codehaus/plexus/plexus-interactivity-api" version="1.0-alpha-4" name="plexus-interactivity-api"/>
     <pull orgpath="org/codehaus/plexus/plexus-archiver" version="1.0-alpha-8-SNAPSHOT" name="plexus-archiver" repository="codehaus"/>
@@ -122,8 +122,8 @@
     <path id="pre.classpath">
       <pathelement location="${maven.repo.local}/commons-cli/commons-cli/1.0/commons-cli-1.0.jar"/>
       <pathelement location="${maven.repo.local}/org/codehaus/plexus/plexus-utils/1.1/plexus-utils-1.1.jar"/>
-      <pathelement location="${maven.repo.local}/org/codehaus/plexus/plexus-container-default/1.0-alpha-12-SNAPSHOT/plexus-container-default-1.0-alpha-12-SNAPSHOT.jar"/>
-      <pathelement location="${maven.repo.local}/org/codehaus/plexus/plexus-component-api/1.0-alpha-12-SNAPSHOT/plexus-component-api-1.0-alpha-12-SNAPSHOT.jar"/>
+      <pathelement location="${maven.repo.local}/org/codehaus/plexus/plexus-container-default/1.0-alpha-12/plexus-container-default-1.0-alpha-12.jar"/>
+      <pathelement location="${maven.repo.local}/org/codehaus/plexus/plexus-component-api/1.0-alpha-12/plexus-component-api-1.0-alpha-12.jar"/>
       <pathelement location="${maven.repo.local}/org/codehaus/plexus/plexus-classworlds/1.2-alpha-5-SNAPSHOT/plexus-classworlds-1.2-alpha-5-SNAPSHOT.jar"/>
       <pathelement location="${maven.repo.local}/org/codehaus/plexus/plexus-interactivity-api/1.0-alpha-4/plexus-interactivity-api-1.0-alpha-4.jar"/>
       <pathelement location="${maven.repo.local}/org/apache/maven/wagon/wagon-file/1.0-alpha-7/wagon-file-1.0-alpha-7.jar"/>
