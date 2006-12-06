@@ -98,7 +98,7 @@
     <pull orgpath="org/codehaus/plexus/plexus-utils" version="1.1" name="plexus-utils"/>
     <pull orgpath="org/codehaus/plexus/plexus-container-default" version="1.0-alpha-12" name="plexus-container-default"/>
     <pull orgpath="org/codehaus/plexus/plexus-component-api" version="1.0-alpha-12" name="plexus-component-api"/>
-    <pull orgpath="org/codehaus/plexus/plexus-classworlds" version="1.2-alpha-5-SNAPSHOT" name="plexus-classworlds"/>
+    <pull orgpath="org/codehaus/plexus/plexus-classworlds" version="1.2-alpha-5" name="plexus-classworlds"/>
     <pull orgpath="org/codehaus/plexus/plexus-interactivity-api" version="1.0-alpha-4" name="plexus-interactivity-api"/>
     <pull orgpath="org/codehaus/plexus/plexus-archiver" version="1.0-alpha-8-SNAPSHOT" name="plexus-archiver" repository="codehaus"/>
     <pull orgpath="org/apache/apache" version="3" name="apache" type="pom"/>
