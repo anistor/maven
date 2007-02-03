@@ -63,6 +63,7 @@ import org.apache.maven.project.validation.ModelValidator;
 import org.apache.maven.wagon.events.TransferListener;
 import org.codehaus.plexus.PlexusConstants;
 import org.codehaus.plexus.PlexusContainer;
+import org.codehaus.plexus.cache.Cache;
 import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
 import org.codehaus.plexus.context.Context;
 import org.codehaus.plexus.context.ContextException;
@@ -150,9 +151,9 @@ public class DefaultMavenProjectBuilder
 
     private ModelValidator validator;
     
-    private Map processedProjectCache = new HashMap();
+    private Cache processedProjectCache;
     
-    private Map cachedPomFilesByModelId = new HashMap();
+    private Cache cachedPomFilesByModelId;
 
     // TODO: make it a component
     private MavenXpp3Reader modelReader;

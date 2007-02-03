@@ -98,6 +98,16 @@
           <role>org.apache.maven.context.BuildContextManager</role>
           <role-hint>default</role-hint>
         </requirement>
+        <requirement>
+          <role>org.codehaus.plexus.cache.Cache</role>
+          <role-hint>projectBuilder-processed</role-hint>
+          <field-name>processedProjectCache</field-name>
+        </requirement>
+        <requirement>
+          <role>org.codehaus.plexus.cache.Cache</role>
+          <role-hint>cache-PomFilesById</role-hint>
+          <field-name>cachedPomFilesByModelId</field-name>
+        </requirement>
       </requirements>
     </component>
   </components>

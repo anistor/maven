@@ -19,12 +19,12 @@ import org.apache.maven.project.build.model.ModelLineageIterator;
 import org.apache.maven.project.interpolation.ModelInterpolationException;
 import org.apache.maven.project.interpolation.ModelInterpolator;
 import org.codehaus.plexus.PlexusContainerException;
+import org.codehaus.plexus.cache.Cache;
 import org.codehaus.plexus.logging.LogEnabled;
 import org.codehaus.plexus.logging.Logger;
 import org.codehaus.plexus.logging.console.ConsoleLogger;
 
 import java.io.File;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -48,7 +48,7 @@ public class DefaultBuildExtensionScanner
     private ModelInterpolator modelInterpolator;
 
     public void scanForBuildExtensions( File pom, ArtifactRepository localRepository,
-                                        ProfileManager globalProfileManager, Map pomFilesById )
+                                        ProfileManager globalProfileManager, Cache pomFilesById )
         throws ExtensionScanningException
     {
         // setup the CustomActivatorAdvice to fail quietly while we discover extensions...then, we'll
@@ -110,7 +110,7 @@ public class DefaultBuildExtensionScanner
 
     private void checkModulesForExtensions( File containingPom, Model model, ArtifactRepository localRepository,
                                             List originalRemoteRepositories, ProfileManager globalProfileManager,
-                                            Map pomFilesById )
+                                            Cache pomFilesById )
         throws ExtensionScanningException
     {
         // FIXME: This gets a little sticky, because modules can be added by profiles that require
@@ -199,7 +199,7 @@ public class DefaultBuildExtensionScanner
 
     private ModelLineage buildModelLineage( File pom, ArtifactRepository localRepository,
                                             List originalRemoteRepositories, ProfileManager globalProfileManager,
-                                            Map cache )
+                                            Cache cache )
         throws ExtensionScanningException
     {
         ModelLineage lineage;

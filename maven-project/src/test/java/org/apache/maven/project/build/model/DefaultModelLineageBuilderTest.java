@@ -8,6 +8,7 @@ import org.apache.maven.model.Parent;
 import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
 import org.apache.maven.project.ProjectBuildingException;
 import org.codehaus.plexus.PlexusTestCase;
+import org.codehaus.plexus.cache.Cache;
 import org.codehaus.plexus.logging.Logger;
 import org.codehaus.plexus.util.FileUtils;
 import org.codehaus.plexus.util.IOUtil;
@@ -16,9 +17,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Map;
 
 public class DefaultModelLineageBuilderTest
     extends PlexusTestCase
@@ -27,17 +26,28 @@ public class DefaultModelLineageBuilderTest
     private DefaultModelLineageBuilder modelLineageBuilder;
 
     private ArtifactRepositoryLayout defaultLayout;
+    
+    private Cache testCache;
 
     public void setUp()
         throws Exception
     {
         super.setUp();
         getContainer().getLoggerManager().setThresholds( Logger.LEVEL_DEBUG );
+        
+        testCache = (Cache) lookup( Cache.ROLE, "testCache" );
 
         modelLineageBuilder = (DefaultModelLineageBuilder) lookup( ModelLineageBuilder.ROLE,
                                                                    DefaultModelLineageBuilder.ROLE_HINT );
 
         defaultLayout = (ArtifactRepositoryLayout) lookup( ArtifactRepositoryLayout.ROLE, "default" );
+    }
+
+    protected void tearDown()
+        throws Exception
+    {
+        release( testCache );
+        super.tearDown();
     }
 
     public void testShouldReadSinglePomWithNoParents()
@@ -68,7 +78,7 @@ public class DefaultModelLineageBuilderTest
             IOUtil.close( writer );
         }
 
-        ModelLineage lineage = modelLineageBuilder.buildModelLineage( pomFile, null, null, null, new HashMap() );
+        ModelLineage lineage = modelLineageBuilder.buildModelLineage( pomFile, null, null, null, testCache );
 
         assertEquals( 1, lineage.size() );
 
@@ -126,7 +136,7 @@ public class DefaultModelLineageBuilderTest
             .toExternalForm(), defaultLayout );
 
         ModelLineage lineage = modelLineageBuilder.buildModelLineage( currentPOM, localRepository,
-                                                                      Collections.EMPTY_LIST, null, new HashMap() );
+                                                                      Collections.EMPTY_LIST, null, testCache );
 
         assertEquals( 3, lineage.size() );
 
@@ -198,7 +208,7 @@ public class DefaultModelLineageBuilderTest
             .toExternalForm(), defaultLayout );
 
         ModelLineage lineage = modelLineageBuilder.buildModelLineage( currentPOM, localRepository, Collections
-            .singletonList( remoteRepository ), null, new HashMap() );
+            .singletonList( remoteRepository ), null, testCache );
 
         assertEquals( 3, lineage.size() );
 
@@ -253,7 +263,7 @@ public class DefaultModelLineageBuilderTest
             .toExternalForm(), defaultLayout );
 
         ModelLineage lineage = modelLineageBuilder.buildModelLineage( currentPOM, localRepository,
-                                                                      Collections.EMPTY_LIST, null, new HashMap() );
+                                                                      Collections.EMPTY_LIST, null, testCache );
 
         assertEquals( 2, lineage.size() );
 
@@ -314,8 +324,7 @@ public class DefaultModelLineageBuilderTest
         // 4. write the parent model to the local repo directory
         writeModel( parent, parentPOM );
         
-        Map cache = new HashMap();
-        cache.put( "group:parent:1", parentPOM );
+        testCache.put( "group:parent:1", parentPOM );
 
         // 5. create the current pom with a parent-ref on the parent model
         Model current = createModel( "group", "current", "1" );
@@ -336,13 +345,12 @@ public class DefaultModelLineageBuilderTest
 
         // 7. build the lineage.
         ModelLineage lineage = modelLineageBuilder.buildModelLineage( currentPOM, null, Collections
-            .EMPTY_LIST, null, cache );
+            .EMPTY_LIST, null, testCache );
 
         assertEquals( 2, lineage.size() );
 
         Iterator modelIterator = lineage.modelIterator();
 
-        assertEquals( 2, cache.size() );
         assertEquals( current.getId(), ( (Model) modelIterator.next() ).getId() );
         assertEquals( parent.getId(), ( (Model) modelIterator.next() ).getId() );
     }

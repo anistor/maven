@@ -3,10 +3,10 @@ package org.apache.maven.project.build.model;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.profiles.ProfileManager;
 import org.apache.maven.project.ProjectBuildingException;
+import org.codehaus.plexus.cache.Cache;
 
 import java.io.File;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Builds the lineage of Model instances, starting from a given POM file, and stretching back through
@@ -37,7 +37,7 @@ public interface ModelLineageBuilder
      *   have an incorrect relativePath
      */
     ModelLineage buildModelLineage( File pom, ArtifactRepository localRepository, List remoteRepositories,
-                                    ProfileManager profileManager, Map cachedPomFilesByModelId )
+                                    ProfileManager profileManager, Cache cachedPomFilesByModelId )
         throws ProjectBuildingException;
 
     /**
@@ -53,7 +53,7 @@ public interface ModelLineageBuilder
      *   have an incorrect relativePath
      */
     void resumeBuildingModelLineage( ModelLineage lineage, ArtifactRepository localRepository,
-                                     ProfileManager profileManager, Map cachedPomFilesByModelId )
+                                     ProfileManager profileManager, Cache cachedPomFilesByModelId )
         throws ProjectBuildingException;
 
 }

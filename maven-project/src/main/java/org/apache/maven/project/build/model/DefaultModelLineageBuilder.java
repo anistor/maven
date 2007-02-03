@@ -14,6 +14,7 @@ import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
 import org.apache.maven.profiles.ProfileManager;
 import org.apache.maven.project.ProjectBuildingException;
 import org.apache.maven.project.build.profile.ProfileAdvisor;
+import org.codehaus.plexus.cache.Cache;
 import org.codehaus.plexus.logging.LogEnabled;
 import org.codehaus.plexus.logging.Logger;
 import org.codehaus.plexus.logging.console.ConsoleLogger;
@@ -28,7 +29,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -64,7 +64,7 @@ public class DefaultModelLineageBuilder
      * @see org.apache.maven.project.build.model.ModelLineageBuilder#buildModelLineage(java.io.File, org.apache.maven.artifact.repository.ArtifactRepository, java.util.List)
      */
     public ModelLineage buildModelLineage( File pom, ArtifactRepository localRepository, List remoteRepositories,
-                                           ProfileManager profileManager, Map cachedPomFilesByModelId )
+                                           ProfileManager profileManager, Cache cachedPomFilesByModelId )
         throws ProjectBuildingException
     {
         ModelLineage lineage = new DefaultModelLineage();
@@ -96,7 +96,7 @@ public class DefaultModelLineageBuilder
     }
 
     public void resumeBuildingModelLineage( ModelLineage lineage, ArtifactRepository localRepository,
-                                            ProfileManager profileManager, Map cachedPomFilesByModelId )
+                                            ProfileManager profileManager, Cache cachedPomFilesByModelId )
         throws ProjectBuildingException
     {
         File pomFile = lineage.getDeepestFile();
@@ -146,7 +146,7 @@ public class DefaultModelLineageBuilder
      * Read the Model instance from the given POM file, and cache it in the given Map before 
      * returning it.
      */
-    private Model readModel( File pomFile, Map cachedPomFilesByModelId )
+    private Model readModel( File pomFile, Cache cachedPomFilesByModelId )
         throws ProjectBuildingException
     {
         return readModel( pomFile, cachedPomFilesByModelId, false );
@@ -157,7 +157,7 @@ public class DefaultModelLineageBuilder
      * Model instance in the given Map before returning it. The skipCache flag controls whether the
      * Model instance is actually cached.
      */
-    private Model readModel( File pom, Map cachedPomFilesByModelId, boolean skipCache )
+    private Model readModel( File pom, Cache cachedPomFilesByModelId, boolean skipCache )
         throws ProjectBuildingException
     {
         File pomFile = pom;
@@ -268,7 +268,7 @@ public class DefaultModelLineageBuilder
      * @param cachedModelsById 
      */
     private File resolveParentPom( Model model, List remoteRepositories, ArtifactRepository localRepository,
-                                   File modelPomFile, Map cachedModelsById )
+                                   File modelPomFile, Cache cachedModelsById )
         throws ProjectBuildingException
     {
         Parent modelParent = model.getParent();

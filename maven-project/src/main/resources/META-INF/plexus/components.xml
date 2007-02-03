@@ -87,6 +87,26 @@
      |
      -->
     <component>
+      <role>org.codehaus.plexus.cache.Cache</role>
+      <role-hint>projectBuilder-processed</role-hint>
+      <implementation>org.codehaus.plexus.cache.hashmap.HashMapCache</implementation>
+      <configuration>
+        <cache-hit-ratio>1.0</cache-hit-ratio>
+        <cache-max-size>0</cache-max-size>
+      </configuration>
+    </component>     
+     
+    <component>
+      <role>org.codehaus.plexus.cache.Cache</role>
+      <role-hint>cache-PomFilesById</role-hint>
+      <implementation>org.codehaus.plexus.cache.hashmap.HashMapCache</implementation>
+      <configuration>
+        <cache-hit-ratio>1.0</cache-hit-ratio>
+        <cache-max-size>0</cache-max-size>
+      </configuration>
+    </component>     
+    
+    <component>
       <role>org.apache.maven.project.MavenProjectBuilder</role>
       <implementation>org.apache.maven.project.DefaultMavenProjectBuilder</implementation>
       <requirements>
@@ -131,6 +151,16 @@
         </requirement>
         <requirement>
           <role>org.apache.maven.MavenTools</role>
+        </requirement>
+        <requirement>
+          <role>org.codehaus.plexus.cache.Cache</role>
+          <role-hint>projectBuilder-processed</role-hint>
+          <field-name>processedProjectCache</field-name>
+        </requirement>
+        <requirement>
+          <role>org.codehaus.plexus.cache.Cache</role>
+          <role-hint>cache-PomFilesById</role-hint>
+          <field-name>cachedPomFilesByModelId</field-name>
         </requirement>
       </requirements>
     </component>

@@ -50,6 +50,7 @@ import org.apache.maven.settings.Settings;
 import org.apache.maven.usability.diagnostics.ErrorDiagnostics;
 import org.codehaus.plexus.PlexusConstants;
 import org.codehaus.plexus.PlexusContainer;
+import org.codehaus.plexus.cache.Cache;
 import org.codehaus.plexus.context.Context;
 import org.codehaus.plexus.context.ContextException;
 import org.codehaus.plexus.logging.AbstractLogEnabled;
@@ -64,10 +65,8 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.TimeZone;
 
 /**
@@ -96,6 +95,8 @@ public class DefaultMaven
     protected RuntimeInformation runtimeInformation;
 
     private BuildExtensionScanner buildExtensionScanner;
+    
+    private Cache pomFileCache;
 
     private static final long MB = 1024 * 1024;
 
@@ -345,17 +346,13 @@ public class DefaultMaven
             throw new MavenExecutionException( "Error selecting project files for the reactor: " + e.getMessage(), e );
         }
         
-        // TODO: We should probably do this discovery just-in-time, if we can move to building project
-        // instances just-in-time.
-        Map cache = new HashMap();
-        
         for ( Iterator it = files.iterator(); it.hasNext(); )
         {
             File pom = (File) it.next();
 
             try
             {
-                buildExtensionScanner.scanForBuildExtensions( pom, request.getLocalRepository(), globalProfileManager, cache );
+                buildExtensionScanner.scanForBuildExtensions( pom, request.getLocalRepository(), globalProfileManager, pomFileCache );
             }
             catch ( ExtensionScanningException e )
             {
