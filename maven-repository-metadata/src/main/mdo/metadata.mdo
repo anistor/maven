@@ -147,6 +147,7 @@ under the License.
             if ( v.getLastUpdated() == null || v.getLastUpdated().length() == 0 ||
                  versioning.getLastUpdated().compareTo( v.getLastUpdated() ) >= 0 )
             {
+                changed = true;
                 v.setLastUpdated( versioning.getLastUpdated() );
 
                 if ( versioning.getRelease() != null )
@@ -244,10 +245,15 @@ under the License.
           <code>
             public void updateTimestamp()
             {
-            java.util.TimeZone timezone = java.util.TimeZone.getTimeZone( "UTC" );
-            java.text.DateFormat fmt = new java.text.SimpleDateFormat( "yyyyMMddHHmmss" );
-            fmt.setTimeZone( timezone );
-            setLastUpdated( fmt.format( new java.util.Date() ) );
+                setLastUpdatedTimestamp( new java.util.Date() );
+            }
+
+            public void setLastUpdatedTimestamp( java.util.Date date )
+            {
+                java.util.TimeZone timezone = java.util.TimeZone.getTimeZone( "UTC" );
+                java.text.DateFormat fmt = new java.text.SimpleDateFormat( "yyyyMMddHHmmss" );
+                fmt.setTimeZone( timezone );
+                setLastUpdated( fmt.format( date ) );
             }
           </code>
         </codeSegment>
