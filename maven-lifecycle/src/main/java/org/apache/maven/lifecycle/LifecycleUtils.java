@@ -192,7 +192,30 @@ public class LifecycleUtils
 
     public static void removeBindings( List toRemove, List removeFrom )
     {
-        // remove where g:a:v:goal matches.
+        // remove where gid:aid:goal matches.
+        List targets = new ArrayList();
+        for ( Iterator it = toRemove.iterator(); it.hasNext(); )
+        {
+            MojoBinding binding = (MojoBinding) it.next();
+            
+            targets.add( createMojoBindingKey( binding ) );
+        }
+        
+        for ( Iterator it = removeFrom.iterator(); it.hasNext(); )
+        {
+            MojoBinding binding = (MojoBinding) it.next();
+            
+            String key = createMojoBindingKey( binding );
+            if ( targets.contains( key ) )
+            {
+                it.remove();
+            }
+        }
+    }
+    
+    public static String createMojoBindingKey( MojoBinding mojoBinding )
+    {
+        return mojoBinding.getGroupId() + ":" + mojoBinding.getArtifactId() + ":" + mojoBinding.getGoal();
     }
 
 }
