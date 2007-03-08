@@ -6,7 +6,7 @@ public class PluginLoaderException
     extends Exception
 {
 
-    private final Plugin plugin;
+    private Plugin plugin;
 
     public PluginLoaderException( Plugin plugin, String message, Throwable cause )
     {
@@ -20,6 +20,16 @@ public class PluginLoaderException
         this.plugin = plugin;
     }
     
+    public PluginLoaderException( String message )
+    {
+        super( message );
+    }
+
+    public PluginLoaderException( String message, Throwable cause )
+    {
+        super( message, cause );
+    }
+
     public Plugin getPlugin()
     {
         return plugin;

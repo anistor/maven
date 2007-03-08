@@ -55,7 +55,7 @@ public class ClassLoaderXmlBindingLoader
                 + e.getMessage(), e );
         }
         
-        bindings.setOrigin( url.toExternalForm() );
+        LifecycleUtils.setOrigin( bindings, url.toExternalForm() );
         
         return bindings;
     }

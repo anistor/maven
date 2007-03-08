@@ -46,12 +46,6 @@
           <required>true</required>
           <description>POM packaging to which this lifecycle specification applies.</description>
         </field>
-        <field>
-          <version>1.0.0</version>
-          <name>origin</name>
-          <type>String</type>
-          <description>Specific location from which this set of bindings was loaded.</description>
-        </field>
         <field xml.tagName="clean">
           <version>1.0.0</version>
           <name>cleanBinding</name>
@@ -84,7 +78,7 @@
         <codeSegment>
           <version>1.0.0</version>
           <code><![CDATA[
-    public java.util.List getMappingList()
+    public java.util.List getBindingList()
     {
         java.util.List lifecycles = new java.util.ArrayList();
         
@@ -103,7 +97,7 @@
             lifecycles.add( getSiteBinding() );
         }
         
-        return lifecycles;
+        return java.util.Collections.unmodifiableList( lifecycles );
     }
           ]]></code>
         </codeSegment>
@@ -122,12 +116,12 @@
         throw new UnsupportedOperationException( "Unsupported in base-class." );
     }
           
-    public java.util.List getPhaseBindingsInOrder()
+    public java.util.List getPhasesInOrder()
     {
         throw new UnsupportedOperationException( "Unsupported in base-class." );
     }
     
-    public java.util.List getPhaseBindingNamesInOrder()
+    public java.util.List getPhaseNamesInOrder()
     {
         throw new UnsupportedOperationException( "Unsupported in base-class." );
     }
@@ -171,7 +165,7 @@
         return "clean";
     }
           
-    public java.util.List getPhaseBindingsInOrder()
+    public java.util.List getPhasesInOrder()
     {
         java.util.List phases = new java.util.ArrayList();
         
@@ -179,10 +173,10 @@
         phases.add( getClean() );
         phases.add( getPostClean() );
         
-        return phases;
+        return java.util.Collections.unmodifiableList( phases );
     }
     
-    public java.util.List getPhaseBindingNamesInOrder()
+    public java.util.List getPhaseNamesInOrder()
     {
         java.util.List phases = new java.util.ArrayList();
         
@@ -190,7 +184,7 @@
         phases.add( "clean" );
         phases.add( "post-clean" );
         
-        return phases;
+        return java.util.Collections.unmodifiableList( phases );
     }
           ]]></code>
         </codeSegment>
@@ -372,7 +366,7 @@
         return "build";
     }
           
-    public java.util.List getPhaseBindingsInOrder()
+    public java.util.List getPhasesInOrder()
     {
         java.util.List phases = new java.util.ArrayList();
         
@@ -400,10 +394,10 @@
         phases.add( getInstall() );
         phases.add( getDeploy() );
         
-        return phases;
+        return java.util.Collections.unmodifiableList( phases );
     }
     
-    public java.util.List getPhaseBindingNamesInOrder()
+    public java.util.List getPhaseNamesInOrder()
     {
         java.util.List phases = new java.util.ArrayList();
         
@@ -431,7 +425,7 @@
         phases.add( "install" );
         phases.add( "deploy" );
         
-        return phases;
+        return java.util.Collections.unmodifiableList( phases );
     }
           ]]></code>
         </codeSegment>
@@ -473,7 +467,7 @@
         return "site";
     }
           
-    public java.util.List getPhaseBindingsInOrder()
+    public java.util.List getPhasesInOrder()
     {
         java.util.List phases = new java.util.ArrayList();
         
@@ -481,10 +475,10 @@
         phases.add( getSite() );
         phases.add( getPostSite() );
         
-        return phases;
+        return java.util.Collections.unmodifiableList( phases );
     }
     
-    public java.util.List getPhaseBindingNamesInOrder()
+    public java.util.List getPhaseNamesInOrder()
     {
         java.util.List phases = new java.util.ArrayList();
         
@@ -492,7 +486,7 @@
         phases.add( "site" );
         phases.add( "post-site" );
         
-        return phases;
+        return java.util.Collections.unmodifiableList( phases );
     }
           ]]></code>
         </codeSegment>
@@ -546,6 +540,12 @@
           <version>1.0.0</version>
           <description>Mojo's goal name.</description>
           <type>String</type>
+        </field>
+        <field>
+          <version>1.0.0</version>
+          <name>origin</name>
+          <type>String</type>
+          <description>Specific location from which this set of mojo binding was loaded.</description>
         </field>
         <field>
           <name>defaultConfiguration</name>

@@ -5,6 +5,7 @@ import org.apache.maven.lifecycle.CleanBinding;
 import org.apache.maven.lifecycle.Lifecycle;
 import org.apache.maven.lifecycle.LifecycleBindings;
 import org.apache.maven.lifecycle.LifecycleSpecificationException;
+import org.apache.maven.lifecycle.LifecycleUtils;
 import org.apache.maven.lifecycle.MojoBinding;
 import org.apache.maven.lifecycle.Phase;
 import org.apache.maven.lifecycle.SiteBinding;
@@ -23,7 +24,6 @@ public final class LegacyLifecycleMappingParser
     {
         LifecycleBindings bindings = new LifecycleBindings();
         
-        bindings.setOrigin( "Maven core" );
         bindings.setPackaging( "unmatched" );
         
         for ( Iterator it = lifecycles.iterator(); it.hasNext(); )
@@ -47,6 +47,8 @@ public final class LegacyLifecycleMappingParser
                 throw new LifecycleSpecificationException( "Unrecognized lifecycle: " + lifecycle.getId() );
             }
         }
+        
+        LifecycleUtils.setOrigin( bindings, "Maven core" );
 
         return bindings;
     }
@@ -55,63 +57,15 @@ public final class LegacyLifecycleMappingParser
         throws LifecycleSpecificationException
     {
         LifecycleBindings bindings = new LifecycleBindings();
-        bindings.setOrigin( "Maven core" );
         bindings.setPackaging( packaging );
 
         bindings.setCleanBinding( parseCleanBindings( mapping.getPhases( "clean" ) ) );
         bindings.setBuildBinding( parseBuildBindings( mapping.getPhases( "default" ) ) );
         bindings.setSiteBinding( parseSiteBindings( mapping.getPhases( "site" ) ) );
+        
+        LifecycleUtils.setOrigin( bindings, "Maven core" );
 
         return bindings;
-    }
-
-    public static MojoBinding parseMojoBinding( String bindingSpec, boolean allowPrefixReference )
-        throws LifecycleSpecificationException
-    {
-        StringTokenizer tok = new StringTokenizer( bindingSpec, ":" );
-        int numTokens = tok.countTokens();
-
-        MojoBinding binding = null;
-
-        if ( numTokens == 2 )
-        {
-            if ( !allowPrefixReference )
-            {
-                String msg = "Mapped-prefix lookup of mojos are only supported from direct invocation. "
-                    + "Please use specification of the form groupId:artifactId[:version]:goal instead.";
-
-                throw new LifecycleSpecificationException( msg );
-            }
-
-            binding = new PrefixedMojoBinding();
-
-            ( (PrefixedMojoBinding) binding ).setPrefix( tok.nextToken() );
-            binding.setGoal( tok.nextToken() );
-
-        }
-        else if ( numTokens == 3 || numTokens == 4 )
-        {
-            binding = new MojoBinding();
-
-            binding.setGroupId( tok.nextToken() );
-            binding.setArtifactId( tok.nextToken() );
-
-            if ( numTokens == 4 )
-            {
-                binding.setVersion( tok.nextToken() );
-            }
-
-            binding.setGoal( tok.nextToken() );
-        }
-        else
-        {
-            String message = "Invalid task '" + bindingSpec + "': you must specify a valid lifecycle phase, or"
-                + " a goal in the format plugin:goal or pluginGroupId:pluginArtifactId:pluginVersion:goal";
-
-            throw new LifecycleSpecificationException( message );
-        }
-
-        return binding;
     }
 
     private static BuildBinding parseBuildBindings( Map phases )
@@ -169,7 +123,7 @@ public final class LegacyLifecycleMappingParser
             {
                 String rawBinding = tok.nextToken().trim();
 
-                MojoBinding binding = parseMojoBinding( rawBinding, false );
+                MojoBinding binding = MojoReferenceParser.parseMojoBinding( rawBinding, false );
 
                 if ( binding == null )
                 {

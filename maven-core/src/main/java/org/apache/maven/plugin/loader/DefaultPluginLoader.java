@@ -5,15 +5,19 @@ import org.apache.maven.artifact.resolver.ArtifactResolutionException;
 import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException;
 import org.apache.maven.context.BuildContextManager;
 import org.apache.maven.execution.SessionContext;
+import org.apache.maven.lifecycle.MojoBinding;
+import org.apache.maven.lifecycle.parser.PrefixedMojoBinding;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.plugin.InvalidPluginException;
 import org.apache.maven.plugin.PluginManager;
 import org.apache.maven.plugin.PluginManagerException;
+import org.apache.maven.plugin.PluginMappingManager;
 import org.apache.maven.plugin.PluginNotFoundException;
 import org.apache.maven.plugin.descriptor.PluginDescriptor;
 import org.apache.maven.plugin.version.PluginVersionNotFoundException;
 import org.apache.maven.plugin.version.PluginVersionResolutionException;
 import org.apache.maven.project.MavenProject;
+import org.apache.maven.settings.Settings;
 import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
 import org.codehaus.plexus.logging.LogEnabled;
 import org.codehaus.plexus.logging.Logger;
@@ -25,9 +29,11 @@ public class DefaultPluginLoader
     private Logger logger;
 
     // FIXME: Move the functionality used from this into the PluginLoader when PluginManager refactor is complete.
-    PluginManager pluginManager;
+    private PluginManager pluginManager;
+    
+    private PluginMappingManager pluginMappingManager;
 
-    BuildContextManager buildContextManager;
+    private BuildContextManager buildContextManager;
 
     public Object loadPluginComponent( String role, String roleHint, Plugin plugin, MavenProject project )
         throws ComponentLookupException, PluginLoaderException
@@ -71,6 +77,43 @@ public class DefaultPluginLoader
                 throw new PluginLoaderException( plugin, "Failed to lookup plugin component. Reason: " + e.getMessage(), e );
             }
         }
+    }
+    
+    public PluginDescriptor loadPlugin( MojoBinding mojoBinding, MavenProject project )
+        throws PluginLoaderException
+    {
+        Plugin plugin = null;
+        if ( mojoBinding instanceof PrefixedMojoBinding )
+        {
+            PrefixedMojoBinding prefixed = (PrefixedMojoBinding) mojoBinding;
+            
+            SessionContext ctx = SessionContext.read( buildContextManager );
+            Settings settings = ctx.getSettings();
+            
+            plugin = pluginMappingManager.getByPrefix( prefixed.getPrefix(), settings.getPluginGroups(),
+                                                              project.getPluginArtifactRepositories(), ctx.getLocalRepository() );
+            
+            if ( plugin == null )
+            {
+                throw new PluginLoaderException( "Cannot find plugin with prefix: " + prefixed.getPrefix() );
+            }
+            
+            mojoBinding.setGroupId( plugin.getGroupId() );
+            mojoBinding.setArtifactId( plugin.getArtifactId() );
+        }
+        else
+        {
+            plugin = new Plugin();
+            plugin.setGroupId( mojoBinding.getGroupId() );
+            plugin.setArtifactId( mojoBinding.getArtifactId() );
+            plugin.setVersion( mojoBinding.getVersion() );
+        }
+        
+        PluginDescriptor pluginDescriptor = loadPlugin( plugin, project );
+        
+        mojoBinding.setVersion( pluginDescriptor.getVersion() );
+        
+        return pluginDescriptor;
     }
 
     public PluginDescriptor loadPlugin( Plugin plugin, MavenProject project )

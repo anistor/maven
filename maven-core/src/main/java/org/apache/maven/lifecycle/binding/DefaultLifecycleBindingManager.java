@@ -4,7 +4,7 @@ import org.apache.maven.lifecycle.LifecycleBindingLoader;
 import org.apache.maven.lifecycle.LifecycleBindings;
 import org.apache.maven.lifecycle.LifecycleLoaderException;
 import org.apache.maven.lifecycle.LifecycleSpecificationException;
-import org.apache.maven.lifecycle.LifecycleWalker;
+import org.apache.maven.lifecycle.LifecycleUtils;
 import org.apache.maven.lifecycle.MojoBinding;
 import org.apache.maven.lifecycle.parser.LegacyLifecycleMappingParser;
 import org.apache.maven.model.Plugin;
@@ -124,7 +124,6 @@ public class DefaultLifecycleBindingManager
         String projectId = project.getId();
         
         LifecycleBindings bindings = new LifecycleBindings();
-        bindings.setOrigin( projectId );
         bindings.setPackaging( project.getPackaging() );
         
         List plugins = project.getBuildPlugins();
@@ -179,12 +178,14 @@ public class DefaultLifecycleBindingManager
                                 }
                             }
                             
-                            LifecycleWalker.addMojoBinding( phase, mojoBinding, bindings );
+                            LifecycleUtils.addMojoBinding( phase, mojoBinding, bindings );
                         }
                     }
                 }
             }
         }
+        
+        LifecycleUtils.setOrigin( bindings, projectId );
         
         return bindings;
     }
