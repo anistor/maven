@@ -1,14 +1,13 @@
-package org.apache.maven.lifecycle.parser;
+package org.apache.maven.lifecycle;
 
-import org.apache.maven.lifecycle.LifecycleSpecificationException;
 import org.apache.maven.lifecycle.MojoBinding;
 
 import java.util.StringTokenizer;
 
-public final class MojoReferenceParser
+public final class MojoBindingParser
 {
 
-    private MojoReferenceParser()
+    private MojoBindingParser()
     {
     }
 

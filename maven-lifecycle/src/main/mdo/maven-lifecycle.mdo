@@ -542,15 +542,22 @@
           <type>String</type>
         </field>
         <field>
+          <name>executionId</name>
+          <version>1.0.0</version>
+          <defaultValue>default</defaultValue>
+          <description>A name for this mojo binding, for purposes of merging configurations via inheritance, etc.</description>
+          <type>String</type>
+        </field>
+        <field>
           <version>1.0.0</version>
           <name>origin</name>
           <type>String</type>
           <description>Specific location from which this set of mojo binding was loaded.</description>
         </field>
         <field>
-          <name>defaultConfiguration</name>
+          <name>configuration</name>
           <version>1.0.0</version>
-          <description>Mojo's default configuration (will NOT be merged with config given in the POM).</description>
+          <description>Mojo binding's configuration.</description>
           <type>DOM</type>
         </field>
       </fields>

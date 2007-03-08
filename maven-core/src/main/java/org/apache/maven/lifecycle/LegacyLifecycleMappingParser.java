@@ -1,16 +1,24 @@
-package org.apache.maven.lifecycle.parser;
+package org.apache.maven.lifecycle;
 
 import org.apache.maven.lifecycle.BuildBinding;
 import org.apache.maven.lifecycle.CleanBinding;
 import org.apache.maven.lifecycle.Lifecycle;
 import org.apache.maven.lifecycle.LifecycleBindings;
-import org.apache.maven.lifecycle.LifecycleSpecificationException;
-import org.apache.maven.lifecycle.LifecycleUtils;
+import org.apache.maven.lifecycle.LifecycleExecutionException;
 import org.apache.maven.lifecycle.MojoBinding;
 import org.apache.maven.lifecycle.Phase;
 import org.apache.maven.lifecycle.SiteBinding;
 import org.apache.maven.lifecycle.mapping.LifecycleMapping;
+import org.apache.maven.model.Plugin;
+import org.apache.maven.plugin.MojoExecution;
+import org.apache.maven.plugin.descriptor.MojoDescriptor;
+import org.apache.maven.plugin.descriptor.PluginDescriptor;
+import org.apache.maven.plugin.lifecycle.Execution;
+import org.codehaus.plexus.util.StringUtils;
+import org.codehaus.plexus.util.xml.Xpp3Dom;
+import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
+import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -67,7 +75,7 @@ public final class LegacyLifecycleMappingParser
 
         return bindings;
     }
-
+    
     private static BuildBinding parseBuildBindings( Map phases )
         throws LifecycleSpecificationException
     {
@@ -123,7 +131,7 @@ public final class LegacyLifecycleMappingParser
             {
                 String rawBinding = tok.nextToken().trim();
 
-                MojoBinding binding = MojoReferenceParser.parseMojoBinding( rawBinding, false );
+                MojoBinding binding = MojoBindingParser.parseMojoBinding( rawBinding, false );
 
                 if ( binding == null )
                 {

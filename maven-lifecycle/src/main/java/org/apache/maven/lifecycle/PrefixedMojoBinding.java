@@ -1,4 +1,4 @@
-package org.apache.maven.lifecycle.parser;
+package org.apache.maven.lifecycle;
 
 import org.apache.maven.lifecycle.MojoBinding;
 

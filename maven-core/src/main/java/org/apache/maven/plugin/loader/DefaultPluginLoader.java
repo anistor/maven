@@ -6,7 +6,7 @@ import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException
 import org.apache.maven.context.BuildContextManager;
 import org.apache.maven.execution.SessionContext;
 import org.apache.maven.lifecycle.MojoBinding;
-import org.apache.maven.lifecycle.parser.PrefixedMojoBinding;
+import org.apache.maven.lifecycle.PrefixedMojoBinding;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.plugin.InvalidPluginException;
 import org.apache.maven.plugin.PluginManager;

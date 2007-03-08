@@ -1,16 +1,61 @@
 package org.apache.maven.lifecycle.plan;
 
+import org.apache.maven.lifecycle.LifecycleBindings;
+import org.apache.maven.lifecycle.LifecycleSpecificationException;
+import org.apache.maven.lifecycle.LifecycleUtils;
+
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 public class DefaultLifecyclePlan
     implements LifecyclePlan
 {
 
-    private final List planBindings;
+    private final List tasks;
+    private final LifecycleBindings lifecycleBindings;
+    
+    private List planModifiers = new ArrayList();
 
-    public DefaultLifecyclePlan( List planBindings )
+    public DefaultLifecyclePlan( List tasks, LifecycleBindings lifecycleBindings )
     {
-        this.planBindings = planBindings;
+        this.tasks = tasks;
+        this.lifecycleBindings = lifecycleBindings;
+    }
+
+    public List getPlanMojoBindings()
+        throws LifecycleSpecificationException, LifecyclePlannerException
+    {
+        LifecycleBindings cloned = LifecycleUtils.cloneBindings( lifecycleBindings );
+        
+        for ( Iterator it = planModifiers.iterator(); it.hasNext(); )
+        {
+            LifecyclePlanModifier modifier = (LifecyclePlanModifier) it.next();
+            
+            cloned = modifier.modifyBindings( cloned );
+        }
+        
+        return LifecycleUtils.assembleMojoBindingList( tasks, cloned );
+    }
+    
+    public LifecycleBindings getPlanLifecycleBindings()
+    {
+        return lifecycleBindings;
+    }
+    
+    public List getTasks()
+    {
+        return tasks;
+    }
+
+    public void addModifier( LifecyclePlanModifier planModifier )
+    {
+        planModifiers.add( planModifier );
+    }
+
+    public List getModifiers()
+    {
+        return planModifiers;
     }
 
 }
