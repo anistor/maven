@@ -1090,6 +1090,57 @@ public class LifecycleUtilsTest
 
     }
 
+    public void testRemoveMojoBindings_LifecycleBinding_RemoveOneMojo_WithExecIdCompare()
+        throws NoSuchPhaseException
+    {
+        MojoBinding binding = newMojoBinding( "group", "artifact", "clean" );
+        binding.setExecutionId( "non-default" );
+
+        MojoBinding binding2 = newMojoBinding( "group", "artifact", "clean" );
+        binding2.setExecutionId( "non-default" );
+
+        CleanBinding cb = new CleanBinding();
+
+        assertEquals( 0, cb.getClean().getBindings().size() );
+
+        cb.getClean().addBinding( binding );
+
+        assertEquals( 1, cb.getClean().getBindings().size() );
+
+        LifecycleUtils.removeMojoBindings( Collections.singletonList( binding2 ), cb, true );
+
+        assertEquals( 0, cb.getClean().getBindings().size() );
+
+    }
+
+    public void testRemoveMojoBindings_LifecycleBinding_RemoveTwoMojos_WithoutExecIdCompare()
+        throws NoSuchPhaseException
+    {
+        MojoBinding binding = newMojoBinding( "group", "artifact", "clean" );
+        MojoBinding binding2 = newMojoBinding( "group", "artifact", "clean2" );
+        MojoBinding binding3 = newMojoBinding( "group", "artifact", "clean" );
+        MojoBinding binding4 = newMojoBinding( "group", "artifact", "clean4" );
+
+        CleanBinding cb = new CleanBinding();
+
+        assertEquals( 0, cb.getClean().getBindings().size() );
+
+        cb.getClean().addBinding( binding2 );
+        cb.getClean().addBinding( binding3 );
+        cb.getClean().addBinding( binding4 );
+
+        assertEquals( 3, cb.getClean().getBindings().size() );
+
+        LifecycleUtils.removeMojoBindings( Collections.singletonList( binding ), cb, false );
+
+        List cleanBindings = cb.getClean().getBindings();
+
+        assertEquals( 2, cleanBindings.size() );
+
+        assertEquals( binding2.getGoal(), ( (MojoBinding) cleanBindings.get( 0 ) ).getGoal() );
+        assertEquals( binding4.getGoal(), ( (MojoBinding) cleanBindings.get( 1 ) ).getGoal() );
+    }
+
     public void testRemoveMojoBindings_LifecycleBinding_DontRemoveIfNoExecIdMatch_WithExecIdCompare()
         throws NoSuchPhaseException
     {
@@ -1107,6 +1158,105 @@ public class LifecycleUtilsTest
         assertEquals( 1, cb.getClean().getBindings().size() );
 
         LifecycleUtils.removeMojoBindings( Collections.singletonList( binding2 ), cb, true );
+
+        assertEquals( 1, cb.getClean().getBindings().size() );
+
+    }
+
+    public void testRemoveMojoBindings_LifecycleBindings_RemoveOneMojo_WithoutExecIdCompare()
+        throws NoSuchPhaseException
+    {
+        MojoBinding binding = newMojoBinding( "group", "artifact", "clean" );
+
+        MojoBinding binding2 = newMojoBinding( "group", "artifact", "clean" );
+        binding2.setExecutionId( "non-default" );
+
+        LifecycleBindings bindings = new LifecycleBindings();
+        CleanBinding cb = bindings.getCleanBinding();
+
+        assertEquals( 0, cb.getClean().getBindings().size() );
+
+        cb.getClean().addBinding( binding );
+
+        assertEquals( 1, cb.getClean().getBindings().size() );
+
+        LifecycleUtils.removeMojoBindings( Collections.singletonList( binding2 ), bindings, false );
+
+        assertEquals( 0, cb.getClean().getBindings().size() );
+
+    }
+
+    public void testRemoveMojoBindings_LifecycleBindings_RemoveOneMojo_WithExecIdCompare()
+        throws NoSuchPhaseException
+    {
+        MojoBinding binding = newMojoBinding( "group", "artifact", "clean" );
+        binding.setExecutionId( "non-default" );
+
+        MojoBinding binding2 = newMojoBinding( "group", "artifact", "clean" );
+        binding2.setExecutionId( "non-default" );
+
+        LifecycleBindings bindings = new LifecycleBindings();
+        CleanBinding cb = bindings.getCleanBinding();
+
+        assertEquals( 0, cb.getClean().getBindings().size() );
+
+        cb.getClean().addBinding( binding );
+
+        assertEquals( 1, cb.getClean().getBindings().size() );
+
+        LifecycleUtils.removeMojoBindings( Collections.singletonList( binding2 ), bindings, true );
+
+        assertEquals( 0, cb.getClean().getBindings().size() );
+
+    }
+
+    public void testRemoveMojoBindings_LifecycleBindings_RemoveTwoMojos_WithoutExecIdCompare()
+        throws NoSuchPhaseException
+    {
+        MojoBinding binding = newMojoBinding( "group", "artifact", "clean" );
+        MojoBinding binding2 = newMojoBinding( "group", "artifact", "clean2" );
+        MojoBinding binding3 = newMojoBinding( "group", "artifact", "clean" );
+        MojoBinding binding4 = newMojoBinding( "group", "artifact", "clean4" );
+
+        LifecycleBindings bindings = new LifecycleBindings();
+        CleanBinding cb = bindings.getCleanBinding();
+
+        assertEquals( 0, cb.getClean().getBindings().size() );
+
+        cb.getClean().addBinding( binding2 );
+        cb.getClean().addBinding( binding3 );
+        cb.getClean().addBinding( binding4 );
+
+        assertEquals( 3, cb.getClean().getBindings().size() );
+
+        LifecycleUtils.removeMojoBindings( Collections.singletonList( binding ), bindings, false );
+
+        List cleanBindings = cb.getClean().getBindings();
+
+        assertEquals( 2, cleanBindings.size() );
+
+        assertEquals( binding2.getGoal(), ( (MojoBinding) cleanBindings.get( 0 ) ).getGoal() );
+        assertEquals( binding4.getGoal(), ( (MojoBinding) cleanBindings.get( 1 ) ).getGoal() );
+    }
+
+    public void testRemoveMojoBindings_LifecycleBindings_DontRemoveIfNoExecIdMatch_WithExecIdCompare()
+        throws NoSuchPhaseException
+    {
+        MojoBinding binding = newMojoBinding( "group", "artifact", "clean" );
+
+        MojoBinding binding2 = newMojoBinding( "group", "artifact", "clean" );
+        binding2.setExecutionId( "non-default" );
+
+        LifecycleBindings bindings = new LifecycleBindings();
+        CleanBinding cb = bindings.getCleanBinding();
+
+        assertEquals( 0, cb.getClean().getBindings().size() );
+
+        cb.getClean().addBinding( binding );
+
+        assertEquals( 1, cb.getClean().getBindings().size() );
+
+        LifecycleUtils.removeMojoBindings( Collections.singletonList( binding2 ), bindings, true );
 
         assertEquals( 1, cb.getClean().getBindings().size() );
 
