@@ -61,5 +61,52 @@
         </lifecycles>
       </configuration>
     </component>
+    <component>
+      <role>org.apache.maven.lifecycle.mapping.LifecycleMapping</role>
+      <role-hint>test-mapping</role-hint>
+      <implementation>org.apache.maven.lifecycle.mapping.DefaultLifecycleMapping</implementation>
+      <configuration>
+        <lifecycles>
+          <lifecycle>
+            <id>default</id>
+            <!-- START SNIPPET: pom-lifecycle -->
+            <phases>
+              <package>org.apache.maven.plugins:maven-site-plugin:attach-descriptor</package>
+              <install>org.apache.maven.plugins:maven-install-plugin:install</install>
+              <deploy>org.apache.maven.plugins:maven-deploy-plugin:deploy</deploy>
+            </phases>
+            <optional-mojos>
+              <optional-mojo>org.apache.maven.plugins:maven-site-plugin:attach-descriptor</optional-mojo>
+            </optional-mojos>
+            <!-- END SNIPPET: pom-lifecycle -->
+          </lifecycle>
+        </lifecycles>
+      </configuration>
+    </component>
+    <component>
+      <role>org.apache.maven.lifecycle.mapping.LifecycleMapping</role>
+      <role-hint>test-mapping2</role-hint>
+      <implementation>org.apache.maven.lifecycle.mapping.DefaultLifecycleMapping</implementation>
+      <configuration>
+        <lifecycles>
+          <lifecycle>
+            <id>default</id>
+            <!-- START SNIPPET: pom-lifecycle -->
+            <phases>
+              <package>
+                org.apache.maven.plugins:maven-site-plugin:attach-descriptor,
+                org.apache.maven.plugins:maven-clean-plugin:clean
+              </package>
+              <install>org.apache.maven.plugins:maven-install-plugin:install</install>
+              <deploy>org.apache.maven.plugins:maven-deploy-plugin:deploy</deploy>
+            </phases>
+            <optional-mojos>
+              <optional-mojo>org.apache.maven.plugins:maven-site-plugin:attach-descriptor</optional-mojo>
+            </optional-mojos>
+            <!-- END SNIPPET: pom-lifecycle -->
+          </lifecycle>
+        </lifecycles>
+      </configuration>
+    </component>
   </components>
 </component-set>

@@ -599,6 +599,12 @@
           <description>Mojo binding's configuration.</description>
           <type>DOM</type>
         </field>
+        <field>
+          <name>optional</name>
+          <version>1.0.0</version>
+          <description>Marks a mojo binding as optional (not required for execution of the lifecycle).</description>
+          <type>boolean</type>
+        </field>
       </fields>
     </class>
   </classes>
