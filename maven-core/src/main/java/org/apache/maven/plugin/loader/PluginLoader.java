@@ -1,6 +1,6 @@
 package org.apache.maven.plugin.loader;
 
-import org.apache.maven.lifecycle.MojoBinding;
+import org.apache.maven.lifecycle.model.MojoBinding;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.plugin.descriptor.PluginDescriptor;
 import org.apache.maven.project.MavenProject;

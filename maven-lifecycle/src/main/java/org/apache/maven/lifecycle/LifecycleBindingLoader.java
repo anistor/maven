@@ -1,5 +1,7 @@
 package org.apache.maven.lifecycle;
 
+import org.apache.maven.lifecycle.model.LifecycleBindings;
+
 public interface LifecycleBindingLoader
 {
     

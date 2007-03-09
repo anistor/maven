@@ -1,5 +1,9 @@
 package org.apache.maven.lifecycle;
 
+import org.apache.maven.lifecycle.model.CleanBinding;
+import org.apache.maven.lifecycle.model.LifecycleBindings;
+import org.apache.maven.lifecycle.model.MojoBinding;
+import org.apache.maven.lifecycle.model.Phase;
 import org.codehaus.plexus.PlexusTestCase;
 
 import java.util.List;

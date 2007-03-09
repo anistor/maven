@@ -1,12 +1,12 @@
 package org.apache.maven.lifecycle.plan;
 
-import org.apache.maven.lifecycle.LifecycleBinding;
-import org.apache.maven.lifecycle.LifecycleBindings;
 import org.apache.maven.lifecycle.LifecycleLoaderException;
 import org.apache.maven.lifecycle.LifecycleSpecificationException;
 import org.apache.maven.lifecycle.LifecycleUtils;
-import org.apache.maven.lifecycle.MojoBinding;
 import org.apache.maven.lifecycle.binding.LifecycleBindingManager;
+import org.apache.maven.lifecycle.model.LifecycleBinding;
+import org.apache.maven.lifecycle.model.LifecycleBindings;
+import org.apache.maven.lifecycle.model.MojoBinding;
 import org.apache.maven.plugin.descriptor.MojoDescriptor;
 import org.apache.maven.plugin.descriptor.PluginDescriptor;
 import org.apache.maven.plugin.loader.PluginLoader;

@@ -1,5 +1,7 @@
 package org.apache.maven.lifecycle;
 
+import org.apache.maven.lifecycle.model.MojoBinding;
+
 import junit.framework.TestCase;
 
 public class MojoBindingParserTest

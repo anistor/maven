@@ -30,7 +30,7 @@
   <defaults>
     <default>
       <key>package</key>
-      <value>org.apache.maven.lifecycle</value>
+      <value>org.apache.maven.lifecycle.model</value>
     </default>
   </defaults>
   <classes>
@@ -486,6 +486,14 @@
             <type>Phase</type>
           </association>
         </field>
+        <field xml.tagName="site-deploy">
+          <name>siteDeploy</name>
+          <version>1.0.0</version>
+          <defaultValue>new Phase()</defaultValue>
+          <association>
+            <type>Phase</type>
+          </association>
+        </field>
       </fields>
       <codeSegments>
         <codeSegment>
@@ -503,6 +511,7 @@
         phases.add( getPreSite() );
         phases.add( getSite() );
         phases.add( getPostSite() );
+        phases.add( getSiteDeploy() );
         
         return java.util.Collections.unmodifiableList( phases );
     }
@@ -514,6 +523,7 @@
         phases.add( "pre-site" );
         phases.add( "site" );
         phases.add( "post-site" );
+        phases.add( "site-deploy" );
         
         return java.util.Collections.unmodifiableList( phases );
     }

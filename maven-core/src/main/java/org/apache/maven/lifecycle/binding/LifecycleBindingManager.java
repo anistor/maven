@@ -1,8 +1,8 @@
 package org.apache.maven.lifecycle.binding;
 
-import org.apache.maven.lifecycle.LifecycleBindings;
 import org.apache.maven.lifecycle.LifecycleLoaderException;
 import org.apache.maven.lifecycle.LifecycleSpecificationException;
+import org.apache.maven.lifecycle.model.LifecycleBindings;
 import org.apache.maven.plugin.descriptor.PluginDescriptor;
 import org.apache.maven.project.MavenProject;
 

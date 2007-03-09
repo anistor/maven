@@ -1,5 +1,12 @@
 package org.apache.maven.lifecycle;
 
+import org.apache.maven.lifecycle.model.BuildBinding;
+import org.apache.maven.lifecycle.model.CleanBinding;
+import org.apache.maven.lifecycle.model.LifecycleBinding;
+import org.apache.maven.lifecycle.model.LifecycleBindings;
+import org.apache.maven.lifecycle.model.MojoBinding;
+import org.apache.maven.lifecycle.model.Phase;
+import org.apache.maven.lifecycle.model.SiteBinding;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 
 import java.util.ArrayList;

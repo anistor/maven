@@ -1,6 +1,6 @@
 package org.apache.maven.lifecycle.plan;
 
-import org.apache.maven.lifecycle.LifecycleBindings;
+import org.apache.maven.lifecycle.model.LifecycleBindings;
 
 public interface LifecyclePlanModifier extends ModifiablePlanElement
 {

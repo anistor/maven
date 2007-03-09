@@ -1,7 +1,7 @@
 package org.apache.maven.lifecycle.plan;
 
-import org.apache.maven.lifecycle.LifecycleBindings;
 import org.apache.maven.lifecycle.LifecycleUtils;
+import org.apache.maven.lifecycle.model.LifecycleBindings;
 
 import java.util.ArrayList;
 import java.util.Iterator;

@@ -1,6 +1,7 @@
 package org.apache.maven.lifecycle;
 
-import org.apache.maven.lifecycle.io.xpp3.LifecycleBindingsXpp3Reader;
+import org.apache.maven.lifecycle.model.LifecycleBindings;
+import org.apache.maven.lifecycle.model.io.xpp3.LifecycleBindingsXpp3Reader;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
 import java.io.IOException;

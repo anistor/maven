@@ -1,6 +1,6 @@
 package org.apache.maven.lifecycle;
 
-import org.apache.maven.lifecycle.MojoBinding;
+import org.apache.maven.lifecycle.model.MojoBinding;
 
 import java.util.StringTokenizer;
 
