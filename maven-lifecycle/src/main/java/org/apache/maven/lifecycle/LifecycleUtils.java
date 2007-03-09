@@ -184,10 +184,10 @@ public class LifecycleUtils
         LifecycleBindings result = new LifecycleBindings();
         result.setPackaging( newBindings.getPackaging() );
 
-        CleanBinding cb = existingBindings.getCleanBinding();
-        if ( defaultBindings != null && cb == null )
+        CleanBinding cb = (CleanBinding) cloneBinding( existingBindings.getCleanBinding() );
+        if ( defaultBindings != null && isNullOrEmpty( cb ) )
         {
-            cb = defaultBindings.getCleanBinding();
+            cb = (CleanBinding) cloneBinding( defaultBindings.getCleanBinding() );
         }
 
         if ( cb == null )
@@ -197,10 +197,10 @@ public class LifecycleUtils
 
         result.setCleanBinding( cb );
 
-        BuildBinding bb = existingBindings.getBuildBinding();
-        if ( defaultBindings != null && bb == null )
+        BuildBinding bb = (BuildBinding) cloneBinding( existingBindings.getBuildBinding() );
+        if ( defaultBindings != null && isNullOrEmpty( bb ) )
         {
-            bb = defaultBindings.getBuildBinding();
+            bb = (BuildBinding) cloneBinding( defaultBindings.getBuildBinding() );
         }
 
         if ( bb == null )
@@ -210,10 +210,10 @@ public class LifecycleUtils
 
         result.setBuildBinding( bb );
 
-        SiteBinding sb = existingBindings.getSiteBinding();
-        if ( defaultBindings != null && sb == null )
+        SiteBinding sb = (SiteBinding) cloneBinding( existingBindings.getSiteBinding() );
+        if ( defaultBindings != null && isNullOrEmpty( sb ) )
         {
-            sb = defaultBindings.getSiteBinding();
+            sb = (SiteBinding) cloneBinding( defaultBindings.getSiteBinding() );
         }
 
         if ( sb == null )
@@ -243,20 +243,40 @@ public class LifecycleUtils
                         {
                             MojoBinding mojoBinding = (MojoBinding) phaseIt.next();
 
+                            mojoBinding = cloneMojoBinding( mojoBinding );
+
                             if ( mergeConfigIfExecutionIdMatches )
                             {
                                 MojoBinding matchingBinding = findMatchingMojoBinding( mojoBinding, existingBindings, true );
 
                                 if ( matchingBinding != null )
                                 {
-                                    mojoBinding = cloneMojoBinding( (MojoBinding) phaseIt.next() );
-
                                     Xpp3Dom existingConfig = new Xpp3Dom( (Xpp3Dom) matchingBinding.getConfiguration() );
-
-                                    Xpp3Dom configuration = Xpp3Dom.mergeXpp3Dom( existingConfig,
-                                                                                  (Xpp3Dom) mojoBinding.getConfiguration() );
+                                    Xpp3Dom configuration = Xpp3Dom.mergeXpp3Dom( (Xpp3Dom) mojoBinding.getConfiguration(), existingConfig );
 
                                     mojoBinding.setConfiguration( configuration );
+                                    
+                                    if ( mojoBinding.getOrigin() == null && matchingBinding.getOrigin() != null )
+                                    {
+                                        mojoBinding.setOrigin( matchingBinding.getOrigin() );
+                                    }
+                                    
+                                    LifecycleBinding resultBinding = findLifecycleBindingForPhase( name, result );
+                                    
+                                    try
+                                    {
+                                        removeMojoBinding( name, matchingBinding, resultBinding, true );
+                                    }
+                                    catch ( NoSuchPhaseException e )
+                                    {
+                                        IllegalStateException error = new IllegalStateException(
+                                                                                                 e.getMessage()
+                                                                                                     + "\nSomething strange is going on. Merging should not encounter such inconsistencies." );
+
+                                        error.initCause( e );
+
+                                        throw error;
+                                    }
                                 }
                             }
 
@@ -283,6 +303,26 @@ public class LifecycleUtils
         }
 
         return result;
+    }
+
+    private static boolean isNullOrEmpty( LifecycleBinding binding )
+    {
+        if ( binding == null )
+        {
+            return true;
+        }
+        
+        for ( Iterator it = binding.getPhasesInOrder().iterator(); it.hasNext(); )
+        {
+            Phase phase = (Phase) it.next();
+            
+            if ( !phase.getBindings().isEmpty() )
+            {
+                return false;
+            }
+        }
+        
+        return true;
     }
 
     public static MojoBinding findMatchingMojoBinding( MojoBinding mojoBinding, LifecycleBindings inBindings,
@@ -360,7 +400,7 @@ public class LifecycleUtils
         {
             Phase phase = (Phase) phases.get( i );
             List phaseBindings = phase.getBindings();
-            
+
             for ( Iterator mojoIt = phaseBindings.iterator(); mojoIt.hasNext(); )
             {
                 MojoBinding binding = (MojoBinding) mojoIt.next();
@@ -370,7 +410,7 @@ public class LifecycleUtils
                     mojoIt.remove();
                 }
             }
-            
+
             phase.setBindings( phaseBindings );
         }
     }
@@ -419,6 +459,11 @@ public class LifecycleUtils
 
     public static LifecycleBinding cloneBinding( LifecycleBinding binding )
     {
+        if ( binding == null )
+        {
+            return null;
+        }
+
         LifecycleBinding result;
         if ( binding instanceof CleanBinding )
         {
@@ -509,7 +554,7 @@ public class LifecycleUtils
                 {
                     List revised = new ArrayList( mojoBindings );
                     revised.removeAll( lastMojoBindings );
-                    
+
                     if ( revised.isEmpty() )
                     {
                         continue;
@@ -539,28 +584,28 @@ public class LifecycleUtils
         {
             return false;
         }
-        
+
         if ( superCandidate.size() < check.size() )
         {
             return false;
         }
-        
+
         List superKeys = new ArrayList( superCandidate.size() );
         for ( Iterator it = superCandidate.iterator(); it.hasNext(); )
         {
             MojoBinding binding = (MojoBinding) it.next();
-            
+
             superKeys.add( createMojoBindingKey( binding, true ) );
         }
-        
+
         List checkKeys = new ArrayList( check.size() );
         for ( Iterator it = check.iterator(); it.hasNext(); )
         {
             MojoBinding binding = (MojoBinding) it.next();
-            
+
             checkKeys.add( createMojoBindingKey( binding, true ) );
         }
-        
+
         return superKeys.subList( 0, checkKeys.size() ).equals( checkKeys );
     }
 
