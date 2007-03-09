@@ -34,7 +34,7 @@
     </default>
   </defaults>
   <classes>
-    <class rootElement="true">
+    <class rootElement="true" xml.tagName="lifecycles">
       <name>LifecycleBindings</name>
       <version>1.0.0</version>
       <description>Specifies phase bindings for clean, site, and default lifecycles.</description>

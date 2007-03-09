@@ -22,9 +22,19 @@ public class LifecycleUtils
         {
             LifecycleBinding binding = (LifecycleBinding) bindingIt.next();
 
+            if ( binding == null )
+            {
+                continue;
+            }
+
             for ( Iterator phaseIt = binding.getPhasesInOrder().iterator(); phaseIt.hasNext(); )
             {
                 Phase phase = (Phase) phaseIt.next();
+
+                if ( phase == null )
+                {
+                    continue;
+                }
 
                 for ( Iterator mojoIt = phase.getBindings().iterator(); mojoIt.hasNext(); )
                 {
@@ -275,15 +285,21 @@ public class LifecycleUtils
         {
             LifecycleBinding binding = (LifecycleBinding) bindingIt.next();
 
-            for ( Iterator phaseIt = binding.getPhasesInOrder().iterator(); phaseIt.hasNext(); )
+            if ( binding != null )
             {
-                Phase phase = (Phase) phaseIt.next();
-
-                for ( Iterator mojoIt = phase.getBindings().iterator(); mojoIt.hasNext(); )
+                for ( Iterator phaseIt = binding.getPhasesInOrder().iterator(); phaseIt.hasNext(); )
                 {
-                    MojoBinding mojoBinding = (MojoBinding) mojoIt.next();
+                    Phase phase = (Phase) phaseIt.next();
 
-                    byKey.put( createMojoBindingKey( mojoBinding, considerExecutionId ), mojoBinding );
+                    if ( phase != null )
+                    {
+                        for ( Iterator mojoIt = phase.getBindings().iterator(); mojoIt.hasNext(); )
+                        {
+                            MojoBinding mojoBinding = (MojoBinding) mojoIt.next();
+
+                            byKey.put( createMojoBindingKey( mojoBinding, considerExecutionId ), mojoBinding );
+                        }
+                    }
                 }
             }
         }
@@ -344,7 +360,15 @@ public class LifecycleUtils
 
     public static String createMojoBindingKey( MojoBinding mojoBinding, boolean considerExecutionId )
     {
-        String key = mojoBinding.getGroupId() + ":" + mojoBinding.getArtifactId() + ":" + mojoBinding.getGoal();
+        String key;
+        if ( mojoBinding instanceof PrefixedMojoBinding )
+        {
+            key = ( (PrefixedMojoBinding) mojoBinding ).getPrefix() + ":" + mojoBinding.getGoal();
+        }
+        else
+        {
+            key = mojoBinding.getGroupId() + ":" + mojoBinding.getArtifactId() + ":" + mojoBinding.getGoal();
+        }
 
         if ( considerExecutionId )
         {
@@ -487,18 +511,19 @@ public class LifecycleUtils
         return planBindings;
     }
 
-    public static Phase findPhaseForMojoBinding( MojoBinding mojoBinding, LifecycleBindings lifecycleBindings, boolean considerExecutionId )
+    public static Phase findPhaseForMojoBinding( MojoBinding mojoBinding, LifecycleBindings lifecycleBindings,
+                                                 boolean considerExecutionId )
     {
         String targetKey = createMojoBindingKey( mojoBinding, considerExecutionId );
-        
+
         for ( Iterator lifecycleIt = lifecycleBindings.getBindingList().iterator(); lifecycleIt.hasNext(); )
         {
             LifecycleBinding binding = (LifecycleBinding) lifecycleIt.next();
-            
+
             for ( Iterator phaseIt = binding.getPhasesInOrder().iterator(); phaseIt.hasNext(); )
             {
                 Phase phase = (Phase) phaseIt.next();
-    
+
                 for ( Iterator mojoIt = phase.getBindings().iterator(); mojoIt.hasNext(); )
                 {
                     MojoBinding candidate = (MojoBinding) mojoIt.next();
@@ -510,20 +535,20 @@ public class LifecycleUtils
                 }
             }
         }
-        
+
         return null;
     }
 
     public static boolean isMojoBindingPresent( MojoBinding binding, LinkedList candidates, boolean considerExecutionId )
     {
         String key = createMojoBindingKey( binding, considerExecutionId );
-        
+
         for ( Iterator it = candidates.iterator(); it.hasNext(); )
         {
             MojoBinding candidate = (MojoBinding) it.next();
-            
+
             String candidateKey = createMojoBindingKey( candidate, considerExecutionId );
-            
+
             if ( candidateKey.equals( key ) )
             {
                 return true;

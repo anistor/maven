@@ -16,6 +16,16 @@ public class ClassLoaderXmlBindingLoader
 
     // configuration.
     private String path;
+    
+    public ClassLoaderXmlBindingLoader()
+    {
+        // for plexus init.
+    }
+    
+    public ClassLoaderXmlBindingLoader( String path )
+    {
+        this.path = path;
+    }
 
     public LifecycleBindings getBindings()
         throws LifecycleLoaderException, LifecycleSpecificationException
