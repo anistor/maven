@@ -112,22 +112,26 @@ public class LifecycleUtils
         List phases = lifecycleBinding.getPhasesInOrder();
 
         Phase phase = (Phase) phases.get( idx );
-        List mojoBindings = phase.getBindings();
-
-        String targetKey = createMojoBindingKey( mojoBinding, considerExecutionId );
-
-        for ( Iterator it = mojoBindings.iterator(); it.hasNext(); )
+        
+        if ( phase != null )
         {
-            MojoBinding candidate = (MojoBinding) it.next();
+            List mojoBindings = phase.getBindings();
 
-            String candidateKey = createMojoBindingKey( candidate, considerExecutionId );
-            if ( candidateKey.equals( targetKey ) )
+            String targetKey = createMojoBindingKey( mojoBinding, considerExecutionId );
+
+            for ( Iterator it = mojoBindings.iterator(); it.hasNext(); )
             {
-                it.remove();
-            }
-        }
+                MojoBinding candidate = (MojoBinding) it.next();
 
-        phase.setBindings( mojoBindings );
+                String candidateKey = createMojoBindingKey( candidate, considerExecutionId );
+                if ( candidateKey.equals( targetKey ) )
+                {
+                    it.remove();
+                }
+            }
+
+            phase.setBindings( mojoBindings );
+        }
     }
 
     public static void addMojoBinding( String phaseName, MojoBinding mojoBinding, LifecycleBinding lifecycleBinding )
