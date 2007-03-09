@@ -5,7 +5,6 @@ import org.codehaus.plexus.util.xml.Xpp3Dom;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -46,16 +45,29 @@ public class LifecycleUtils
         }
     }
 
-    public static List getMojoBindings( String phaseName, LifecycleBinding lifecycle )
+    public static List getMojoBindingListForLifecycle( String stopPhase, LifecycleBindings bindings )
+        throws NoSuchPhaseException
+    {
+        LifecycleBinding binding = findLifecycleBindingForPhase( stopPhase, bindings );
+
+        if ( binding == null )
+        {
+            throw new NoSuchPhaseException( stopPhase, "Phase not found in any lifecycle." );
+        }
+
+        return getMojoBindingListForLifecycle( stopPhase, binding );
+    }
+
+    public static List getMojoBindingListForLifecycle( String stopPhase, LifecycleBinding lifecycle )
         throws NoSuchPhaseException
     {
         List phaseNames = lifecycle.getPhaseNamesInOrder();
 
-        int idx = phaseNames.indexOf( phaseName );
+        int idx = phaseNames.indexOf( stopPhase );
 
         if ( idx < 0 )
         {
-            throw new NoSuchPhaseException( phaseName, "Phase not found in lifecycle: " + lifecycle.getId() );
+            throw new NoSuchPhaseException( stopPhase, "Phase not found in lifecycle: " + lifecycle.getId() );
         }
 
         List phases = lifecycle.getPhasesInOrder();
@@ -112,7 +124,7 @@ public class LifecycleUtils
         List phases = lifecycleBinding.getPhasesInOrder();
 
         Phase phase = (Phase) phases.get( idx );
-        
+
         if ( phase != null )
         {
             List mojoBindings = phase.getBindings();
@@ -486,16 +498,21 @@ public class LifecycleUtils
             LifecycleBinding binding = LifecycleUtils.findLifecycleBindingForPhase( task, lifecycleBindings );
             if ( binding != null )
             {
-                List mojoBindings = LifecycleUtils.getMojoBindings( task, binding );
+                List mojoBindings = LifecycleUtils.getMojoBindingListForLifecycle( task, binding );
 
                 // save these so we can reference the originals...
                 List originalMojoBindings = mojoBindings;
 
                 // if these mojo bindings are a superset of the last bindings, only add the difference.
-                if ( lastMojoBindings != null && mojoBindings.containsAll( mojoBindings ) )
+                if ( isSameOrSuperListOfMojoBindings( mojoBindings, lastMojoBindings ) )
                 {
                     List revised = new ArrayList( mojoBindings );
                     revised.removeAll( lastMojoBindings );
+                    
+                    if ( revised.isEmpty() )
+                    {
+                        continue;
+                    }
 
                     mojoBindings = revised;
                 }
@@ -513,6 +530,37 @@ public class LifecycleUtils
         }
 
         return planBindings;
+    }
+
+    private static boolean isSameOrSuperListOfMojoBindings( List superCandidate, List check )
+    {
+        if ( superCandidate == null || check == null )
+        {
+            return false;
+        }
+        
+        if ( superCandidate.size() < check.size() )
+        {
+            return false;
+        }
+        
+        List superKeys = new ArrayList( superCandidate.size() );
+        for ( Iterator it = superCandidate.iterator(); it.hasNext(); )
+        {
+            MojoBinding binding = (MojoBinding) it.next();
+            
+            superKeys.add( createMojoBindingKey( binding, true ) );
+        }
+        
+        List checkKeys = new ArrayList( check.size() );
+        for ( Iterator it = check.iterator(); it.hasNext(); )
+        {
+            MojoBinding binding = (MojoBinding) it.next();
+            
+            checkKeys.add( createMojoBindingKey( binding, true ) );
+        }
+        
+        return superKeys.subList( 0, checkKeys.size() ).equals( checkKeys );
     }
 
     public static Phase findPhaseForMojoBinding( MojoBinding mojoBinding, LifecycleBindings lifecycleBindings,
@@ -543,7 +591,7 @@ public class LifecycleUtils
         return null;
     }
 
-    public static boolean isMojoBindingPresent( MojoBinding binding, LinkedList candidates, boolean considerExecutionId )
+    public static boolean isMojoBindingPresent( MojoBinding binding, List candidates, boolean considerExecutionId )
     {
         String key = createMojoBindingKey( binding, considerExecutionId );
 
