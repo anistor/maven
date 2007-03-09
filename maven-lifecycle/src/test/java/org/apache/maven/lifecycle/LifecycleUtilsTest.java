@@ -112,10 +112,10 @@ public class LifecycleUtilsTest
     public void testFindMatchingMojoBinding_ShouldFindMatchWithExecId()
     {
         MojoBinding binding = newMojoBinding( "group", "artifact", "goal" );
-        binding.setExecutionId( "exec" );
+        binding.setExecutionId( "non-default" );
 
         MojoBinding binding2 = newMojoBinding( "group", "artifact", "goal" );
-        binding2.setExecutionId( "exec" );
+        binding2.setExecutionId( "non-default" );
 
         LifecycleBindings bindings = new LifecycleBindings();
 
@@ -134,7 +134,7 @@ public class LifecycleUtilsTest
         assertEquals( "goal", binding3.getGoal() );
         assertEquals( "group", binding3.getGroupId() );
         assertEquals( "artifact", binding3.getArtifactId() );
-        assertEquals( "exec", binding3.getExecutionId() );
+        assertEquals( "non-default", binding3.getExecutionId() );
     }
 
     public void testFindMatchingMojoBinding_ShouldReturnNullNoMatchWithoutExecId()
@@ -265,6 +265,133 @@ public class LifecycleUtilsTest
         assertEquals( 0, result.getBindings().size() );
     }
 
+    public void testCloneBinding_SingleMojoCloneIsPresentInNewInstance()
+    {
+        CleanBinding cbOrig = new CleanBinding();
+        MojoBinding bOrig = newMojoBinding( "group", "artifact", "goal" );
+        cbOrig.getClean().addBinding( bOrig );
+
+        LifecycleBinding result = LifecycleUtils.cloneBinding( cbOrig );
+
+        assertNotNull( result );
+        assertTrue( result instanceof CleanBinding );
+        assertNotSame( cbOrig, result );
+
+        List mojos = ( (CleanBinding) result ).getClean().getBindings();
+        assertNotNull( mojos );
+        assertEquals( 1, mojos.size() );
+
+        MojoBinding bResult = (MojoBinding) mojos.get( 0 );
+        assertNotSame( bOrig, bResult );
+
+        assertEquals( "group", bResult.getGroupId() );
+        assertEquals( "artifact", bResult.getArtifactId() );
+        assertEquals( "goal", bResult.getGoal() );
+    }
+
+    public void testCloneBinding_OrderIsPreservedBetweenTwoMojoBindingsInNewInstance()
+    {
+        CleanBinding cbOrig = new CleanBinding();
+        MojoBinding bOrig = newMojoBinding( "group", "artifact", "goal" );
+        cbOrig.getClean().addBinding( bOrig );
+
+        MojoBinding bOrig2 = newMojoBinding( "group", "artifact", "goal2" );
+        cbOrig.getClean().addBinding( bOrig2 );
+
+        LifecycleBinding result = LifecycleUtils.cloneBinding( cbOrig );
+
+        assertNotNull( result );
+        assertTrue( result instanceof CleanBinding );
+        assertNotSame( cbOrig, result );
+
+        List mojos = ( (CleanBinding) result ).getClean().getBindings();
+        assertNotNull( mojos );
+        assertEquals( 2, mojos.size() );
+
+        MojoBinding bResult = (MojoBinding) mojos.get( 0 );
+        assertNotSame( bOrig, bResult );
+
+        assertEquals( bOrig.getGroupId(), bResult.getGroupId() );
+        assertEquals( bOrig.getArtifactId(), bResult.getArtifactId() );
+        assertEquals( bOrig.getGoal(), bResult.getGoal() );
+
+        MojoBinding bResult2 = (MojoBinding) mojos.get( 1 );
+        assertNotSame( bOrig2, bResult2 );
+
+        assertEquals( bOrig2.getGroupId(), bResult2.getGroupId() );
+        assertEquals( bOrig2.getArtifactId(), bResult2.getArtifactId() );
+        assertEquals( bOrig2.getGoal(), bResult2.getGoal() );
+    }
+
+    public void testCloneBindings_SingleMojoCloneIsPresentInNewInstance()
+    {
+        LifecycleBindings bindings = new LifecycleBindings();
+
+        CleanBinding cbOrig = bindings.getCleanBinding();
+        MojoBinding bOrig = newMojoBinding( "group", "artifact", "goal" );
+        cbOrig.getClean().addBinding( bOrig );
+
+        LifecycleBindings result = LifecycleUtils.cloneBindings( bindings );
+
+        assertNotNull( result );
+        assertNotSame( bindings, result );
+
+        CleanBinding cbResult = result.getCleanBinding();
+
+        assertNotNull( cbResult );
+        assertNotSame( cbOrig, cbResult );
+
+        List mojos = cbResult.getClean().getBindings();
+        assertNotNull( mojos );
+        assertEquals( 1, mojos.size() );
+
+        MojoBinding bResult = (MojoBinding) mojos.get( 0 );
+        assertNotSame( bOrig, bResult );
+
+        assertEquals( "group", bResult.getGroupId() );
+        assertEquals( "artifact", bResult.getArtifactId() );
+        assertEquals( "goal", bResult.getGoal() );
+    }
+
+    public void testCloneBindings_OrderIsPreservedBetweenTwoMojoBindingsInNewInstance()
+    {
+        LifecycleBindings bindings = new LifecycleBindings();
+        CleanBinding cbOrig = bindings.getCleanBinding();
+        MojoBinding bOrig = newMojoBinding( "group", "artifact", "goal" );
+        cbOrig.getClean().addBinding( bOrig );
+
+        MojoBinding bOrig2 = newMojoBinding( "group", "artifact", "goal2" );
+        cbOrig.getClean().addBinding( bOrig2 );
+
+        LifecycleBindings result = LifecycleUtils.cloneBindings( bindings );
+
+        assertNotNull( result );
+        assertNotSame( bindings, result );
+
+        CleanBinding cbResult = result.getCleanBinding();
+
+        assertNotNull( cbResult );
+        assertNotSame( cbOrig, cbResult );
+
+        List mojos = cbResult.getClean().getBindings();
+        assertNotNull( mojos );
+        assertEquals( 2, mojos.size() );
+
+        MojoBinding bResult = (MojoBinding) mojos.get( 0 );
+        assertNotSame( bOrig, bResult );
+
+        assertEquals( bOrig.getGroupId(), bResult.getGroupId() );
+        assertEquals( bOrig.getArtifactId(), bResult.getArtifactId() );
+        assertEquals( bOrig.getGoal(), bResult.getGoal() );
+
+        MojoBinding bResult2 = (MojoBinding) mojos.get( 1 );
+        assertNotSame( bOrig2, bResult2 );
+
+        assertEquals( bOrig2.getGroupId(), bResult2.getGroupId() );
+        assertEquals( bOrig2.getArtifactId(), bResult2.getArtifactId() );
+        assertEquals( bOrig2.getGoal(), bResult2.getGoal() );
+    }
+
     public void testCloneMojoBinding_NullVersionIsPropagated()
     {
         MojoBinding binding = newMojoBinding( "group", "artifact", "goal" );
@@ -282,7 +409,7 @@ public class LifecycleUtilsTest
     public void testCloneMojoBinding_ExecutionIdIsPropagated()
     {
         MojoBinding binding = newMojoBinding( "group", "artifact", "goal" );
-        binding.setExecutionId( "exec" );
+        binding.setExecutionId( "non-default" );
 
         MojoBinding binding2 = LifecycleUtils.cloneMojoBinding( binding );
 
@@ -290,7 +417,7 @@ public class LifecycleUtilsTest
         assertEquals( "goal", binding2.getGoal() );
         assertEquals( "group", binding2.getGroupId() );
         assertEquals( "artifact", binding2.getArtifactId() );
-        assertEquals( "exec", binding2.getExecutionId() );
+        assertEquals( "non-default", binding2.getExecutionId() );
     }
 
     public void testCloneMojoBinding_VersionIsPropagated()
@@ -615,7 +742,7 @@ public class LifecycleUtilsTest
     public void testIsMojoBindingPresent_ReturnTrueWhenMojoBindingExecIdDoesntMatch_WithoutExecIdCompare()
     {
         MojoBinding binding = newMojoBinding( "group", "artifact", "goal" );
-        binding.setExecutionId( "exec" );
+        binding.setExecutionId( "non-default" );
 
         MojoBinding binding2 = newMojoBinding( "group", "artifact", "goal" );
 
@@ -628,7 +755,7 @@ public class LifecycleUtilsTest
     public void testIsMojoBindingPresent_ReturnFalseWhenMojoBindingExecIdDoesntMatch_WithExecIdCompare()
     {
         MojoBinding binding = newMojoBinding( "group", "artifact", "goal" );
-        binding.setExecutionId( "exec" );
+        binding.setExecutionId( "non-default" );
 
         MojoBinding binding2 = newMojoBinding( "group", "artifact", "goal" );
 
@@ -665,7 +792,7 @@ public class LifecycleUtilsTest
     public void testFindPhaseForMojoBinding_ReturnPhaseContainingSimilarBindingWithOtherExecId_WithoutExecIdCompare()
     {
         MojoBinding binding2 = newMojoBinding( "group", "artifact", "goal" );
-        binding2.setExecutionId( "exec" );
+        binding2.setExecutionId( "non-default" );
 
         MojoBinding binding = newMojoBinding( "group", "artifact", "goal" );
 
@@ -682,7 +809,7 @@ public class LifecycleUtilsTest
     public void testFindPhaseForMojoBinding_ReturnNullWhenBindingExecIdsDontMatch_WithExecIdCompare()
     {
         MojoBinding binding2 = newMojoBinding( "group", "artifact", "goal" );
-        binding2.setExecutionId( "exec" );
+        binding2.setExecutionId( "non-default" );
 
         MojoBinding binding = newMojoBinding( "group", "artifact", "goal" );
 
@@ -856,6 +983,132 @@ public class LifecycleUtilsTest
         assertEquals( "goal", binding.getGroupId() );
         assertEquals( "artifact", binding.getArtifactId() );
         assertEquals( "compile", binding.getGoal() );
+
+    }
+
+    public void testRemoveMojoBinding_ReturnLifecycleWithoutMojo_WithoutExecIdCompare()
+        throws NoSuchPhaseException
+    {
+        MojoBinding binding = newMojoBinding( "group", "artifact", "clean" );
+
+        MojoBinding binding2 = newMojoBinding( "group", "artifact", "clean" );
+        binding2.setExecutionId( "non-default" );
+
+        CleanBinding cb = new CleanBinding();
+
+        assertEquals( 0, cb.getClean().getBindings().size() );
+
+        cb.getClean().addBinding( binding );
+
+        assertEquals( 1, cb.getClean().getBindings().size() );
+
+        LifecycleUtils.removeMojoBinding( "clean", binding2, cb, false );
+
+        assertEquals( 0, cb.getClean().getBindings().size() );
+    }
+
+    public void testRemoveMojoBinding_ReturnLifecycleWithoutMojo_WithExecIdCompare()
+        throws NoSuchPhaseException
+    {
+        MojoBinding binding = newMojoBinding( "group", "artifact", "clean" );
+        binding.setExecutionId( "non-default" );
+
+        MojoBinding binding2 = newMojoBinding( "group", "artifact", "clean" );
+        binding2.setExecutionId( "non-default" );
+
+        CleanBinding cb = new CleanBinding();
+
+        assertEquals( 0, cb.getClean().getBindings().size() );
+
+        cb.getClean().addBinding( binding );
+
+        assertEquals( 1, cb.getClean().getBindings().size() );
+
+        LifecycleUtils.removeMojoBinding( "clean", binding2, cb, true );
+
+        assertEquals( 0, cb.getClean().getBindings().size() );
+    }
+
+    public void testRemoveMojoBinding_DontRemoveMojoIfExecIdDoesntMatch_WithExecIdCompare()
+        throws NoSuchPhaseException
+    {
+        MojoBinding binding = newMojoBinding( "group", "artifact", "clean" );
+
+        MojoBinding binding2 = newMojoBinding( "group", "artifact", "clean" );
+        binding2.setExecutionId( "non-default" );
+
+        CleanBinding cb = new CleanBinding();
+
+        assertEquals( 0, cb.getClean().getBindings().size() );
+
+        cb.getClean().addBinding( binding );
+
+        assertEquals( 1, cb.getClean().getBindings().size() );
+
+        LifecycleUtils.removeMojoBinding( "clean", binding2, cb, true );
+
+        assertEquals( 1, cb.getClean().getBindings().size() );
+    }
+
+    public void testRemoveMojoBinding_FailOnInvalidPhaseName()
+    {
+        MojoBinding binding = newMojoBinding( "group", "artifact", "clean" );
+
+        CleanBinding cb = new CleanBinding();
+
+        try
+        {
+            LifecycleUtils.removeMojoBinding( "dud", binding, cb, false );
+
+            fail( "Should fail because phase does not exist in the clean lifecycle." );
+        }
+        catch ( NoSuchPhaseException e )
+        {
+            // expected
+        }
+    }
+
+    public void testRemoveMojoBindings_LifecycleBinding_RemoveOneMojo_WithoutExecIdCompare()
+        throws NoSuchPhaseException
+    {
+        MojoBinding binding = newMojoBinding( "group", "artifact", "clean" );
+
+        MojoBinding binding2 = newMojoBinding( "group", "artifact", "clean" );
+        binding2.setExecutionId( "non-default" );
+
+        CleanBinding cb = new CleanBinding();
+
+        assertEquals( 0, cb.getClean().getBindings().size() );
+
+        cb.getClean().addBinding( binding );
+
+        assertEquals( 1, cb.getClean().getBindings().size() );
+
+        LifecycleUtils.removeMojoBindings( Collections.singletonList( binding2 ), cb, false );
+
+        assertEquals( 0, cb.getClean().getBindings().size() );
+
+    }
+
+    public void testRemoveMojoBindings_LifecycleBinding_DontRemoveIfNoExecIdMatch_WithExecIdCompare()
+        throws NoSuchPhaseException
+    {
+        MojoBinding binding = newMojoBinding( "group", "artifact", "clean" );
+
+        MojoBinding binding2 = newMojoBinding( "group", "artifact", "clean" );
+        binding2.setExecutionId( "non-default" );
+
+        CleanBinding cb = new CleanBinding();
+
+        assertEquals( 0, cb.getClean().getBindings().size() );
+
+        cb.getClean().addBinding( binding );
+
+        assertEquals( 1, cb.getClean().getBindings().size() );
+
+        LifecycleUtils.removeMojoBindings( Collections.singletonList( binding2 ), cb, true );
+
+        assertEquals( 1, cb.getClean().getBindings().size() );
 
     }
 

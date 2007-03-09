@@ -355,22 +355,23 @@ public class LifecycleUtils
         }
 
         List phases = removeFrom.getPhasesInOrder();
-        List names = removeFrom.getPhaseNamesInOrder();
 
         for ( int i = 0; i < phases.size(); i++ )
         {
             Phase phase = (Phase) phases.get( i );
-            String phaseName = (String) names.get( i );
-
-            for ( Iterator mojoIt = phase.getBindings().iterator(); mojoIt.hasNext(); )
+            List phaseBindings = phase.getBindings();
+            
+            for ( Iterator mojoIt = phaseBindings.iterator(); mojoIt.hasNext(); )
             {
                 MojoBinding binding = (MojoBinding) mojoIt.next();
                 String key = createMojoBindingKey( binding, considerExecutionId );
                 if ( targets.contains( key ) )
                 {
-                    removeMojoBinding( phaseName, binding, removeFrom, considerExecutionId );
+                    mojoIt.remove();
                 }
             }
+            
+            phase.setBindings( phaseBindings );
         }
     }
 
