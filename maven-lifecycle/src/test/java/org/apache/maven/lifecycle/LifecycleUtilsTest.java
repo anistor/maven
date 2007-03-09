@@ -214,13 +214,13 @@ public class LifecycleUtilsTest
         Phase result = cleanBinding.getClean();
         assertEquals( 0, result.getBindings().size() );
     }
-    
+
     public void testCloneMojoBinding_NullVersionIsPropagated()
     {
         MojoBinding binding = newMojoBinding( "group", "artifact", "goal" );
-        
+
         MojoBinding binding2 = LifecycleUtils.cloneMojoBinding( binding );
-        
+
         assertNotNull( binding2 );
         assertEquals( "goal", binding2.getGoal() );
         assertEquals( "group", binding2.getGroupId() );
@@ -233,9 +233,9 @@ public class LifecycleUtilsTest
     {
         MojoBinding binding = newMojoBinding( "group", "artifact", "goal" );
         binding.setExecutionId( "exec" );
-        
+
         MojoBinding binding2 = LifecycleUtils.cloneMojoBinding( binding );
-        
+
         assertNotNull( binding2 );
         assertEquals( "goal", binding2.getGoal() );
         assertEquals( "group", binding2.getGroupId() );
@@ -247,9 +247,9 @@ public class LifecycleUtilsTest
     {
         MojoBinding binding = newMojoBinding( "group", "artifact", "goal" );
         binding.setVersion( "version" );
-        
+
         MojoBinding binding2 = LifecycleUtils.cloneMojoBinding( binding );
-        
+
         assertNotNull( binding2 );
         assertEquals( "goal", binding2.getGoal() );
         assertEquals( "group", binding2.getGroupId() );
@@ -257,7 +257,20 @@ public class LifecycleUtilsTest
         assertEquals( "version", binding2.getVersion() );
         assertEquals( "default", binding2.getExecutionId() );
     }
-    
+
+    public void testAddMojoBinding_AddOneMojoBindingToEmptyLifecycleBinding()
+        throws NoSuchPhaseException
+    {
+        CleanBinding cleanBinding = new CleanBinding();
+
+        MojoBinding binding = newMojoBinding( "group", "artifact", "goal" );
+
+        LifecycleUtils.addMojoBinding( "clean", binding, cleanBinding );
+        
+        Phase clean = cleanBinding.getClean();
+        assertEquals( 1, clean.getBindings().size() );
+    }
+
     private MojoBinding newMojoBinding( String groupId, String artifactId, String goal )
     {
         MojoBinding binding = new MojoBinding();

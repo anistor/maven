@@ -49,7 +49,7 @@
         <field xml.tagName="clean">
           <version>1.0.0</version>
           <name>cleanBinding</name>
-          <required>false</required>
+          <defaultValue>new CleanBinding()</defaultValue>
           <description>The binding for the clean lifecycle</description>
           <association>
             <type>CleanBinding</type>
@@ -58,7 +58,7 @@
         <field xml.tagName="build">
           <version>1.0.0</version>
           <name>buildBinding</name>
-          <required>true</required>
+          <defaultValue>new BuildBinding()</defaultValue>
           <description>The binding for the main build (default) lifecycle</description>
           <association>
             <type>BuildBinding</type>
@@ -67,7 +67,7 @@
         <field xml.tagName="site">
           <version>1.0.0</version>
           <name>siteBinding</name>
-          <required>false</required>
+          <defaultValue>new SiteBinding()</defaultValue>
           <description>The binding for the site lifecycle</description>
           <association>
             <type>SiteBinding</type>
@@ -137,6 +137,7 @@
         <field xml.tagName="pre-clean">
           <name>preClean</name>
           <version>1.0.0</version>
+          <defaultValue>new Phase()</defaultValue>
           <association>
             <type>Phase</type>
           </association>
@@ -144,6 +145,7 @@
         <field xml.tagName="clean">
           <name>clean</name>
           <version>1.0.0</version>
+          <defaultValue>new Phase()</defaultValue>
           <association>
             <type>Phase</type>
           </association>
@@ -151,6 +153,7 @@
         <field xml.tagName="post-clean">
           <name>postClean</name>
           <version>1.0.0</version>
+          <defaultValue>new Phase()</defaultValue>
           <association>
             <type>Phase</type>
           </association>
@@ -198,6 +201,7 @@
         <field>
           <name>validate</name>
           <version>1.0.0</version>
+          <defaultValue>new Phase()</defaultValue>
           <association>
             <type>Phase</type>
           </association>
@@ -205,6 +209,7 @@
         <field>
           <name>initialize</name>
           <version>1.0.0</version>
+          <defaultValue>new Phase()</defaultValue>
           <association>
             <type>Phase</type>
           </association>
@@ -212,6 +217,7 @@
         <field xml.tagName="generate-sources">
           <name>generateSources</name>
           <version>1.0.0</version>
+          <defaultValue>new Phase()</defaultValue>
           <association>
             <type>Phase</type>
           </association>
@@ -219,6 +225,7 @@
         <field xml.tagName="process-sources">
           <name>processSources</name>
           <version>1.0.0</version>
+          <defaultValue>new Phase()</defaultValue>
           <association>
             <type>Phase</type>
           </association>
@@ -226,6 +233,7 @@
         <field xml.tagName="generate-resources">
           <name>generateResources</name>
           <version>1.0.0</version>
+          <defaultValue>new Phase()</defaultValue>
           <association>
             <type>Phase</type>
           </association>
@@ -233,6 +241,7 @@
         <field xml.tagName="process-resources">
           <name>processResources</name>
           <version>1.0.0</version>
+          <defaultValue>new Phase()</defaultValue>
           <association>
             <type>Phase</type>
           </association>
@@ -240,6 +249,7 @@
         <field>
           <name>compile</name>
           <version>1.0.0</version>
+          <defaultValue>new Phase()</defaultValue>
           <association>
             <type>Phase</type>
           </association>
@@ -247,6 +257,7 @@
         <field xml.tagName="process-classes">
           <name>processClasses</name>
           <version>1.0.0</version>
+          <defaultValue>new Phase()</defaultValue>
           <association>
             <type>Phase</type>
           </association>
@@ -254,6 +265,7 @@
         <field xml.tagName="generate-test-sources">
           <name>generateTestSources</name>
           <version>1.0.0</version>
+          <defaultValue>new Phase()</defaultValue>
           <association>
             <type>Phase</type>
           </association>
@@ -261,6 +273,7 @@
         <field xml.tagName="process-test-sources">
           <name>processTestSources</name>
           <version>1.0.0</version>
+          <defaultValue>new Phase()</defaultValue>
           <association>
             <type>Phase</type>
           </association>
@@ -268,6 +281,7 @@
         <field xml.tagName="generate-test-resources">
           <name>generateTestResources</name>
           <version>1.0.0</version>
+          <defaultValue>new Phase()</defaultValue>
           <association>
             <type>Phase</type>
           </association>
@@ -275,6 +289,7 @@
         <field xml.tagName="process-test-resources">
           <name>processTestResources</name>
           <version>1.0.0</version>
+          <defaultValue>new Phase()</defaultValue>
           <association>
             <type>Phase</type>
           </association>
@@ -282,6 +297,7 @@
         <field xml.tagName="test-compile">
           <name>testCompile</name>
           <version>1.0.0</version>
+          <defaultValue>new Phase()</defaultValue>
           <association>
             <type>Phase</type>
           </association>
@@ -289,6 +305,7 @@
         <field xml.tagName="process-test-classes">
           <name>processTestClasses</name>
           <version>1.0.0</version>
+          <defaultValue>new Phase()</defaultValue>
           <association>
             <type>Phase</type>
           </association>
@@ -296,6 +313,7 @@
         <field xml.tagName="test">
           <name>test</name>
           <version>1.0.0</version>
+          <defaultValue>new Phase()</defaultValue>
           <association>
             <type>Phase</type>
           </association>
@@ -303,6 +321,7 @@
         <field xml.tagName="prepare-package">
           <name>preparePackage</name>
           <version>1.0.0</version>
+          <defaultValue>new Phase()</defaultValue>
           <association>
             <type>Phase</type>
           </association>
@@ -310,6 +329,7 @@
         <field xml.tagName="package">
           <name>createPackage</name>
           <version>1.0.0</version>
+          <defaultValue>new Phase()</defaultValue>
           <association>
             <type>Phase</type>
           </association>
@@ -317,6 +337,7 @@
         <field xml.tagName="pre-integration-test">
           <name>preIntegrationTest</name>
           <version>1.0.0</version>
+          <defaultValue>new Phase()</defaultValue>
           <association>
             <type>Phase</type>
           </association>
@@ -324,6 +345,7 @@
         <field xml.tagName="integration-test">
           <name>integrationTest</name>
           <version>1.0.0</version>
+          <defaultValue>new Phase()</defaultValue>
           <association>
             <type>Phase</type>
           </association>
@@ -331,6 +353,7 @@
         <field xml.tagName="post-integration-test">
           <name>postIntegrationTest</name>
           <version>1.0.0</version>
+          <defaultValue>new Phase()</defaultValue>
           <association>
             <type>Phase</type>
           </association>
@@ -338,6 +361,7 @@
         <field>
           <name>verify</name>
           <version>1.0.0</version>
+          <defaultValue>new Phase()</defaultValue>
           <association>
             <type>Phase</type>
           </association>
@@ -345,6 +369,7 @@
         <field>
           <name>install</name>
           <version>1.0.0</version>
+          <defaultValue>new Phase()</defaultValue>
           <association>
             <type>Phase</type>
           </association>
@@ -352,6 +377,7 @@
         <field>
           <name>deploy</name>
           <version>1.0.0</version>
+          <defaultValue>new Phase()</defaultValue>
           <association>
             <type>Phase</type>
           </association>
@@ -439,6 +465,7 @@
         <field xml.tagName="pre-site">
           <name>preSite</name>
           <version>1.0.0</version>
+          <defaultValue>new Phase()</defaultValue>
           <association>
             <type>Phase</type>
           </association>
@@ -446,6 +473,7 @@
         <field xml.tagName="site">
           <name>site</name>
           <version>1.0.0</version>
+          <defaultValue>new Phase()</defaultValue>
           <association>
             <type>Phase</type>
           </association>
@@ -453,6 +481,7 @@
         <field xml.tagName="post-site">
           <name>postSite</name>
           <version>1.0.0</version>
+          <defaultValue>new Phase()</defaultValue>
           <association>
             <type>Phase</type>
           </association>
@@ -499,7 +528,7 @@
       <fields>
         <field>
           <name>bindings</name>
-      <version>1.0.0</version>
+          <version>1.0.0</version>
           <description>Collection of mojo bindings for a phase.</description>
           <association>
             <type>MojoBinding</type>
