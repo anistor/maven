@@ -37,7 +37,7 @@ public class DefaultLifecyclePlanner
         LifecycleBindings packagingBindings = lifecycleBindingManager.getBindingsForPackaging( project );
         LifecycleBindings projectBindings = lifecycleBindingManager.getProjectCustomBindings( project );
 
-        LifecycleBindings merged = LifecycleUtils.mergeBindings( packagingBindings, projectBindings, defaultBindings, false );
+        LifecycleBindings merged = LifecycleUtils.mergeBindings( packagingBindings, projectBindings, defaultBindings, false, false );
 
         // foreach task, find the binding list from the merged lifecycle-bindings.
         // if the binding list is a super-set of a previous task, forget the previous task/binding

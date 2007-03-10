@@ -285,7 +285,7 @@ public class LifecycleUtilsTest
         MojoBinding binding2 = newMojoBinding( "group", "artifact", "goal2" );
         cbOrig2.getClean().addBinding( binding2 );
 
-        LifecycleBindings result = LifecycleUtils.mergeBindings( bOrig, bOrig2, new LifecycleBindings(), false );
+        LifecycleBindings result = LifecycleUtils.mergeBindings( bOrig, bOrig2, new LifecycleBindings(), false, false );
 
         assertNotNull( result );
         
@@ -325,7 +325,7 @@ public class LifecycleUtilsTest
         MojoBinding binding2 = newMojoBinding( "group", "artifact", "goal2" );
         cbOrig2.getClean().addBinding( binding2 );
 
-        LifecycleBindings result = LifecycleUtils.mergeBindings( bOrig, new LifecycleBindings(), bOrig2, false );
+        LifecycleBindings result = LifecycleUtils.mergeBindings( bOrig, new LifecycleBindings(), bOrig2, false, false );
 
         assertNotNull( result );
         
@@ -357,7 +357,7 @@ public class LifecycleUtilsTest
         MojoBinding binding2 = newMojoBinding( "group", "artifact", "goal2" );
         bbOrig.getCompile().addBinding( binding2 );
 
-        LifecycleBindings result = LifecycleUtils.mergeBindings( bOrig, new LifecycleBindings(), bOrig2, false );
+        LifecycleBindings result = LifecycleUtils.mergeBindings( bOrig, new LifecycleBindings(), bOrig2, false, false );
 
         assertNotNull( result );
         
@@ -427,7 +427,7 @@ public class LifecycleUtilsTest
         
         cbOrig2.getClean().addBinding( binding2 );
 
-        LifecycleBindings result = LifecycleUtils.mergeBindings( bOrig, bOrig2, new LifecycleBindings(), true );
+        LifecycleBindings result = LifecycleUtils.mergeBindings( bOrig, bOrig2, new LifecycleBindings(), true, false );
 
         assertNotNull( result );
         
@@ -451,6 +451,68 @@ public class LifecycleUtilsTest
         
         assertNotNull( cResult );
         assertEquals( "value2", cResult.getChild( "child" ).getValue() );
+        assertEquals( "val", cResult.getChild( "key" ).getValue() );
+    }
+
+    public void testMergeBindings_MergeConfigsWithExistingAsDominant_EmptyDefaults()
+    {
+        LifecycleBindings bOrig = new LifecycleBindings();
+        CleanBinding cbOrig = bOrig.getCleanBinding();
+        MojoBinding binding = newMojoBinding( "group", "artifact", "goal" );
+        binding.setOrigin( "non-default" );
+        
+        Xpp3Dom config = new Xpp3Dom( "configuration" );
+        Xpp3Dom child = new Xpp3Dom( "child" );
+        child.setValue( "value" );
+        config.addChild( child );
+        
+        binding.setConfiguration( config );
+        
+        cbOrig.getClean().addBinding( binding );
+
+        LifecycleBindings bOrig2 = new LifecycleBindings();
+        CleanBinding cbOrig2 = bOrig2.getCleanBinding();
+        MojoBinding binding2 = newMojoBinding( "group", "artifact", "goal" );
+        
+        Xpp3Dom config2 = new Xpp3Dom( "configuration" );
+        
+        Xpp3Dom child2 = new Xpp3Dom( "child" );
+        child2.setValue( "value2" );
+        
+        Xpp3Dom child3 = new Xpp3Dom( "key" );
+        child3.setValue( "val" );
+        
+        config2.addChild( child2 );
+        config2.addChild( child3 );
+        
+        binding2.setConfiguration( config2 );
+        
+        cbOrig2.getClean().addBinding( binding2 );
+
+        LifecycleBindings result = LifecycleUtils.mergeBindings( bOrig, bOrig2, new LifecycleBindings(), true, true );
+
+        assertNotNull( result );
+        
+        CleanBinding cbResult = result.getCleanBinding();
+        assertNotSame( cbOrig, cbResult );
+
+        List mojos = cbResult.getClean().getBindings();
+        assertNotNull( mojos );
+        assertEquals( 1, mojos.size() );
+
+        MojoBinding bResult = (MojoBinding) mojos.get( 0 );
+        
+        assertNotSame( binding, bResult );
+
+        assertEquals( "group", bResult.getGroupId() );
+        assertEquals( "artifact", bResult.getArtifactId() );
+        assertEquals( "goal", bResult.getGoal() );
+        assertEquals( "non-default", bResult.getOrigin() );
+        
+        Xpp3Dom cResult = (Xpp3Dom) bResult.getConfiguration();
+        
+        assertNotNull( cResult );
+        assertEquals( "value", cResult.getChild( "child" ).getValue() );
         assertEquals( "val", cResult.getChild( "key" ).getValue() );
     }
 

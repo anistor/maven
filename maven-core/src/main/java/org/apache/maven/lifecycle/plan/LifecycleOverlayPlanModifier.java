@@ -37,7 +37,7 @@ public class LifecycleOverlayPlanModifier
         // the ordering of these LifecycleBindings instances may seem reversed, but it is done this
         // way on purpose, in order to make the configurations from the main bindings be dominant
         // over those specified in the lifecycle overlay.
-        return LifecycleUtils.mergeBindings( cloned, bindings, null, true );
+        return LifecycleUtils.mergeBindings( bindings, cloned, null, true, true );
     }
 
     public void addModifier( LifecyclePlanModifier planModifier )

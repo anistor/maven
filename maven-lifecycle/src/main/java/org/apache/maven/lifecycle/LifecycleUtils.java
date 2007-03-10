@@ -188,6 +188,13 @@ public class LifecycleUtils
     public static LifecycleBindings mergeBindings( LifecycleBindings existingBindings, LifecycleBindings newBindings,
                                                    LifecycleBindings defaultBindings, boolean mergeConfigIfExecutionIdMatches )
     {
+        return mergeBindings( existingBindings, newBindings, defaultBindings, mergeConfigIfExecutionIdMatches, false );
+    }
+
+    public static LifecycleBindings mergeBindings( LifecycleBindings existingBindings, LifecycleBindings newBindings,
+                                                   LifecycleBindings defaultBindings, boolean mergeConfigIfExecutionIdMatches,
+                                                   boolean reverseConfigMergeDirection )
+    {
         LifecycleBindings result = new LifecycleBindings();
         result.setPackaging( newBindings.getPackaging() );
 
@@ -259,7 +266,16 @@ public class LifecycleUtils
                                 if ( matchingBinding != null )
                                 {
                                     Xpp3Dom existingConfig = new Xpp3Dom( (Xpp3Dom) matchingBinding.getConfiguration() );
-                                    Xpp3Dom configuration = Xpp3Dom.mergeXpp3Dom( (Xpp3Dom) mojoBinding.getConfiguration(), existingConfig );
+                                    
+                                    Xpp3Dom configuration;
+                                    if ( reverseConfigMergeDirection )
+                                    {
+                                        configuration = Xpp3Dom.mergeXpp3Dom( existingConfig, (Xpp3Dom) mojoBinding.getConfiguration() );
+                                    }
+                                    else
+                                    {
+                                        configuration = Xpp3Dom.mergeXpp3Dom( (Xpp3Dom) mojoBinding.getConfiguration(), existingConfig );
+                                    }
 
                                     mojoBinding.setConfiguration( configuration );
                                     
