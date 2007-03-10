@@ -297,7 +297,6 @@ public class DefaultLifecycleBindingManager
                 // Merge in general configuration for a phase.
                 // TODO: this is all kind of backwards from the POMM. Let's align it all under 2.1.
                 //   We should create a new lifecycle executor for modelVersion >5.0.0
-
                 // [jdcasey; 08-March-2007] Not sure what the above to-do references...how _should_
                 // this work??
                 for ( Iterator j = phaseBindings.iterator(); j.hasNext(); )
