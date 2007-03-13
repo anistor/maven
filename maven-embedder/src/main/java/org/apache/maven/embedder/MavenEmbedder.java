@@ -423,10 +423,14 @@ public class MavenEmbedder
         {
             request = defaultsPopulator.populateDefaults( request, this );
             //mkleint: copied from DefaultLifecycleExecutor
+
             project = readProject( new File( request.getPomFile() ) );
+
             Map handlers = findArtifactTypeHandlers( project );
+
             //is this necessary in this context, I doubt it..mkleint
             artifactHandlerManager.addHandlers( handlers );
+
             project = mavenProjectBuilder.buildWithDependencies( new File( request.getPomFile() ),
                                                                  request.getLocalRepository(), profileManager,
                                                                  request.getTransferListener() );
