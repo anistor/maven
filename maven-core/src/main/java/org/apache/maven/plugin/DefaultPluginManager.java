@@ -38,6 +38,7 @@ import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException
 import org.apache.maven.artifact.versioning.VersionRange;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.execution.RuntimeInformation;
+import org.apache.maven.lifecycle.statemgmt.StateManagementUtils;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.model.ReportPlugin;
 import org.apache.maven.monitor.event.EventDispatcher;
@@ -92,6 +93,17 @@ public class DefaultPluginManager
     extends AbstractLogEnabled
     implements PluginManager, Contextualizable
 {
+    private static final List RESERVED_GROUP_IDS;
+    
+    static
+    {
+        List rgids = new ArrayList();
+        
+        rgids.add( StateManagementUtils.GROUP_ID );
+        
+        RESERVED_GROUP_IDS = rgids;
+    }
+
     protected PlexusContainer container;
 
     protected PluginDescriptorBuilder pluginDescriptorBuilder;
@@ -189,27 +201,38 @@ public class DefaultPluginManager
         // the 'Can't find plexus container for plugin: xxx' error.
         try
         {
-            VersionRange versionRange = VersionRange.createFromVersionSpec( plugin.getVersion() );
+            // if the groupId is internal, don't try to resolve it...
+            if ( !RESERVED_GROUP_IDS.contains( plugin.getGroupId() ) )
+            {
+                VersionRange versionRange = VersionRange.createFromVersionSpec( plugin.getVersion() );
 
-            List remoteRepositories = new ArrayList();
+                List remoteRepositories = new ArrayList();
 
-            remoteRepositories.addAll( project.getPluginArtifactRepositories() );
+                remoteRepositories.addAll( project.getPluginArtifactRepositories() );
 
-            remoteRepositories.addAll( project.getRemoteArtifactRepositories() );
+                remoteRepositories.addAll( project.getRemoteArtifactRepositories() );
 
-            checkRequiredMavenVersion( plugin, localRepository, remoteRepositories );
+                checkRequiredMavenVersion( plugin, localRepository, remoteRepositories );
 
-            Artifact pluginArtifact =
-                artifactFactory.createPluginArtifact( plugin.getGroupId(), plugin.getArtifactId(), versionRange );
+                Artifact pluginArtifact =
+                    artifactFactory.createPluginArtifact( plugin.getGroupId(), plugin.getArtifactId(), versionRange );
 
-            pluginArtifact = project.replaceWithActiveArtifact( pluginArtifact );
+                pluginArtifact = project.replaceWithActiveArtifact( pluginArtifact );
 
-            artifactResolver.resolve( pluginArtifact, project.getPluginArtifactRepositories(), localRepository );
+                artifactResolver.resolve( pluginArtifact, project.getPluginArtifactRepositories(), localRepository );
 
-//            if ( !pluginCollector.isPluginInstalled( plugin ) )
-//            {
-//            }
-            addPlugin( plugin, pluginArtifact, project, localRepository );
+//                if ( !pluginCollector.isPluginInstalled( plugin ) )
+//                {
+//                }
+                addPlugin( plugin, pluginArtifact, project, localRepository );
+            }
+            else
+            {
+                getLogger().debug( "Skipping resolution for Maven built-in plugin: " + plugin.getKey() );
+                
+                PluginDescriptor pd = pluginCollector.getPluginDescriptor( plugin );
+                pd.setClassRealm( container.getContainerRealm() );
+            }
 
             project.addPlugin( plugin );
         }
@@ -236,7 +259,9 @@ public class DefaultPluginManager
             }
         }
 
-        return pluginCollector.getPluginDescriptor( plugin );
+        PluginDescriptor pluginDescriptor = pluginCollector.getPluginDescriptor( plugin );
+        
+        return pluginDescriptor;
     }
 
     /**
@@ -596,7 +621,12 @@ public class DefaultPluginManager
             ClassRealm oldRealm = container.setLookupRealm( pluginRealm );
 
             plugin.execute();
-
+            
+            if ( plugin instanceof MavenReport )
+            {
+                session.addReport( mojoDescriptor, (MavenReport) plugin );
+            }
+            
             container.setLookupRealm( oldRealm );
 
             dispatcher.dispatchEnd( event, goalExecId );
@@ -1181,7 +1211,7 @@ public class DefaultPluginManager
     }
 
     // ----------------------------------------------------------------------
-    // Lifecycle
+    // LegacyLifecycle
     // ----------------------------------------------------------------------
 
     public void contextualize( Context context )

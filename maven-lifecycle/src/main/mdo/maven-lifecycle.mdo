@@ -548,7 +548,16 @@
       </fields>
     </class>
     <class>
+      <name>LifecycleStep</name>
+      <version>1.0.0</version>
+      <description><![CDATA[
+        Some step in the build process. This could be a mojo, or it could be a signal to start/stop 
+        forked-mode of execution, etc.
+      ]]></description>
+    </class>
+    <class>
       <name>MojoBinding</name>
+      <superClass>LifecycleStep</superClass>
       <version>1.0.0</version>
       <description>A binding of one mojo to one lifecycle phase, possibly including configuration.</description>
       <fields>

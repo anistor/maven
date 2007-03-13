@@ -21,13 +21,17 @@ package org.apache.maven.execution;
 
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.monitor.event.EventDispatcher;
+import org.apache.maven.plugin.descriptor.MojoDescriptor;
 import org.apache.maven.plugin.descriptor.PluginDescriptor;
 import org.apache.maven.project.MavenProject;
+import org.apache.maven.reporting.MavenReport;
 import org.apache.maven.settings.Settings;
 import org.codehaus.plexus.PlexusContainer;
 import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -47,6 +51,8 @@ public class MavenSession
     private boolean usingPOMsFromFilesystem = true;
 
     private MavenExecutionRequest request;
+
+    private Map reports = new LinkedHashMap();
 
     public MavenSession( PlexusContainer container,
                          MavenExecutionRequest request,
@@ -155,5 +161,22 @@ public class MavenSession
     public MavenExecutionRequest getRequest()
     {
         return request;
+    }
+    
+    // this is a hack to try to untangle Maven's reporting system from the lifecycle executor, 
+    // so we can plan the lifecycle steps ahead of any actual execution.
+    public List getReports()
+    {
+        return new ArrayList( reports.values() );
+    }
+    
+    public void clearReports()
+    {
+        reports.clear();
+    }
+
+    public void addReport( MojoDescriptor mojoDescriptor, MavenReport report )
+    {
+        reports.put( mojoDescriptor.getId(), report );
     }
 }

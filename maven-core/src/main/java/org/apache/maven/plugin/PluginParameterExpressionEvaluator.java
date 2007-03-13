@@ -192,7 +192,7 @@ public class PluginParameterExpressionEvaluator
         }
         else if ( "reports".equals( expression ) )
         {
-            value = mojoExecution.getReports();
+            value = context.getReports();
         }
         else if ( "project".equals( expression ) )
         {

@@ -1073,170 +1073,6 @@ public class LifecycleUtilsTest
         assertNull( phase );
     }
 
-    public void testAssembleMojoBindingList_ThrowErrorForInvalidPhaseNameAsSingletonTaskList()
-    {
-        try
-        {
-            LifecycleUtils.assembleMojoBindingList( Collections.singletonList( "dud" ), new LifecycleBindings() );
-
-            fail( "Should fail with LifecycleSpecificationException due to invalid phase/direct mojo reference." );
-        }
-        catch ( LifecycleSpecificationException e )
-        {
-            // expected.
-        }
-    }
-
-    public void testAssembleMojoBindingList_ReturnBindingWithDirectInvocationOriginWhenSpecifiedInTasks()
-        throws LifecycleSpecificationException
-    {
-        List result = LifecycleUtils.assembleMojoBindingList( Collections.singletonList( "dud:goal" ), new LifecycleBindings() );
-
-        assertEquals( 1, result.size() );
-
-        MojoBinding binding = (MojoBinding) result.get( 0 );
-
-        assertTrue( binding instanceof PrefixedMojoBinding );
-        assertEquals( "direct invocation", binding.getOrigin() );
-        assertEquals( "dud", ( (PrefixedMojoBinding) binding ).getPrefix() );
-        assertEquals( "goal", binding.getGoal() );
-    }
-
-    public void testAssembleMojoBindingList_ReturnBindingsUpToStopPhaseForSinglePhaseTaskList()
-        throws LifecycleSpecificationException
-    {
-        LifecycleBindings bindings = new LifecycleBindings();
-        bindings.getCleanBinding().getPreClean().addBinding( newMojoBinding( "goal", "artifact", "pre-clean" ) );
-        bindings.getCleanBinding().getClean().addBinding( newMojoBinding( "goal", "artifact", "clean" ) );
-        bindings.getCleanBinding().getPostClean().addBinding( newMojoBinding( "goal", "artifact", "post-clean" ) );
-
-        List result = LifecycleUtils.assembleMojoBindingList( Collections.singletonList( "clean" ), bindings );
-
-        assertEquals( 2, result.size() );
-
-        MojoBinding binding = (MojoBinding) result.get( 0 );
-
-        assertEquals( "goal", binding.getGroupId() );
-        assertEquals( "artifact", binding.getArtifactId() );
-        assertEquals( "pre-clean", binding.getGoal() );
-
-        binding = (MojoBinding) result.get( 1 );
-
-        assertEquals( "goal", binding.getGroupId() );
-        assertEquals( "artifact", binding.getArtifactId() );
-        assertEquals( "clean", binding.getGoal() );
-    }
-
-    public void testAssembleMojoBindingList_CombinePreviousBindingsWhenSubsetOfNextBindingsForTwoPhaseTaskList()
-        throws LifecycleSpecificationException
-    {
-        LifecycleBindings bindings = new LifecycleBindings();
-        bindings.getCleanBinding().getPreClean().addBinding( newMojoBinding( "goal", "artifact", "pre-clean" ) );
-        bindings.getCleanBinding().getClean().addBinding( newMojoBinding( "goal", "artifact", "clean" ) );
-        bindings.getCleanBinding().getClean().addBinding( newMojoBinding( "goal", "artifact", "post-clean" ) );
-
-        List tasks = new ArrayList( 2 );
-        tasks.add( "clean" );
-        tasks.add( "post-clean" );
-
-        List result = LifecycleUtils.assembleMojoBindingList( tasks, bindings );
-
-        assertEquals( 3, result.size() );
-
-        MojoBinding binding = (MojoBinding) result.get( 0 );
-
-        assertEquals( "goal", binding.getGroupId() );
-        assertEquals( "artifact", binding.getArtifactId() );
-        assertEquals( "pre-clean", binding.getGoal() );
-
-        binding = (MojoBinding) result.get( 1 );
-
-        assertEquals( "goal", binding.getGroupId() );
-        assertEquals( "artifact", binding.getArtifactId() );
-        assertEquals( "clean", binding.getGoal() );
-
-        binding = (MojoBinding) result.get( 2 );
-
-        assertEquals( "goal", binding.getGroupId() );
-        assertEquals( "artifact", binding.getArtifactId() );
-        assertEquals( "post-clean", binding.getGoal() );
-    }
-
-    public void testAssembleMojoBindingList_IgnoreSuccessiveBindingsWhenSameAsPreviousOnesForTwoPhaseTaskList()
-        throws LifecycleSpecificationException
-    {
-        LifecycleBindings bindings = new LifecycleBindings();
-        bindings.getCleanBinding().getPreClean().addBinding( newMojoBinding( "goal", "artifact", "pre-clean" ) );
-        bindings.getCleanBinding().getClean().addBinding( newMojoBinding( "goal", "artifact", "clean" ) );
-
-        List tasks = new ArrayList( 2 );
-        tasks.add( "clean" );
-        tasks.add( "post-clean" );
-
-        List result = LifecycleUtils.assembleMojoBindingList( tasks, bindings );
-
-        assertEquals( 2, result.size() );
-
-        MojoBinding binding = (MojoBinding) result.get( 0 );
-
-        assertEquals( "goal", binding.getGroupId() );
-        assertEquals( "artifact", binding.getArtifactId() );
-        assertEquals( "pre-clean", binding.getGoal() );
-
-        binding = (MojoBinding) result.get( 1 );
-
-        assertEquals( "goal", binding.getGroupId() );
-        assertEquals( "artifact", binding.getArtifactId() );
-        assertEquals( "clean", binding.getGoal() );
-    }
-
-    public void testAssembleMojoBindingList_ReturnBindingsUpToStopPhasesForTwoPhaseTaskList()
-        throws LifecycleSpecificationException
-    {
-        LifecycleBindings bindings = new LifecycleBindings();
-
-        bindings.getCleanBinding().getPreClean().addBinding( newMojoBinding( "goal", "artifact", "pre-clean" ) );
-        bindings.getCleanBinding().getClean().addBinding( newMojoBinding( "goal", "artifact", "clean" ) );
-        bindings.getCleanBinding().getPostClean().addBinding( newMojoBinding( "goal", "artifact", "post-clean" ) );
-
-        bindings.getBuildBinding().getInitialize().addBinding( newMojoBinding( "goal", "artifact", "initialize" ) );
-        bindings.getBuildBinding().getCompile().addBinding( newMojoBinding( "goal", "artifact", "compile" ) );
-        bindings.getBuildBinding().getCreatePackage().addBinding( newMojoBinding( "goal", "artifact", "package" ) );
-
-        List tasks = new ArrayList( 2 );
-        tasks.add( "clean" );
-        tasks.add( "compile" );
-
-        List result = LifecycleUtils.assembleMojoBindingList( tasks, bindings );
-
-        assertEquals( 4, result.size() );
-
-        MojoBinding binding = (MojoBinding) result.get( 0 );
-
-        assertEquals( "goal", binding.getGroupId() );
-        assertEquals( "artifact", binding.getArtifactId() );
-        assertEquals( "pre-clean", binding.getGoal() );
-
-        binding = (MojoBinding) result.get( 1 );
-
-        assertEquals( "goal", binding.getGroupId() );
-        assertEquals( "artifact", binding.getArtifactId() );
-        assertEquals( "clean", binding.getGoal() );
-
-        binding = (MojoBinding) result.get( 2 );
-
-        assertEquals( "goal", binding.getGroupId() );
-        assertEquals( "artifact", binding.getArtifactId() );
-        assertEquals( "initialize", binding.getGoal() );
-
-        binding = (MojoBinding) result.get( 3 );
-
-        assertEquals( "goal", binding.getGroupId() );
-        assertEquals( "artifact", binding.getArtifactId() );
-        assertEquals( "compile", binding.getGoal() );
-
-    }
-
     public void testRemoveMojoBinding_ReturnLifecycleWithoutMojo_WithoutExecIdCompare()
         throws NoSuchPhaseException
     {
@@ -1511,6 +1347,26 @@ public class LifecycleUtilsTest
 
         assertEquals( 1, cb.getClean().getBindings().size() );
 
+    }
+    
+    public void testIsValidPhaseName_ReturnTrueForPhaseInCleanLifecycle()
+    {
+        assertTrue( LifecycleUtils.isValidPhaseName( "clean" ) );
+    }
+
+    public void testIsValidPhaseName_ReturnTrueForPhaseInBuildLifecycle()
+    {
+        assertTrue( LifecycleUtils.isValidPhaseName( "compile" ) );
+    }
+
+    public void testIsValidPhaseName_ReturnTrueForPhaseInSiteLifecycle()
+    {
+        assertTrue( LifecycleUtils.isValidPhaseName( "site" ) );
+    }
+
+    public void testIsValidPhaseName_ReturnFalseForInvalidPhaseName()
+    {
+        assertFalse( LifecycleUtils.isValidPhaseName( "dud" ) );
     }
 
     private MojoBinding newMojoBinding( String groupId, String artifactId, String goal )

@@ -2,17 +2,19 @@ package org.apache.maven.lifecycle.plan;
 
 import org.apache.maven.lifecycle.model.LifecycleBindings;
 import org.apache.maven.lifecycle.model.MojoBinding;
+import org.apache.maven.lifecycle.statemgmt.StateManagementUtils;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import junit.framework.TestCase;
 
-public class DefaultLifecyclePlanModifierTest
+public class ForkPlanModifierTest
     extends TestCase
 {
 
-    public void testModifyBindings_AddTwoMojosAfterExistingCompileMojo()
+    public void testModifyBindings_AddTwoMojosAheadOfCompileMojo()
         throws LifecyclePlannerException
     {
         MojoBinding mojo = newMojo( "org.apache.maven.plugins", "maven-compiler-plugin", "compile" );
@@ -22,23 +24,33 @@ public class DefaultLifecyclePlanModifierTest
         additions.add( newMojo( "group", "artifact", "compile" ) );
 
         LifecycleBindings target = new LifecycleBindings();
-        
+
         assertEquals( 0, target.getBuildBinding().getCompile().getBindings().size() );
-        
+
         target.getBuildBinding().getCompile().addBinding( mojo );
-        
+
         assertEquals( 1, target.getBuildBinding().getCompile().getBindings().size() );
 
-        target = new DefaultLifecyclePlanModifier( mojo, additions ).modifyBindings( target );
+        target = new ForkPlanModifier( mojo, additions ).modifyBindings( target );
 
-        assertEquals( 3, target.getBuildBinding().getCompile().getBindings().size() );
+        assertEquals( 5, target.getBuildBinding().getCompile().getBindings().size() );
+
+        Iterator it = target.getBuildBinding().getCompile().getBindings().iterator();
         
+        assertMojo( StateManagementUtils.GROUP_ID, StateManagementUtils.ARTIFACT_ID,
+                    StateManagementUtils.START_FORKED_EXECUTION_GOAL,
+                    (MojoBinding) it.next() );
+
+        assertMojo( "group", "artifact", "clean", (MojoBinding) it.next() );
+
+        assertMojo( "group", "artifact", "compile", (MojoBinding) it.next() );
+
         assertMojo( mojo.getGroupId(), mojo.getArtifactId(), mojo.getGoal(),
-                    (MojoBinding) target.getBuildBinding().getCompile().getBindings().get( 0 ) );
-        
-        assertMojo( "group", "artifact", "clean", (MojoBinding) target.getBuildBinding().getCompile().getBindings().get( 1 ) );
-        
-        assertMojo( "group", "artifact", "compile", (MojoBinding) target.getBuildBinding().getCompile().getBindings().get( 2 ) );
+                    (MojoBinding) it.next() );
+
+        assertMojo( StateManagementUtils.GROUP_ID, StateManagementUtils.ARTIFACT_ID,
+                    StateManagementUtils.END_FORKED_EXECUTION_GOAL,
+                    (MojoBinding) it.next() );
     }
 
     public void testModifyBindings_AddTwoMojosBetweenTwoExistingCompileMojos()
@@ -52,30 +64,41 @@ public class DefaultLifecyclePlanModifierTest
         additions.add( newMojo( "group", "artifact", "compile" ) );
 
         LifecycleBindings target = new LifecycleBindings();
-        
+
         assertEquals( 0, target.getBuildBinding().getCompile().getBindings().size() );
-        
+
         target.getBuildBinding().getCompile().addBinding( mojo );
         target.getBuildBinding().getCompile().addBinding( mojo2 );
-        
+
         assertEquals( 2, target.getBuildBinding().getCompile().getBindings().size() );
 
-        target = new DefaultLifecyclePlanModifier( mojo, additions ).modifyBindings( target );
+        target = new ForkPlanModifier( mojo2, additions ).modifyBindings( target );
 
-        assertEquals( 4, target.getBuildBinding().getCompile().getBindings().size() );
+        assertEquals( 6, target.getBuildBinding().getCompile().getBindings().size() );
+
+        Iterator it = target.getBuildBinding().getCompile().getBindings().iterator();
         
         assertMojo( mojo.getGroupId(), mojo.getArtifactId(), mojo.getGoal(),
-                    (MojoBinding) target.getBuildBinding().getCompile().getBindings().get( 0 ) );
-        
-        assertMojo( "group", "artifact", "clean", (MojoBinding) target.getBuildBinding().getCompile().getBindings().get( 1 ) );
-        
-        assertMojo( "group", "artifact", "compile", (MojoBinding) target.getBuildBinding().getCompile().getBindings().get( 2 ) );
-        
+                    (MojoBinding) it.next() );
+
+        assertMojo( StateManagementUtils.GROUP_ID, StateManagementUtils.ARTIFACT_ID,
+                    StateManagementUtils.START_FORKED_EXECUTION_GOAL,
+                    (MojoBinding) it.next() );
+
+        assertMojo( "group", "artifact", "clean", (MojoBinding) it.next() );
+
+        assertMojo( "group", "artifact", "compile", (MojoBinding) it.next() );
+
         assertMojo( mojo2.getGroupId(), mojo2.getArtifactId(), mojo2.getGoal(),
-                    (MojoBinding) target.getBuildBinding().getCompile().getBindings().get( 3 ) );
+                    (MojoBinding) it.next() );
+
+        assertMojo( StateManagementUtils.GROUP_ID, StateManagementUtils.ARTIFACT_ID,
+                    StateManagementUtils.END_FORKED_EXECUTION_GOAL,
+                    (MojoBinding) it.next() );
+
     }
 
-    public void testModifyBindings_AddTwoNormalPlusTwoModifierModifiedMojosBetweenTwoExistingCompileMojos()
+    public void testModifyBindings_AddTwoNormalPlusTwoModifierModifiedMojosWithTwoExistingCompileMojos()
         throws LifecyclePlannerException
     {
         MojoBinding mojo = newMojo( "org.apache.maven.plugins", "maven-compiler-plugin", "compile" );
@@ -94,33 +117,52 @@ public class DefaultLifecyclePlanModifierTest
         LifecycleBindings target = new LifecycleBindings();
 
         assertEquals( 0, target.getBuildBinding().getCompile().getBindings().size() );
-        
+
         target.getBuildBinding().getCompile().addBinding( mojo );
         target.getBuildBinding().getCompile().addBinding( mojo2 );
-        
+
         assertEquals( 2, target.getBuildBinding().getCompile().getBindings().size() );
 
-        LifecyclePlanModifier modder = new DefaultLifecyclePlanModifier( mojo, additions );
-        modder.addModifier( new DefaultLifecyclePlanModifier( mojo3, modAdditions ) );
+        BuildPlanModifier modder = new ForkPlanModifier( mojo, additions );
+        modder.addModifier( new ForkPlanModifier( mojo3, modAdditions ) );
 
         target = modder.modifyBindings( target );
 
-        assertEquals( 6, target.getBuildBinding().getCompile().getBindings().size() );
+        assertEquals( 10, target.getBuildBinding().getCompile().getBindings().size() );
+
+        Iterator it = target.getBuildBinding().getCompile().getBindings().iterator();
         
-        assertMojo( mojo.getGroupId(), mojo.getArtifactId(), mojo.getGoal(),
-                    (MojoBinding) target.getBuildBinding().getCompile().getBindings().get( 0 ) );
-        
+        assertMojo( StateManagementUtils.GROUP_ID, StateManagementUtils.ARTIFACT_ID,
+                    StateManagementUtils.START_FORKED_EXECUTION_GOAL,
+                    (MojoBinding) it.next() );
+
+        assertMojo( StateManagementUtils.GROUP_ID, StateManagementUtils.ARTIFACT_ID,
+                    StateManagementUtils.START_FORKED_EXECUTION_GOAL,
+                    (MojoBinding) it.next() );
+
+        assertMojo( "group2", "artifact", "clean", (MojoBinding) it.next() );
+
+        assertMojo( "group2", "artifact", "compile", (MojoBinding) it.next() );
+
         assertMojo( mojo3.getGroupId(), mojo3.getArtifactId(), mojo3.getGoal(),
-                    (MojoBinding) target.getBuildBinding().getCompile().getBindings().get( 1 ) );
-        
-        assertMojo( "group2", "artifact", "clean", (MojoBinding) target.getBuildBinding().getCompile().getBindings().get( 2 ) );
-        
-        assertMojo( "group2", "artifact", "compile", (MojoBinding) target.getBuildBinding().getCompile().getBindings().get( 3 ) );
-        
-        assertMojo( "group", "artifact", "compile", (MojoBinding) target.getBuildBinding().getCompile().getBindings().get( 4 ) );
-        
+                    (MojoBinding) it.next() );
+
+        assertMojo( StateManagementUtils.GROUP_ID, StateManagementUtils.ARTIFACT_ID,
+                    StateManagementUtils.END_FORKED_EXECUTION_GOAL,
+                    (MojoBinding) it.next() );
+
+        assertMojo( "group", "artifact", "compile", (MojoBinding) it.next() );
+
+        assertMojo( mojo.getGroupId(), mojo.getArtifactId(), mojo.getGoal(),
+                    (MojoBinding) it.next() );
+
+        assertMojo( StateManagementUtils.GROUP_ID, StateManagementUtils.ARTIFACT_ID,
+                    StateManagementUtils.END_FORKED_EXECUTION_GOAL,
+                    (MojoBinding) it.next() );
+
         assertMojo( mojo2.getGroupId(), mojo2.getArtifactId(), mojo2.getGoal(),
-                    (MojoBinding) target.getBuildBinding().getCompile().getBindings().get( 5 ) );
+                    (MojoBinding) it.next() );
+
     }
 
     private void assertMojo( String groupId, String artifactId, String goal, MojoBinding binding )

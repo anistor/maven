@@ -1,23 +1,24 @@
 package org.apache.maven.plugin.loader;
 
 import org.apache.maven.model.Plugin;
+import org.apache.maven.model.ReportPlugin;
 
 public class PluginLoaderException
     extends Exception
 {
 
-    private Plugin plugin;
+    private String pluginKey;
 
     public PluginLoaderException( Plugin plugin, String message, Throwable cause )
     {
         super( message, cause );
-        this.plugin = plugin;
+        this.pluginKey = plugin.getKey();
     }
 
     public PluginLoaderException( Plugin plugin, String message )
     {
         super( message );
-        this.plugin = plugin;
+        this.pluginKey = plugin.getKey();
     }
     
     public PluginLoaderException( String message )
@@ -30,9 +31,21 @@ public class PluginLoaderException
         super( message, cause );
     }
 
-    public Plugin getPlugin()
+    public PluginLoaderException( ReportPlugin plugin, String message, Throwable cause )
     {
-        return plugin;
+        super( message, cause );
+        this.pluginKey = plugin.getKey();
+    }
+
+    public PluginLoaderException( ReportPlugin plugin, String message )
+    {
+        super( message );
+        this.pluginKey = plugin.getKey();
+    }
+    
+    public String getPluginKey()
+    {
+        return pluginKey;
     }
 
 }

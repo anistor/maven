@@ -1,18 +1,21 @@
 package org.apache.maven.lifecycle.plan;
 
 import org.apache.maven.lifecycle.LifecycleSpecificationException;
-import org.apache.maven.lifecycle.model.LifecycleBindings;
+import org.apache.maven.lifecycle.model.MojoBinding;
 
 import java.util.List;
 
-public interface LifecyclePlan extends ModifiablePlanElement
+public interface BuildPlan
+    extends ModifiablePlanElement
 {
 
     List getPlanMojoBindings()
         throws LifecycleSpecificationException, LifecyclePlannerException;
-    
-    LifecycleBindings getPlanLifecycleBindings();
-    
+
+    void addDirectInvocationPlan( MojoBinding directInvocationBinding, BuildPlan plan );
+
+    boolean hasDirectInvocationPlans();
+
     List getTasks();
 
 }

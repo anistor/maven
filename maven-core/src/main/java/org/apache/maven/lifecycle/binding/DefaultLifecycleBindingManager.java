@@ -5,11 +5,14 @@ import org.apache.maven.lifecycle.LifecycleBindingLoader;
 import org.apache.maven.lifecycle.LifecycleLoaderException;
 import org.apache.maven.lifecycle.LifecycleSpecificationException;
 import org.apache.maven.lifecycle.LifecycleUtils;
-import org.apache.maven.lifecycle.MojoBindingParser;
+import org.apache.maven.lifecycle.MojoBindingUtils;
+import org.apache.maven.lifecycle.mapping.LifecycleMapping;
 import org.apache.maven.lifecycle.model.LifecycleBindings;
 import org.apache.maven.lifecycle.model.MojoBinding;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.model.PluginExecution;
+import org.apache.maven.model.ReportPlugin;
+import org.apache.maven.model.ReportSet;
 import org.apache.maven.plugin.descriptor.MojoDescriptor;
 import org.apache.maven.plugin.descriptor.PluginDescriptor;
 import org.apache.maven.plugin.lifecycle.Execution;
@@ -28,6 +31,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.StringTokenizer;
 
 //FIXME: This needs a better name!
 public class DefaultLifecycleBindingManager
@@ -36,12 +40,17 @@ public class DefaultLifecycleBindingManager
 
     private ActiveMap bindingsByPackaging;
 
+    private ActiveMap legacyMappingsByPackaging;
+
     private PluginLoader pluginLoader;
 
     private Logger logger;
 
     // configured. Moved out of DefaultLifecycleExecutor...
     private List legacyLifecycles;
+
+    // configured. Moved out of DefaultLifecycleExecutor...
+    private List defaultReports;
 
     public LifecycleBindings getBindingsForPackaging( MavenProject project )
         throws LifecycleLoaderException, LifecycleSpecificationException
@@ -55,7 +64,18 @@ public class DefaultLifecycleBindingManager
         {
             bindings = loader.getBindings();
         }
-        else
+
+        // TODO: Remove this once we no longer have to support legacy-style lifecycle mappings
+        if ( bindings == null )
+        {
+            LifecycleMapping mapping = (LifecycleMapping) legacyMappingsByPackaging.get( packaging );
+            if ( mapping != null )
+            {
+                bindings = LegacyLifecycleMappingParser.parseMappings( mapping, packaging );
+            }
+        }
+
+        if ( bindings == null )
         {
             bindings = searchPluginsWithExtensions( project );
         }
@@ -102,11 +122,37 @@ public class DefaultLifecycleBindingManager
                 if ( loader != null )
                 {
                     bindings = loader.getBindings();
+                }
 
-                    if ( bindings != null )
+                // TODO: Remove this once we no longer have to support legacy-style lifecycle mappings
+                if ( bindings == null )
+                {
+                    LifecycleMapping mapping = null;
+                    try
                     {
-                        break;
+                        mapping = (LifecycleMapping) pluginLoader.loadPluginComponent( LifecycleMapping.ROLE, packaging, plugin,
+                                                                                       project );
                     }
+                    catch ( ComponentLookupException e )
+                    {
+                        logger.debug( LifecycleMapping.ROLE + " for packaging: " + packaging
+                            + " could not be retrieved from plugin: " + plugin.getKey() + ".\nReason: " + e.getMessage(), e );
+                    }
+                    catch ( PluginLoaderException e )
+                    {
+                        throw new LifecycleLoaderException( "Failed to load plugin: " + plugin.getKey() + ". Reason: "
+                            + e.getMessage(), e );
+                    }
+
+                    if ( mapping != null )
+                    {
+                        bindings = LegacyLifecycleMappingParser.parseMappings( mapping, packaging );
+                    }
+                }
+
+                if ( bindings != null )
+                {
+                    break;
                 }
             }
         }
@@ -161,6 +207,7 @@ public class DefaultLifecycleBindingManager
                             mojoBinding.setGoal( goal );
                             mojoBinding.setConfiguration( execution.getConfiguration() );
                             mojoBinding.setExecutionId( execution.getId() );
+                            mojoBinding.setOrigin( project.getId() );
 
                             String phase = execution.getPhase();
                             if ( phase == null )
@@ -220,7 +267,7 @@ public class DefaultLifecycleBindingManager
 
         if ( lifecycleOverlay == null )
         {
-            throw new LifecycleLoaderException( "Lifecycle '" + lifecycleId + "' not found in plugin" );
+            throw new LifecycleLoaderException( "LegacyLifecycle '" + lifecycleId + "' not found in plugin" );
         }
 
         LifecycleBindings bindings = new LifecycleBindings();
@@ -267,7 +314,7 @@ public class DefaultLifecycleBindingManager
                     MojoBinding binding;
                     if ( goal.indexOf( ":" ) > 0 )
                     {
-                        binding = MojoBindingParser.parseMojoBinding( goal, false );
+                        binding = MojoBindingUtils.parseMojoBinding( goal, false );
                     }
                     else
                     {
@@ -315,4 +362,136 @@ public class DefaultLifecycleBindingManager
         return bindings;
     }
 
+    public List getReportBindings( MavenProject project )
+        throws LifecycleLoaderException, LifecycleSpecificationException
+    {
+        if ( project.getModel().getReports() != null )
+        {
+            logger.error( "Plugin contains a <reports/> section: this is IGNORED - please use <reporting/> instead." );
+        }
+
+        List reportPlugins = getReportPluginsForProject( project );
+
+        List reports = new ArrayList();
+        if ( reportPlugins != null )
+        {
+            for ( Iterator it = reportPlugins.iterator(); it.hasNext(); )
+            {
+                ReportPlugin reportPlugin = (ReportPlugin) it.next();
+
+                List reportSets = reportPlugin.getReportSets();
+
+                if ( reportSets == null || reportSets.isEmpty() )
+                {
+                    reports.addAll( getReportsForPlugin( reportPlugin, null, project ) );
+                }
+                else
+                {
+                    for ( Iterator j = reportSets.iterator(); j.hasNext(); )
+                    {
+                        ReportSet reportSet = (ReportSet) j.next();
+
+                        reports.addAll( getReportsForPlugin( reportPlugin, reportSet, project ) );
+                    }
+                }
+            }
+        }
+        return reports;
+    }
+
+    private List getReportPluginsForProject( MavenProject project )
+    {
+        List reportPlugins = project.getReportPlugins();
+        
+        if ( project.getReporting() == null || !project.getReporting().isExcludeDefaults() )
+        {
+            if ( reportPlugins == null )
+            {
+                reportPlugins = new ArrayList();
+            }
+            else
+            {
+                reportPlugins = new ArrayList( reportPlugins );
+            }
+
+            for ( Iterator i = defaultReports.iterator(); i.hasNext(); )
+            {
+                String report = (String) i.next();
+                
+                StringTokenizer tok = new StringTokenizer( report, ":" );
+                if ( tok.countTokens() != 2 )
+                {
+                    logger.warn( "Invalid default report ignored: '" + report + "' (must be groupId:artifactId)" );
+                }
+                else
+                {
+                    String groupId = tok.nextToken();
+                    String artifactId = tok.nextToken();
+
+                    boolean found = false;
+                    for ( Iterator j = reportPlugins.iterator(); j.hasNext() && !found; )
+                    {
+                        ReportPlugin reportPlugin = (ReportPlugin) j.next();
+                        if ( reportPlugin.getGroupId().equals( groupId ) && reportPlugin.getArtifactId().equals( artifactId ) )
+                        {
+                            found = true;
+                        }
+                    }
+
+                    if ( !found )
+                    {
+                        ReportPlugin reportPlugin = new ReportPlugin();
+                        reportPlugin.setGroupId( groupId );
+                        reportPlugin.setArtifactId( artifactId );
+                        reportPlugins.add( reportPlugin );
+                    }
+                }
+            }
+        }
+        
+        return reportPlugins;
+    }
+
+    private List getReportsForPlugin( ReportPlugin reportPlugin, ReportSet reportSet, MavenProject project )
+        throws LifecycleLoaderException
+    {
+        PluginDescriptor pluginDescriptor;
+        try
+        {
+            pluginDescriptor = pluginLoader.loadReportPlugin( reportPlugin, project );
+        }
+        catch ( PluginLoaderException e )
+        {
+            throw new LifecycleLoaderException( "Failed to load report plugin: " + reportPlugin.getKey() + ". Reason: "
+                + e.getMessage(), e );
+        }
+
+        List reports = new ArrayList();
+        for ( Iterator i = pluginDescriptor.getMojos().iterator(); i.hasNext(); )
+        {
+            MojoDescriptor mojoDescriptor = (MojoDescriptor) i.next();
+
+            // TODO: check ID is correct for reports
+            // if the POM configured no reports, give all from plugin
+            if ( reportSet == null || reportSet.getReports().contains( mojoDescriptor.getGoal() ) )
+            {
+                String id = null;
+                if ( reportSet != null )
+                {
+                    id = reportSet.getId();
+                }
+
+                MojoBinding binding = new MojoBinding();
+                binding.setGroupId( pluginDescriptor.getGroupId() );
+                binding.setArtifactId( pluginDescriptor.getArtifactId() );
+                binding.setVersion( pluginDescriptor.getVersion() );
+                binding.setGoal( mojoDescriptor.getGoal() );
+                binding.setExecutionId( id );
+                binding.setOrigin( project.getId() );
+
+                reports.add( binding );
+            }
+        }
+        return reports;
+    }
 }

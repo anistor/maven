@@ -554,84 +554,6 @@ public class LifecycleUtils
         return result;
     }
 
-    public static List assembleMojoBindingList( List tasks, LifecycleBindings lifecycleBindings )
-        throws LifecycleSpecificationException
-    {
-        List planBindings = new ArrayList();
-
-        List lastMojoBindings = null;
-        for ( Iterator it = tasks.iterator(); it.hasNext(); )
-        {
-            String task = (String) it.next();
-
-            LifecycleBinding binding = LifecycleUtils.findLifecycleBindingForPhase( task, lifecycleBindings );
-            if ( binding != null )
-            {
-                List mojoBindings = LifecycleUtils.getMojoBindingListForLifecycle( task, binding );
-
-                // save these so we can reference the originals...
-                List originalMojoBindings = mojoBindings;
-
-                // if these mojo bindings are a superset of the last bindings, only add the difference.
-                if ( isSameOrSuperListOfMojoBindings( mojoBindings, lastMojoBindings ) )
-                {
-                    List revised = new ArrayList( mojoBindings );
-                    revised.removeAll( lastMojoBindings );
-
-                    if ( revised.isEmpty() )
-                    {
-                        continue;
-                    }
-
-                    mojoBindings = revised;
-                }
-
-                planBindings.addAll( mojoBindings );
-                lastMojoBindings = originalMojoBindings;
-            }
-            else
-            {
-                MojoBinding mojoBinding = MojoBindingParser.parseMojoBinding( task, true );
-                mojoBinding.setOrigin( "direct invocation" );
-
-                planBindings.add( mojoBinding );
-            }
-        }
-
-        return planBindings;
-    }
-
-    private static boolean isSameOrSuperListOfMojoBindings( List superCandidate, List check )
-    {
-        if ( superCandidate == null || check == null )
-        {
-            return false;
-        }
-
-        if ( superCandidate.size() < check.size() )
-        {
-            return false;
-        }
-
-        List superKeys = new ArrayList( superCandidate.size() );
-        for ( Iterator it = superCandidate.iterator(); it.hasNext(); )
-        {
-            MojoBinding binding = (MojoBinding) it.next();
-
-            superKeys.add( createMojoBindingKey( binding, true ) );
-        }
-
-        List checkKeys = new ArrayList( check.size() );
-        for ( Iterator it = check.iterator(); it.hasNext(); )
-        {
-            MojoBinding binding = (MojoBinding) it.next();
-
-            checkKeys.add( createMojoBindingKey( binding, true ) );
-        }
-
-        return superKeys.subList( 0, checkKeys.size() ).equals( checkKeys );
-    }
-
     public static Phase findPhaseForMojoBinding( MojoBinding mojoBinding, LifecycleBindings lifecycleBindings,
                                                  boolean considerExecutionId )
     {
@@ -677,5 +599,81 @@ public class LifecycleUtils
         }
 
         return false;
+    }
+
+    public static boolean isValidPhaseName( String phaseName )
+    {
+        LifecycleBindings test = new LifecycleBindings();
+        for ( Iterator it = test.getBindingList().iterator(); it.hasNext(); )
+        {
+            LifecycleBinding binding = (LifecycleBinding) it.next();
+            
+            if ( binding.getPhaseNamesInOrder().contains( phaseName ) )
+            {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    public static List getValidPhaseNames()
+    {
+        List phaseNames = new ArrayList();
+        
+        LifecycleBindings bindings = new LifecycleBindings();
+        for ( Iterator bindingIt = bindings.getBindingList().iterator(); bindingIt.hasNext(); )
+        {
+            LifecycleBinding binding = (LifecycleBinding) bindingIt.next();
+            
+            for ( Iterator phaseNameIt = binding.getPhaseNamesInOrder().iterator(); phaseNameIt.hasNext(); )
+            {
+                phaseNames.add( phaseNameIt.next() );
+            }
+        }
+        
+        return phaseNames;
+    }
+
+    public static List getValidBuildPhaseNames()
+    {
+        List phaseNames = new ArrayList();
+        
+        LifecycleBinding binding = new BuildBinding();
+        
+        for ( Iterator phaseNameIt = binding.getPhaseNamesInOrder().iterator(); phaseNameIt.hasNext(); )
+        {
+            phaseNames.add( phaseNameIt.next() );
+        }
+        
+        return phaseNames;
+    }
+
+    public static List getValidCleanPhaseNames()
+    {
+        List phaseNames = new ArrayList();
+        
+        LifecycleBinding binding = new CleanBinding();
+        
+        for ( Iterator phaseNameIt = binding.getPhaseNamesInOrder().iterator(); phaseNameIt.hasNext(); )
+        {
+            phaseNames.add( phaseNameIt.next() );
+        }
+        
+        return phaseNames;
+    }
+
+    public static List getValidSitePhaseNames()
+    {
+        List phaseNames = new ArrayList();
+        
+        LifecycleBinding binding = new SiteBinding();
+        
+        for ( Iterator phaseNameIt = binding.getPhaseNamesInOrder().iterator(); phaseNameIt.hasNext(); )
+        {
+            phaseNames.add( phaseNameIt.next() );
+        }
+        
+        return phaseNames;
     }
 }

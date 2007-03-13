@@ -4,10 +4,10 @@ import org.apache.maven.lifecycle.model.MojoBinding;
 
 import java.util.StringTokenizer;
 
-public final class MojoBindingParser
+public final class MojoBindingUtils
 {
 
-    private MojoBindingParser()
+    private MojoBindingUtils()
     {
     }
 
@@ -58,6 +58,19 @@ public final class MojoBindingParser
         }
 
         return binding;
+    }
+
+    public static String toString( MojoBinding mojoBinding )
+    {
+        if ( mojoBinding instanceof PrefixedMojoBinding )
+        {
+            return ((PrefixedMojoBinding) mojoBinding).getPrefix() + ":" + mojoBinding.getGoal();
+        }
+        else
+        {
+            return mojoBinding.getGroupId() + ":" + mojoBinding.getArtifactId() + ":"
+                + ( mojoBinding.getVersion() == null ? "" : mojoBinding.getVersion() + ":" ) + mojoBinding.getGoal();
+        }
     }
 
 }

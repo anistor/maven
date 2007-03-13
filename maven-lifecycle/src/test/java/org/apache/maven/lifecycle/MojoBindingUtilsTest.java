@@ -4,7 +4,7 @@ import org.apache.maven.lifecycle.model.MojoBinding;
 
 import junit.framework.TestCase;
 
-public class MojoBindingParserTest
+public class MojoBindingUtilsTest
     extends TestCase
 {
 
@@ -13,7 +13,7 @@ public class MojoBindingParserTest
     {
         String spec = "prefix:goal";
 
-        MojoBinding binding = MojoBindingParser.parseMojoBinding( spec, true );
+        MojoBinding binding = MojoBindingUtils.parseMojoBinding( spec, true );
 
         assertTrue( binding instanceof PrefixedMojoBinding );
         assertEquals( "prefix", ( (PrefixedMojoBinding) binding ).getPrefix() );
@@ -26,7 +26,7 @@ public class MojoBindingParserTest
 
         try
         {
-            MojoBindingParser.parseMojoBinding( spec, false );
+            MojoBindingUtils.parseMojoBinding( spec, false );
 
             fail( "Should fail when prefix references are not allowed." );
         }
@@ -41,7 +41,7 @@ public class MojoBindingParserTest
     {
         String spec = "group:artifact:goal";
 
-        MojoBinding binding = MojoBindingParser.parseMojoBinding( spec, false );
+        MojoBinding binding = MojoBindingUtils.parseMojoBinding( spec, false );
 
         assertEquals( "group", binding.getGroupId() );
         assertEquals( "artifact", binding.getArtifactId() );
@@ -54,7 +54,7 @@ public class MojoBindingParserTest
     {
         String spec = "group:artifact:version:goal";
 
-        MojoBinding binding = MojoBindingParser.parseMojoBinding( spec, false );
+        MojoBinding binding = MojoBindingUtils.parseMojoBinding( spec, false );
 
         assertEquals( "group", binding.getGroupId() );
         assertEquals( "artifact", binding.getArtifactId() );
@@ -68,7 +68,7 @@ public class MojoBindingParserTest
 
         try
         {
-            MojoBindingParser.parseMojoBinding( spec, false );
+            MojoBindingUtils.parseMojoBinding( spec, false );
             
             fail( "Should fail because spec has too many parts (type part is not allowed)." );
         }

@@ -1,5 +1,6 @@
 package org.apache.maven.lifecycle;
 
+import org.apache.maven.lifecycle.binding.LegacyLifecycleParsingTestComponent;
 import org.apache.maven.lifecycle.mapping.LifecycleMapping;
 import org.apache.maven.lifecycle.model.BuildBinding;
 import org.apache.maven.lifecycle.model.LifecycleBindings;

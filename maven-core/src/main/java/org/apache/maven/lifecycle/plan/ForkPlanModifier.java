@@ -2,35 +2,40 @@ package org.apache.maven.lifecycle.plan;
 
 import org.apache.maven.lifecycle.LifecycleSpecificationException;
 import org.apache.maven.lifecycle.LifecycleUtils;
+import org.apache.maven.lifecycle.MojoBindingUtils;
 import org.apache.maven.lifecycle.model.LifecycleBindings;
 import org.apache.maven.lifecycle.model.MojoBinding;
 import org.apache.maven.lifecycle.model.Phase;
+import org.apache.maven.lifecycle.statemgmt.StateManagementUtils;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
-public class DefaultLifecyclePlanModifier
-    implements LifecyclePlanModifier
+public class ForkPlanModifier
+    implements BuildPlanModifier
 {
 
     private final MojoBinding modificationPoint;
     private List planModifiers = new ArrayList();
 
-    private final List mojoBindings;
+    private List mojoBindings;
+    private LifecycleBindings lifecycleBindings;
+    private String lifecyclePhase;
 
-    public DefaultLifecyclePlanModifier( MojoBinding modificationPoint, List mojoBindings )
+    public ForkPlanModifier( MojoBinding modificationPoint, List mojoBindings )
     {
         this.modificationPoint = modificationPoint;
         this.mojoBindings = mojoBindings;
     }
 
-    public DefaultLifecyclePlanModifier( MojoBinding modificationPoint, LifecycleBindings modifiedBindings, String phase )
+    public ForkPlanModifier( MojoBinding modificationPoint, LifecycleBindings modifiedBindings, String phase )
         throws LifecycleSpecificationException
     {
         this.modificationPoint = modificationPoint;
-        this.mojoBindings = LifecycleUtils.assembleMojoBindingList( Collections.singletonList( phase ), modifiedBindings );
+        this.lifecycleBindings = modifiedBindings;
+        this.lifecyclePhase = phase;
     }
 
     public MojoBinding getModificationPoint()
@@ -51,6 +56,7 @@ public class DefaultLifecyclePlanModifier
                 + modificationKey );
         }
 
+        int stopIndex = -1;
         int insertionIndex = -1;
         List phaseBindings = phase.getBindings();
 
@@ -61,17 +67,34 @@ public class DefaultLifecyclePlanModifier
             String key = LifecycleUtils.createMojoBindingKey( candidate, true );
             if ( key.equals( modificationKey ) )
             {
-                insertionIndex = i + 1;
+                insertionIndex = i;
+                stopIndex = i + 1;
                 break;
             }
         }
         
+        phaseBindings.add( stopIndex, StateManagementUtils.createEndForkedExecutionMojoBinding() );
+        
+        if ( mojoBindings == null )
+        {
+            try
+            {
+                mojoBindings = BuildPlanUtils.assembleMojoBindingList( Collections.singletonList( lifecyclePhase ), lifecycleBindings );
+            }
+            catch ( LifecycleSpecificationException e )
+            {
+                throw new LifecyclePlannerException( "Error building modifications list for forked execution of " + MojoBindingUtils.toString( getModificationPoint() ) );
+            }
+        }
+        
         phaseBindings.addAll( insertionIndex, mojoBindings );
+        phaseBindings.add( insertionIndex, StateManagementUtils.createStartForkedExecutionMojoBinding() );
+        
         phase.setBindings( phaseBindings );
         
         for ( Iterator it = planModifiers.iterator(); it.hasNext(); )
         {
-            LifecyclePlanModifier modifier = (LifecyclePlanModifier) it.next();
+            BuildPlanModifier modifier = (BuildPlanModifier) it.next();
             
             modifier.modifyBindings( bindings );
         }
@@ -79,14 +102,14 @@ public class DefaultLifecyclePlanModifier
         return bindings;
     }
 
-    public void addModifier( LifecyclePlanModifier planModifier )
+    public void addModifier( BuildPlanModifier planModifier )
     {
         planModifiers.add( planModifier );
     }
 
-    public List getModifiers()
+    public boolean hasModifiers()
     {
-        return planModifiers;
+        return !planModifiers.isEmpty();
     }
 
 }

@@ -8,7 +8,9 @@ import org.apache.maven.execution.SessionContext;
 import org.apache.maven.lifecycle.PrefixedMojoBinding;
 import org.apache.maven.lifecycle.model.MojoBinding;
 import org.apache.maven.model.Plugin;
+import org.apache.maven.model.ReportPlugin;
 import org.apache.maven.plugin.InvalidPluginException;
+import org.apache.maven.plugin.MavenPluginCollector;
 import org.apache.maven.plugin.PluginManager;
 import org.apache.maven.plugin.PluginManagerException;
 import org.apache.maven.plugin.PluginMappingManager;
@@ -22,6 +24,8 @@ import org.codehaus.plexus.component.repository.exception.ComponentLookupExcepti
 import org.codehaus.plexus.logging.LogEnabled;
 import org.codehaus.plexus.logging.Logger;
 
+import java.util.Iterator;
+
 public class DefaultPluginLoader
     implements PluginLoader, LogEnabled
 {
@@ -30,10 +34,12 @@ public class DefaultPluginLoader
 
     // FIXME: Move the functionality used from this into the PluginLoader when PluginManager refactor is complete.
     private PluginManager pluginManager;
-    
+
     private PluginMappingManager pluginMappingManager;
 
     private BuildContextManager buildContextManager;
+
+    private MavenPluginCollector pluginCollector;
 
     public Object loadPluginComponent( String role, String roleHint, Plugin plugin, MavenProject project )
         throws ComponentLookupException, PluginLoaderException
@@ -78,28 +84,37 @@ public class DefaultPluginLoader
             }
         }
     }
-    
+
     public PluginDescriptor loadPlugin( MojoBinding mojoBinding, MavenProject project )
         throws PluginLoaderException
     {
+        PluginDescriptor pluginDescriptor = null;
+        
         Plugin plugin = null;
         if ( mojoBinding instanceof PrefixedMojoBinding )
         {
             PrefixedMojoBinding prefixed = (PrefixedMojoBinding) mojoBinding;
+
+            pluginDescriptor = loadByPrefix( prefixed, project );
+
+            if ( pluginDescriptor == null )
+            {
+                pluginDescriptor = loadFromProject( prefixed, project );
+            }
+                
+            if ( pluginDescriptor == null )
+            {
+                plugin = new Plugin();
+                plugin.setArtifactId( PluginDescriptor.getDefaultPluginArtifactId( prefixed.getPrefix() ) );
+                plugin.setVersion( mojoBinding.getVersion() );
+                
+                pluginDescriptor = loadPlugin( plugin, project );
+            }
             
-            SessionContext ctx = SessionContext.read( buildContextManager );
-            Settings settings = ctx.getSettings();
-            
-            plugin = pluginMappingManager.getByPrefix( prefixed.getPrefix(), settings.getPluginGroups(),
-                                                              project.getPluginArtifactRepositories(), ctx.getLocalRepository() );
-            
-            if ( plugin == null )
+            if ( pluginDescriptor == null )
             {
                 throw new PluginLoaderException( "Cannot find plugin with prefix: " + prefixed.getPrefix() );
             }
-            
-            mojoBinding.setGroupId( plugin.getGroupId() );
-            mojoBinding.setArtifactId( plugin.getArtifactId() );
         }
         else
         {
@@ -107,11 +122,59 @@ public class DefaultPluginLoader
             plugin.setGroupId( mojoBinding.getGroupId() );
             plugin.setArtifactId( mojoBinding.getArtifactId() );
             plugin.setVersion( mojoBinding.getVersion() );
+
+            pluginDescriptor = loadPlugin( plugin, project );
+        }
+
+        // fill in any blanks once we know more about this plugin.
+        if ( pluginDescriptor != null )
+        {
+            mojoBinding.setGroupId( pluginDescriptor.getGroupId() );
+            mojoBinding.setArtifactId( pluginDescriptor.getArtifactId() );
+            mojoBinding.setVersion( pluginDescriptor.getVersion() );
+        }
+
+        return pluginDescriptor;
+    }
+
+    private PluginDescriptor loadFromProject( PrefixedMojoBinding prefixed, MavenProject project )
+        throws PluginLoaderException
+    {
+        PluginDescriptor result = null;
+        
+        for ( Iterator it = project.getBuildPlugins().iterator(); it.hasNext(); )
+        {
+            Plugin plugin = (Plugin) it.next();
+            
+            PluginDescriptor pluginDescriptor = loadPlugin( plugin, project );
+            if ( prefixed.getPrefix().equals( pluginDescriptor.getGoalPrefix() ) )
+            {
+                result = pluginDescriptor;
+                break;
+            }
         }
         
-        PluginDescriptor pluginDescriptor = loadPlugin( plugin, project );
+        return result;
+    }
+
+    private PluginDescriptor loadByPrefix( PrefixedMojoBinding prefixed, MavenProject project )
+        throws PluginLoaderException
+    {
+        PluginDescriptor pluginDescriptor = pluginCollector.getPluginDescriptorForPrefix( prefixed.getPrefix() );
         
-        mojoBinding.setVersion( pluginDescriptor.getVersion() );
+        SessionContext ctx = SessionContext.read( buildContextManager );
+        Settings settings = ctx.getSettings();
+        
+        if ( pluginDescriptor == null )
+        {
+            Plugin plugin = pluginMappingManager.getByPrefix( prefixed.getPrefix(), settings.getPluginGroups(),
+                                                       project.getPluginArtifactRepositories(), ctx.getLocalRepository() );
+            
+            if ( plugin != null )
+            {
+                pluginDescriptor = loadPlugin( plugin, project );
+            }
+        }
         
         return pluginDescriptor;
     }
@@ -119,11 +182,24 @@ public class DefaultPluginLoader
     public PluginDescriptor loadPlugin( Plugin plugin, MavenProject project )
         throws PluginLoaderException
     {
+        if ( plugin.getGroupId() == null )
+        {
+            plugin.setGroupId( PluginDescriptor.getDefaultPluginGroupId() );
+        }
+        
+        project.injectPluginManagementInfo( plugin );
+
         SessionContext ctx = SessionContext.read( buildContextManager );
 
         try
         {
-            return pluginManager.verifyPlugin( plugin, project, ctx.getSession() );
+            PluginDescriptor result = pluginManager.verifyPlugin( plugin, project, ctx.getSession() );
+            
+            // this has been simplified from the old code that injected the plugin management stuff, since
+            // pluginManagement injection is now handled by the project method.
+            project.addPlugin( plugin );
+            
+            return result;
         }
         catch ( ArtifactResolutionException e )
         {
@@ -162,6 +238,66 @@ public class DefaultPluginLoader
     public void enableLogging( Logger logger )
     {
         this.logger = logger;
+    }
+
+    public PluginDescriptor loadReportPlugin( MojoBinding mojoBinding, MavenProject project )
+        throws PluginLoaderException
+    {
+        ReportPlugin plugin = new ReportPlugin();
+        plugin.setGroupId( mojoBinding.getGroupId() );
+        plugin.setArtifactId( mojoBinding.getArtifactId() );
+        plugin.setVersion( mojoBinding.getVersion() );
+
+        PluginDescriptor pluginDescriptor = loadReportPlugin( plugin, project );
+
+        mojoBinding.setVersion( pluginDescriptor.getVersion() );
+
+        return pluginDescriptor;
+    }
+
+    public PluginDescriptor loadReportPlugin( ReportPlugin plugin, MavenProject project )
+        throws PluginLoaderException
+    {
+        // TODO: Shouldn't we be injecting pluginManagement info here??
+        
+        SessionContext ctx = SessionContext.read( buildContextManager );
+
+        try
+        {
+            return pluginManager.verifyReportPlugin( plugin, project, ctx.getSession() );
+        }
+        catch ( ArtifactResolutionException e )
+        {
+            throw new PluginLoaderException( plugin, "Failed to load plugin. Reason: " + e.getMessage(), e );
+        }
+        catch ( ArtifactNotFoundException e )
+        {
+            throw new PluginLoaderException( plugin, "Failed to load plugin. Reason: " + e.getMessage(), e );
+        }
+        catch ( PluginNotFoundException e )
+        {
+            throw new PluginLoaderException( plugin, "Failed to load plugin. Reason: " + e.getMessage(), e );
+        }
+        catch ( PluginVersionResolutionException e )
+        {
+            throw new PluginLoaderException( plugin, "Failed to load plugin. Reason: " + e.getMessage(), e );
+        }
+        catch ( InvalidVersionSpecificationException e )
+        {
+            throw new PluginLoaderException( plugin, "Failed to load plugin. Reason: " + e.getMessage(), e );
+        }
+        catch ( InvalidPluginException e )
+        {
+            throw new PluginLoaderException( plugin, "Failed to load plugin. Reason: " + e.getMessage(), e );
+        }
+        catch ( PluginManagerException e )
+        {
+            throw new PluginLoaderException( plugin, "Failed to load plugin. Reason: " + e.getMessage(), e );
+        }
+        catch ( PluginVersionNotFoundException e )
+        {
+            throw new PluginLoaderException( plugin, "Failed to load plugin. Reason: " + e.getMessage(), e );
+        }
     }
 
 }

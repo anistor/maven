@@ -1,12 +1,11 @@
 package org.apache.maven.lifecycle.plan;
 
-import java.util.List;
 
 public interface ModifiablePlanElement
 {
 
-    void addModifier( LifecyclePlanModifier planModifier );
+    void addModifier( BuildPlanModifier planModifier );
 
-    List getModifiers();
+    boolean hasModifiers();
     
 }

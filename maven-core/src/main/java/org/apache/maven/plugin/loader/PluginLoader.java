@@ -2,6 +2,7 @@ package org.apache.maven.plugin.loader;
 
 import org.apache.maven.lifecycle.model.MojoBinding;
 import org.apache.maven.model.Plugin;
+import org.apache.maven.model.ReportPlugin;
 import org.apache.maven.plugin.descriptor.PluginDescriptor;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
@@ -18,4 +19,10 @@ public interface PluginLoader
     PluginDescriptor loadPlugin( MojoBinding mojoBinding, MavenProject project )
         throws PluginLoaderException;
 
+    PluginDescriptor loadReportPlugin( ReportPlugin reportPlugin, MavenProject project )
+        throws PluginLoaderException;
+
+    PluginDescriptor loadReportPlugin( MojoBinding mojoBinding, MavenProject project )
+        throws PluginLoaderException;
+    
 }

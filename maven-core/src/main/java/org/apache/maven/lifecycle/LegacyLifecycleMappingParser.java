@@ -1,5 +1,6 @@
 package org.apache.maven.lifecycle;
 
+import org.apache.maven.lifecycle.binding.LegacyLifecycle;
 import org.apache.maven.lifecycle.mapping.LifecycleMapping;
 import org.apache.maven.lifecycle.model.BuildBinding;
 import org.apache.maven.lifecycle.model.CleanBinding;
@@ -26,7 +27,7 @@ public final class LegacyLifecycleMappingParser
         
         for ( Iterator it = lifecycles.iterator(); it.hasNext(); )
         {
-            Lifecycle lifecycle = (Lifecycle) it.next();
+            LegacyLifecycle lifecycle = (LegacyLifecycle) it.next();
             
             if ( "clean".equals( lifecycle.getId() ) )
             {
@@ -46,7 +47,7 @@ public final class LegacyLifecycleMappingParser
             }
         }
         
-        LifecycleUtils.setOrigin( bindings, "Maven core" );
+        LifecycleUtils.setOrigin( bindings, "Maven default lifecycle" );
 
         return bindings;
     }
@@ -61,7 +62,7 @@ public final class LegacyLifecycleMappingParser
         bindings.setBuildBinding( parseBuildBindings( mapping.getPhases( "default" ), mapping.getOptionalMojos( "default" ) ) );
         bindings.setSiteBinding( parseSiteBindings( mapping.getPhases( "site" ), mapping.getOptionalMojos( "site" ) ) );
         
-        LifecycleUtils.setOrigin( bindings, "Maven core" );
+        LifecycleUtils.setOrigin( bindings, "Maven " + packaging + " lifecycle" );
 
         return bindings;
     }
@@ -127,7 +128,7 @@ public final class LegacyLifecycleMappingParser
             {
                 String rawBinding = tok.nextToken().trim();
 
-                MojoBinding binding = MojoBindingParser.parseMojoBinding( rawBinding, false );
+                MojoBinding binding = MojoBindingUtils.parseMojoBinding( rawBinding, false );
                 if ( optionalKeys.contains( rawBinding ) )
                 {
                     binding.setOptional( true );
