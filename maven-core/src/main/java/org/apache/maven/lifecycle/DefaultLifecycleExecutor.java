@@ -349,6 +349,11 @@ public class DefaultLifecycleExecutor
                     throw new LifecycleExecutionException( e.getMessage(), e );
                 }
             }
+            else
+            {
+                throw new LifecycleExecutionException( "Failed to load plugin for: " + MojoBindingUtils.toString( mojoBinding )
+                                                       + ". Reason: unknown" );
+            }
         }
         catch ( LifecycleExecutionException e )
         {
