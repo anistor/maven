@@ -47,7 +47,7 @@ public final class LegacyLifecycleMappingParser
             }
         }
         
-        LifecycleUtils.setOrigin( bindings, "Maven default lifecycle" );
+        LifecycleUtils.setOrigin( bindings, "default lifecycle" );
 
         return bindings;
     }
@@ -62,7 +62,7 @@ public final class LegacyLifecycleMappingParser
         bindings.setBuildBinding( parseBuildBindings( mapping.getPhases( "default" ), mapping.getOptionalMojos( "default" ) ) );
         bindings.setSiteBinding( parseSiteBindings( mapping.getPhases( "site" ), mapping.getOptionalMojos( "site" ) ) );
         
-        LifecycleUtils.setOrigin( bindings, "Maven " + packaging + " lifecycle" );
+        LifecycleUtils.setOrigin( bindings, "packaging: " + packaging );
 
         return bindings;
     }

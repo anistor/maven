@@ -164,7 +164,7 @@ public final class BuildPlanUtils
 
     public static String formatMojoListing( MojoBinding binding, int indentLevel )
     {
-        return MojoBindingUtils.toString( binding ) + " (origin: " + binding.getOrigin() + ")";
+        return MojoBindingUtils.toString( binding ) + " [execution: " + binding.getExecutionId() + "] (origin: " + binding.getOrigin() + ")";
     }
 
     private static boolean isSameOrSuperListOfMojoBindings( List superCandidate, List check )

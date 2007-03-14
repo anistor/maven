@@ -207,7 +207,7 @@ public class DefaultLifecycleBindingManager
                             mojoBinding.setGoal( goal );
                             mojoBinding.setConfiguration( execution.getConfiguration() );
                             mojoBinding.setExecutionId( execution.getId() );
-                            mojoBinding.setOrigin( project.getId() );
+                            mojoBinding.setOrigin( "POM" );
 
                             String phase = execution.getPhase();
                             if ( phase == null )
@@ -242,7 +242,7 @@ public class DefaultLifecycleBindingManager
             }
         }
 
-        LifecycleUtils.setOrigin( bindings, projectId );
+        LifecycleUtils.setOrigin( bindings, "POM" );
 
         return bindings;
     }
@@ -487,7 +487,7 @@ public class DefaultLifecycleBindingManager
                 binding.setVersion( pluginDescriptor.getVersion() );
                 binding.setGoal( mojoDescriptor.getGoal() );
                 binding.setExecutionId( id );
-                binding.setOrigin( project.getId() );
+                binding.setOrigin( "POM" );
 
                 reports.add( binding );
             }
