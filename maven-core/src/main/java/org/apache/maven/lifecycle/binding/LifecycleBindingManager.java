@@ -31,7 +31,7 @@ public interface LifecycleBindingManager
     List getReportBindings( MavenProject project )
         throws LifecycleLoaderException, LifecycleSpecificationException;
 
-    List assembleMojoBindingList( List tasks, LifecycleBindings bindings, Map directInvocationPlans, MavenProject project )
+    List assembleMojoBindingList( List tasks, LifecycleBindings bindings, Map directInvocationModifiers, MavenProject project )
         throws LifecycleSpecificationException, LifecyclePlannerException, LifecycleLoaderException;
 
     List assembleMojoBindingList( List tasks, LifecycleBindings lifecycleBindings, MavenProject project )

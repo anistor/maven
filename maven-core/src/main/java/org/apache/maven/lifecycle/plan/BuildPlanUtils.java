@@ -89,7 +89,7 @@ public final class BuildPlanUtils
 
                 indentLevel++;
             }
-            else if ( StateManagementUtils.isForkedExecutionEndMarker( binding ) )
+            else if ( StateManagementUtils.isForkedExecutionClearMarker( binding ) )
             {
                 indentLevel--;
 

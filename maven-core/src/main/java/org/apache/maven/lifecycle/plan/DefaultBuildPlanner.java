@@ -16,11 +16,14 @@ import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.logging.LogEnabled;
 import org.codehaus.plexus.logging.Logger;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
+// FIXME: The forkingBindings collections are misused; they will probably not prevent cyclic build 
+// processes consisting of > 1 elements.
 public class DefaultBuildPlanner
     implements BuildPlanner, LogEnabled
 {
@@ -172,43 +175,31 @@ public class DefaultBuildPlanner
                                                            LinkedList forkingBindings, List tasks )
         throws LifecyclePlannerException, LifecycleSpecificationException, LifecycleLoaderException
     {
-        if ( LifecycleUtils.findPhaseForMojoBinding( invokedVia, mergedBindings, true ) != null )
+        if ( planElement instanceof DirectInvocationOriginElement )
         {
-            ForkPlanModifier modifier = new ForkPlanModifier( invokedVia, Collections.singletonList( invokedBinding ) );
-
+            List noTasks = Collections.EMPTY_LIST;
+            
+            LifecycleBindings forkedBindings = new LifecycleBindings();
+            LifecycleBuildPlan forkedPlan = new LifecycleBuildPlan( noTasks, forkedBindings );
+            
             forkingBindings.addLast( invokedBinding );
             try
             {
-                findForkModifiers( invokedBinding, pluginDescriptor, modifier, mergedBindings, project, forkingBindings, tasks );
-            }
-            finally
-            {
-                forkingBindings.removeLast();
-            }
-
-            planElement.addModifier( modifier );
-        }
-        else if ( planElement instanceof BuildPlan )
-        {
-            BuildPlan directInvocationPlan = new DirectInvocationPlan( invokedBinding, tasks );
-
-            forkingBindings.addLast( invokedBinding );
-            try
-            {
-                findForkModifiers( invokedBinding, pluginDescriptor, directInvocationPlan, mergedBindings, project,
+                findForkModifiers( invokedBinding, pluginDescriptor, forkedPlan, forkedBindings, project,
                                    forkingBindings, tasks );
             }
             finally
             {
                 forkingBindings.removeLast();
             }
+            
+            List forkedMojos = new ArrayList();
+            forkedMojos.addAll( lifecycleBindingManager.assembleMojoBindingList( noTasks, forkedBindings, project ) );
+            forkedMojos.add( invokedBinding );
 
-            // if we don't have further modifications to this single direct invocation, don't weigh
-            // things down.
-            if ( directInvocationPlan.hasModifiers() || directInvocationPlan.hasDirectInvocationPlans() )
-            {
-                ( (BuildPlan) planElement ).addDirectInvocationPlan( invokedVia, directInvocationPlan );
-            }
+            DirectInvocationModifier modifier = new ForkedDirectInvocationModifier( invokedVia, forkedMojos );
+
+            ( (DirectInvocationOriginElement) planElement ).addDirectInvocationModifier( modifier );
         }
         else
         {
@@ -237,7 +228,7 @@ public class DefaultBuildPlanner
         }
         else if ( planElement instanceof BuildPlan )
         {
-            mpe = new ForkedLifecycleBuildPlan( mojoBinding, phase, bindings );
+            mpe = new SubLifecycleBuildPlan( phase, bindings );
         }
         else
         {
@@ -271,9 +262,13 @@ public class DefaultBuildPlanner
         {
             planElement.addModifier( (BuildPlanModifier) mpe );
         }
-        else if ( planElement instanceof BuildPlan )
+        else if ( planElement instanceof DirectInvocationOriginElement )
         {
-            ( (BuildPlan) planElement ).addDirectInvocationPlan( mojoBinding, (BuildPlan) mpe );
+            List planMojoBindings = ((BuildPlan) mpe).getPlanMojoBindings( project, lifecycleBindingManager );
+            
+            ForkedDirectInvocationModifier modifier = new ForkedDirectInvocationModifier( mojoBinding, planMojoBindings );
+            
+            ( (DirectInvocationOriginElement) planElement ).addDirectInvocationModifier( modifier );
         }
     }
 

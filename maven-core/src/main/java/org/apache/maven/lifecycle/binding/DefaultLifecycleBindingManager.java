@@ -8,7 +8,7 @@ import org.apache.maven.lifecycle.mapping.LifecycleMapping;
 import org.apache.maven.lifecycle.model.LifecycleBinding;
 import org.apache.maven.lifecycle.model.LifecycleBindings;
 import org.apache.maven.lifecycle.model.MojoBinding;
-import org.apache.maven.lifecycle.plan.BuildPlan;
+import org.apache.maven.lifecycle.plan.DirectInvocationModifier;
 import org.apache.maven.lifecycle.plan.LifecyclePlannerException;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.model.PluginExecution;
@@ -582,7 +582,7 @@ public class DefaultLifecycleBindingManager
         return assembleMojoBindingList( tasks, bindings, Collections.EMPTY_MAP, project );
     }
 
-    public List assembleMojoBindingList( List tasks, LifecycleBindings lifecycleBindings, Map directInvocationPlans,
+    public List assembleMojoBindingList( List tasks, LifecycleBindings lifecycleBindings, Map directInvocationModifiers,
                                                 MavenProject project )
         throws LifecycleSpecificationException, LifecyclePlannerException, LifecycleLoaderException
     {
@@ -626,11 +626,11 @@ public class DefaultLifecycleBindingManager
                 mojoBinding.setOrigin( "direct invocation" );
 
                 String key = LifecycleUtils.createMojoBindingKey( mojoBinding, true );
-                BuildPlan diPlan = (BuildPlan) directInvocationPlans.get( key );
+                DirectInvocationModifier modifier = (DirectInvocationModifier) directInvocationModifiers.get( key );
 
-                if ( diPlan != null )
+                if ( modifier != null )
                 {
-                    planBindings.addAll( diPlan.getPlanMojoBindings( project, this ) );
+                    planBindings.addAll( modifier.getModifiedBindings( project, this ) );
                 }
                 else
                 {

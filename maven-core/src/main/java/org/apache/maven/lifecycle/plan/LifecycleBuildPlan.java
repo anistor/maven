@@ -5,7 +5,6 @@ import org.apache.maven.lifecycle.LifecycleSpecificationException;
 import org.apache.maven.lifecycle.LifecycleUtils;
 import org.apache.maven.lifecycle.binding.LifecycleBindingManager;
 import org.apache.maven.lifecycle.model.LifecycleBindings;
-import org.apache.maven.lifecycle.model.MojoBinding;
 import org.apache.maven.project.MavenProject;
 
 import java.util.ArrayList;
@@ -23,7 +22,7 @@ public class LifecycleBuildPlan
 
     private List planModifiers = new ArrayList();
 
-    private Map directInvocationPlans = new HashMap();
+    private Map directInvocationModifiers = new HashMap();
 
     public LifecycleBuildPlan( List tasks, LifecycleBindings lifecycleBindings )
     {
@@ -36,7 +35,7 @@ public class LifecycleBuildPlan
     {
         LifecycleBindings cloned = BuildPlanUtils.modifyPlanBindings( lifecycleBindings, planModifiers );
 
-        return bindingManager.assembleMojoBindingList( tasks, cloned, directInvocationPlans, project );
+        return bindingManager.assembleMojoBindingList( tasks, cloned, directInvocationModifiers, project );
     }
 
     public List getTasks()
@@ -54,14 +53,9 @@ public class LifecycleBuildPlan
         return !planModifiers.isEmpty();
     }
 
-    public void addDirectInvocationPlan( MojoBinding directInvocationBinding, BuildPlan plan )
+    public void addDirectInvocationModifier( DirectInvocationModifier modifier )
     {
-        directInvocationPlans.put( LifecycleUtils.createMojoBindingKey( directInvocationBinding, true ), plan );
-    }
-
-    public boolean hasDirectInvocationPlans()
-    {
-        return !directInvocationPlans.isEmpty();
+        directInvocationModifiers.put( LifecycleUtils.createMojoBindingKey( modifier.getBindingToModify(), true ), modifier );
     }
 
 }
