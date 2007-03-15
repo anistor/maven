@@ -573,25 +573,13 @@ public class DefaultPluginManager
 
         PluginDescriptor pluginDescriptor = mojoDescriptor.getPluginDescriptor();
 
-        String goalId = mojoDescriptor.getGoal();
-
-        String groupId = pluginDescriptor.getGroupId();
-
-        String artifactId = pluginDescriptor.getArtifactId();
-
-        String executionId = mojoExecution.getExecutionId();
-
-        Xpp3Dom dom = project.getGoalConfiguration( groupId, artifactId, executionId, goalId );
-
-        Xpp3Dom reportDom = project.getReportConfiguration( groupId, artifactId, executionId );
-
-        dom = Xpp3Dom.mergeXpp3Dom( dom, reportDom );
-
-        if ( mojoExecution.getConfiguration() != null )
+        Xpp3Dom dom = (Xpp3Dom) mojoExecution.getConfiguration();
+        if ( dom != null )
         {
-            dom = Xpp3Dom.mergeXpp3Dom( dom, mojoExecution.getConfiguration() );
+            // make a defensive copy, to keep things from getting polluted.
+            dom = new Xpp3Dom( dom );
         }
-
+        
         plugin = getConfiguredMojo( session, dom, project, false, mojoExecution );
 
         // Event monitoring.
@@ -787,7 +775,7 @@ public class DefaultPluginManager
         {
             pomConfiguration = new XmlPlexusConfiguration( dom );
         }
-
+        
         // Validate against non-editable (@readonly) parameters, to make sure users aren't trying to
         // override in the POM.
         validatePomConfiguration( mojoDescriptor, pomConfiguration );

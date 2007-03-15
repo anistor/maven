@@ -40,10 +40,16 @@
         <project implementation="org.apache.maven.project.MavenProject" default-value="${project}"/>
         <forkId implementation="int" default-value="-1">${forkId}</forkId>
       </configuration>
+      <requirements>
+        <requirement>
+          <role>org.apache.maven.context.BuildContextManager</role>
+          <field-name>buildContextManager</field-name>
+        </requirement>
+      </requirements>
     </mojo>
     <mojo>
       <goal>end-fork</goal>
-      <description>Tear down any build state used during the previous forked execution.</description>
+      <description>Restore the non-fork currentProject instance, for use in the forking mojo.</description>
       <requiresDirectInvocation>false</requiresDirectInvocation>
       <requiresProject>true</requiresProject>
       <requiresReports>false</requiresReports>
@@ -51,6 +57,38 @@
       <requiresOnline>false</requiresOnline>
       <inheritedByDefault>true</inheritedByDefault>
       <implementation>org.apache.maven.lifecycle.statemgmt.EndForkedExecutionMojo</implementation>
+      <language>java</language>
+      <instantiationStrategy>per-lookup</instantiationStrategy>
+      <executionStrategy>once-per-session</executionStrategy>
+      <parameters>
+        <parameter>
+          <name>forkId</name>
+          <type>int</type>
+          <required>true</required>
+          <editable>true</editable>
+          <description>The current fork identifier.</description>
+        </parameter>
+      </parameters>
+      <configuration>
+        <forkId implementation="int" default-value="-1">${forkId}</forkId>
+      </configuration>
+      <requirements>
+        <requirement>
+          <role>org.apache.maven.context.BuildContextManager</role>
+          <field-name>buildContextManager</field-name>
+        </requirement>
+      </requirements>
+    </mojo>
+    <mojo>
+      <goal>clear-fork-context</goal>
+      <description>Tear down any build state used during the previous forked execution.</description>
+      <requiresDirectInvocation>false</requiresDirectInvocation>
+      <requiresProject>true</requiresProject>
+      <requiresReports>false</requiresReports>
+      <aggregator>false</aggregator>
+      <requiresOnline>false</requiresOnline>
+      <inheritedByDefault>true</inheritedByDefault>
+      <implementation>org.apache.maven.lifecycle.statemgmt.ClearForkedContextMojo</implementation>
       <language>java</language>
       <instantiationStrategy>per-lookup</instantiationStrategy>
       <executionStrategy>once-per-session</executionStrategy>

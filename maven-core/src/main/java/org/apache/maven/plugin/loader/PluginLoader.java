@@ -24,5 +24,8 @@ public interface PluginLoader
 
     PluginDescriptor loadReportPlugin( MojoBinding mojoBinding, MavenProject project )
         throws PluginLoaderException;
+
+    PluginDescriptor findPluginForPrefix( String prefix, MavenProject project )
+        throws PluginLoaderException;
     
 }

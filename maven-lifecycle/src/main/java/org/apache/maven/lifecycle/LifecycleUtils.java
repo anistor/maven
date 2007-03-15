@@ -440,15 +440,7 @@ public class LifecycleUtils
 
     public static String createMojoBindingKey( MojoBinding mojoBinding, boolean considerExecutionId )
     {
-        String key;
-        if ( mojoBinding instanceof PrefixedMojoBinding )
-        {
-            key = ( (PrefixedMojoBinding) mojoBinding ).getPrefix() + ":" + mojoBinding.getGoal();
-        }
-        else
-        {
-            key = mojoBinding.getGroupId() + ":" + mojoBinding.getArtifactId() + ":" + mojoBinding.getGoal();
-        }
+        String key = mojoBinding.getGroupId() + ":" + mojoBinding.getArtifactId() + ":" + mojoBinding.getGoal();
 
         if ( considerExecutionId )
         {

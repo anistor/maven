@@ -25,8 +25,11 @@ import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.artifact.resolver.ArtifactNotFoundException;
 import org.apache.maven.artifact.resolver.ArtifactResolutionException;
 import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException;
+import org.apache.maven.context.BuildContextManager;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.execution.ReactorManager;
+import org.apache.maven.lifecycle.binding.LifecycleBindingManager;
+import org.apache.maven.lifecycle.binding.MojoBindingFactory;
 import org.apache.maven.lifecycle.model.MojoBinding;
 import org.apache.maven.lifecycle.plan.BuildPlan;
 import org.apache.maven.lifecycle.plan.BuildPlanUtils;
@@ -83,6 +86,12 @@ public class DefaultLifecycleExecutor
     private BuildPlanner lifecyclePlanner;
 
     private ArtifactHandlerManager artifactHandlerManager;
+
+    private MojoBindingFactory mojoBindingFactory;
+
+    private LifecycleBindingManager lifecycleBindingManager;
+
+    private BuildContextManager buildContextManager;
 
     // ----------------------------------------------------------------------
     //
@@ -169,6 +178,9 @@ public class DefaultLifecycleExecutor
 
                     dispatcher.dispatchStart( event, target );
 
+                    LifecycleExecutionContext ctx = new LifecycleExecutionContext( rootProject );
+                    ctx.store( buildContextManager );
+                    
                     List mojoBindings = getLifecycleBindings( segment.getTasks(), rootProject, target );
                     
                     // only call once, with the top-level project (assumed to be provided as a parameter)...
@@ -176,10 +188,12 @@ public class DefaultLifecycleExecutor
                     {
                         MojoBinding binding = (MojoBinding) mojoIterator.next();
 
-                        executeGoalAndHandleFailures( binding, session, rootProject, dispatcher, event, rm, buildStartTime,
+                        executeGoalAndHandleFailures( binding, session, dispatcher, event, rm, buildStartTime,
                                                       target );
                     }
-
+                    
+                    LifecycleExecutionContext.delete( buildContextManager );
+                    
                     rm.registerBuildSuccess( rootProject, System.currentTimeMillis() - buildStartTime );
 
                     dispatcher.dispatchEnd( event, target );
@@ -226,6 +240,9 @@ public class DefaultLifecycleExecutor
                         long buildStartTime = System.currentTimeMillis();
 
                         dispatcher.dispatchStart( event, target );
+                        
+                        LifecycleExecutionContext ctx = new LifecycleExecutionContext( currentProject );
+                        ctx.store( buildContextManager );
 
                         List mojoBindings = getLifecycleBindings( segment.getTasks(), currentProject, target );
                         
@@ -233,10 +250,13 @@ public class DefaultLifecycleExecutor
                         {
                             MojoBinding mojoBinding = (MojoBinding) mojoIterator.next();
 
-                            executeGoalAndHandleFailures( mojoBinding, session, currentProject, dispatcher, event, rm,
+                            getLogger().debug( "Mojo: " + mojoBinding.getGoal() + " has config:\n" + mojoBinding.getConfiguration() );
+                            executeGoalAndHandleFailures( mojoBinding, session, dispatcher, event, rm,
                                                           buildStartTime, target );
                         }
 
+                        LifecycleExecutionContext.delete( buildContextManager );
+                        
                         rm.registerBuildSuccess( currentProject, System.currentTimeMillis() - buildStartTime );
 
                         dispatcher.dispatchEnd( event, target );
@@ -269,10 +289,10 @@ public class DefaultLifecycleExecutor
             
             if ( getLogger().isDebugEnabled() )
             {
-                getLogger().debug( "\n\nOur build plan is:\n" + BuildPlanUtils.listBuildPlan( plan ) + "\n\n" );
+                getLogger().debug( "\n\nOur build plan is:\n" + BuildPlanUtils.listBuildPlan( plan, project, lifecycleBindingManager, false ) + "\n\n" );
             }
             
-            mojoBindings = plan.getPlanMojoBindings();
+            mojoBindings = plan.getPlanMojoBindings( project, lifecycleBindingManager );
         }
         catch ( LifecycleException e )
         {
@@ -283,11 +303,13 @@ public class DefaultLifecycleExecutor
         return mojoBindings;
     }
 
-    private void executeGoalAndHandleFailures( MojoBinding mojoBinding, MavenSession session, MavenProject project,
-                                               EventDispatcher dispatcher, String event, ReactorManager rm,
+    private void executeGoalAndHandleFailures( MojoBinding mojoBinding, MavenSession session, EventDispatcher dispatcher, String event, ReactorManager rm,
                                                long buildStartTime, String target )
         throws BuildFailureException, LifecycleExecutionException
     {
+        LifecycleExecutionContext ctx = LifecycleExecutionContext.read( buildContextManager );
+        MavenProject project = ctx.getCurrentProject();
+        
         try
         {
             PluginDescriptor pluginDescriptor = null;
@@ -446,6 +468,12 @@ public class DefaultLifecycleExecutor
                         
                         throw new BuildFailureException( message, e );
                     }
+                    catch ( LifecycleLoaderException e )
+                    {
+                        String message = "Cannot find plugin to match task '" + task + "'.";
+                    
+                        throw new BuildFailureException( message, e );
+                    }
 
                     // if the mojo descriptor was found, determine aggregator status according to:
                     // 1. whether the mojo declares itself an aggregator
@@ -594,9 +622,9 @@ public class DefaultLifecycleExecutor
     }
 
     private MojoDescriptor getMojoDescriptorForDirectInvocation( String task, MavenSession session, MavenProject project )
-        throws LifecycleSpecificationException, PluginLoaderException
+        throws LifecycleSpecificationException, PluginLoaderException, LifecycleLoaderException
     {
-        MojoBinding binding = MojoBindingUtils.parseMojoBinding( task, true );
+        MojoBinding binding = mojoBindingFactory.parseMojoBinding( task, project, true );
         
         PluginDescriptor descriptor = pluginLoader.loadPlugin( binding, project );
         MojoDescriptor mojoDescriptor = descriptor.getMojo( binding.getGoal() );

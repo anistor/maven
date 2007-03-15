@@ -1,15 +1,12 @@
 package org.apache.maven.lifecycle.plan;
 
-import org.apache.maven.lifecycle.LifecycleSpecificationException;
 import org.apache.maven.lifecycle.LifecycleUtils;
-import org.apache.maven.lifecycle.MojoBindingUtils;
 import org.apache.maven.lifecycle.model.LifecycleBindings;
 import org.apache.maven.lifecycle.model.MojoBinding;
 import org.apache.maven.lifecycle.model.Phase;
 import org.apache.maven.lifecycle.statemgmt.StateManagementUtils;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
@@ -20,22 +17,12 @@ public class ForkPlanModifier
     private final MojoBinding modificationPoint;
     private List planModifiers = new ArrayList();
 
-    private List mojoBindings;
-    private LifecycleBindings lifecycleBindings;
-    private String lifecyclePhase;
+    private final List mojoBindings;
 
     public ForkPlanModifier( MojoBinding modificationPoint, List mojoBindings )
     {
         this.modificationPoint = modificationPoint;
         this.mojoBindings = mojoBindings;
-    }
-
-    public ForkPlanModifier( MojoBinding modificationPoint, LifecycleBindings modifiedBindings, String phase )
-        throws LifecycleSpecificationException
-    {
-        this.modificationPoint = modificationPoint;
-        this.lifecycleBindings = modifiedBindings;
-        this.lifecyclePhase = phase;
     }
 
     public MojoBinding getModificationPoint()
@@ -73,20 +60,9 @@ public class ForkPlanModifier
             }
         }
         
-        phaseBindings.add( stopIndex, StateManagementUtils.createEndForkedExecutionMojoBinding() );
+        phaseBindings.add( stopIndex, StateManagementUtils.createClearForkedExecutionMojoBinding() );
         
-        if ( mojoBindings == null )
-        {
-            try
-            {
-                mojoBindings = BuildPlanUtils.assembleMojoBindingList( Collections.singletonList( lifecyclePhase ), lifecycleBindings );
-            }
-            catch ( LifecycleSpecificationException e )
-            {
-                throw new LifecyclePlannerException( "Error building modifications list for forked execution of " + MojoBindingUtils.toString( getModificationPoint() ) );
-            }
-        }
-        
+        phaseBindings.add( insertionIndex, StateManagementUtils.createEndForkedExecutionMojoBinding() );
         phaseBindings.addAll( insertionIndex, mojoBindings );
         phaseBindings.add( insertionIndex, StateManagementUtils.createStartForkedExecutionMojoBinding() );
         

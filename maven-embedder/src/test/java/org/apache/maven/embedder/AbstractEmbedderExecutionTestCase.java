@@ -84,6 +84,8 @@ public abstract class AbstractEmbedderExecutionTestCase
         FileUtils.copyDirectoryStructure( testDirectory, targetDirectory );
 
         MavenExecutionRequest request = new DefaultMavenExecutionRequest()
+            .setShowErrors( true )
+            .setLoggingLevel( MavenExecutionRequest.LOGGING_LEVEL_DEBUG )
             .setBaseDirectory( targetDirectory )
             .setGoals( goals );
 

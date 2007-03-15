@@ -1,9 +1,12 @@
 package org.apache.maven.lifecycle.plan;
 
+import org.apache.maven.lifecycle.LifecycleLoaderException;
 import org.apache.maven.lifecycle.LifecycleSpecificationException;
 import org.apache.maven.lifecycle.LifecycleUtils;
+import org.apache.maven.lifecycle.binding.LifecycleBindingManager;
 import org.apache.maven.lifecycle.model.LifecycleBindings;
 import org.apache.maven.lifecycle.model.MojoBinding;
+import org.apache.maven.project.MavenProject;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -15,9 +18,11 @@ public class LifecycleBuildPlan
 {
 
     private final List tasks;
+
     private final LifecycleBindings lifecycleBindings;
-    
+
     private List planModifiers = new ArrayList();
+
     private Map directInvocationPlans = new HashMap();
 
     public LifecycleBuildPlan( List tasks, LifecycleBindings lifecycleBindings )
@@ -26,14 +31,14 @@ public class LifecycleBuildPlan
         this.lifecycleBindings = lifecycleBindings;
     }
 
-    public List getPlanMojoBindings()
-        throws LifecycleSpecificationException, LifecyclePlannerException
+    public List getPlanMojoBindings( MavenProject project, LifecycleBindingManager bindingManager )
+        throws LifecycleSpecificationException, LifecyclePlannerException, LifecycleLoaderException
     {
         LifecycleBindings cloned = BuildPlanUtils.modifyPlanBindings( lifecycleBindings, planModifiers );
-        
-        return BuildPlanUtils.assembleMojoBindingList( tasks, cloned, directInvocationPlans );
+
+        return bindingManager.assembleMojoBindingList( tasks, cloned, directInvocationPlans, project );
     }
-    
+
     public List getTasks()
     {
         return tasks;

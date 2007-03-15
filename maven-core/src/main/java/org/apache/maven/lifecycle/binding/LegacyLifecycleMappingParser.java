@@ -1,6 +1,7 @@
-package org.apache.maven.lifecycle;
+package org.apache.maven.lifecycle.binding;
 
-import org.apache.maven.lifecycle.binding.LegacyLifecycle;
+import org.apache.maven.lifecycle.LifecycleSpecificationException;
+import org.apache.maven.lifecycle.LifecycleUtils;
 import org.apache.maven.lifecycle.mapping.LifecycleMapping;
 import org.apache.maven.lifecycle.model.BuildBinding;
 import org.apache.maven.lifecycle.model.CleanBinding;
@@ -15,10 +16,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
 
-public final class LegacyLifecycleMappingParser
+public class LegacyLifecycleMappingParser
 {
 
-    public static LifecycleBindings parseDefaultMappings( List lifecycles )
+    public static final String ROLE = LegacyLifecycleMappingParser.class.getName();
+    
+    private MojoBindingFactory mojoBindingFactory;
+
+    public LifecycleBindings parseDefaultMappings( List lifecycles )
         throws LifecycleSpecificationException
     {
         LifecycleBindings bindings = new LifecycleBindings();
@@ -52,7 +57,7 @@ public final class LegacyLifecycleMappingParser
         return bindings;
     }
 
-    public static LifecycleBindings parseMappings( LifecycleMapping mapping, String packaging )
+    public LifecycleBindings parseMappings( LifecycleMapping mapping, String packaging )
         throws LifecycleSpecificationException
     {
         LifecycleBindings bindings = new LifecycleBindings();
@@ -67,7 +72,7 @@ public final class LegacyLifecycleMappingParser
         return bindings;
     }
     
-    private static BuildBinding parseBuildBindings( Map phases, List optionalKeys )
+    private BuildBinding parseBuildBindings( Map phases, List optionalKeys )
         throws LifecycleSpecificationException
     {
         BuildBinding binding = new BuildBinding();
@@ -102,7 +107,7 @@ public final class LegacyLifecycleMappingParser
         return binding;
     }
 
-    private static CleanBinding parseCleanBindings( Map phaseMappings, List optionalKeys )
+    private CleanBinding parseCleanBindings( Map phaseMappings, List optionalKeys )
         throws LifecycleSpecificationException
     {
         CleanBinding binding = new CleanBinding();
@@ -117,7 +122,7 @@ public final class LegacyLifecycleMappingParser
         return binding;
     }
 
-    private static Phase parsePhaseBindings( String bindingList, List optionalKeys )
+    private Phase parsePhaseBindings( String bindingList, List optionalKeys )
         throws LifecycleSpecificationException
     {
         Phase phase = new Phase();
@@ -128,8 +133,8 @@ public final class LegacyLifecycleMappingParser
             {
                 String rawBinding = tok.nextToken().trim();
 
-                MojoBinding binding = MojoBindingUtils.parseMojoBinding( rawBinding, false );
-                if ( optionalKeys.contains( rawBinding ) )
+                MojoBinding binding = mojoBindingFactory.parseMojoBinding( rawBinding );
+                if ( optionalKeys != null && optionalKeys.contains( rawBinding ) )
                 {
                     binding.setOptional( true );
                 }
@@ -146,7 +151,7 @@ public final class LegacyLifecycleMappingParser
         return phase;
     }
 
-    private static SiteBinding parseSiteBindings( Map phases, List optionalKeys )
+    private SiteBinding parseSiteBindings( Map phases, List optionalKeys )
         throws LifecycleSpecificationException
     {
         SiteBinding binding = new SiteBinding();
@@ -160,10 +165,6 @@ public final class LegacyLifecycleMappingParser
         }
 
         return binding;
-    }
-
-    private LegacyLifecycleMappingParser()
-    {
     }
 
 }

@@ -1,9 +1,12 @@
 package org.apache.maven.lifecycle.plan;
 
+import org.apache.maven.lifecycle.LifecycleLoaderException;
 import org.apache.maven.lifecycle.LifecycleSpecificationException;
 import org.apache.maven.lifecycle.LifecycleUtils;
+import org.apache.maven.lifecycle.binding.LifecycleBindingManager;
 import org.apache.maven.lifecycle.model.LifecycleBindings;
 import org.apache.maven.lifecycle.model.MojoBinding;
+import org.apache.maven.project.MavenProject;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -32,22 +35,22 @@ public class DirectInvocationPlan
     {
         directInvocationPlans.put( LifecycleUtils.createMojoBindingKey( directInvocationBinding, true ), plan );
     }
-    
+
     public boolean hasDirectInvocationPlans()
     {
         return !directInvocationPlans.isEmpty();
     }
 
-    public List getPlanMojoBindings()
-        throws LifecycleSpecificationException, LifecyclePlannerException
+    public List getPlanMojoBindings( MavenProject project, LifecycleBindingManager bindingManager )
+        throws LifecycleSpecificationException, LifecyclePlannerException, LifecycleLoaderException
     {
         // null parameter here avoids creating an extra instance just for purposes of cloning.
         LifecycleBindings bindings = BuildPlanUtils.modifyPlanBindings( null, planModifiers );
-        
-        List result = BuildPlanUtils.assembleMojoBindingList( tasks, bindings, directInvocationPlans );
-        
+
+        List result = bindingManager.assembleMojoBindingList( tasks, bindings, directInvocationPlans, project );
+
         result.add( directInvocationBinding );
-        
+
         return result;
     }
 

@@ -1,5 +1,6 @@
 package org.apache.maven.lifecycle;
 
+import org.apache.maven.lifecycle.binding.LegacyLifecycleMappingParser;
 import org.apache.maven.lifecycle.binding.LegacyLifecycleParsingTestComponent;
 import org.apache.maven.lifecycle.mapping.LifecycleMapping;
 import org.apache.maven.lifecycle.model.BuildBinding;
@@ -18,11 +19,15 @@ public class LegacyLifecycleMappingParserTest
     private LifecycleMapping testMapping;
     
     private LifecycleMapping testMapping2;
+    
+    private LegacyLifecycleMappingParser parser;
 
     public void setUp()
         throws Exception
     {
         super.setUp();
+        
+        parser = (LegacyLifecycleMappingParser) lookup( LegacyLifecycleMappingParser.ROLE, "default" );
 
         testComponent = (LegacyLifecycleParsingTestComponent) lookup( LegacyLifecycleParsingTestComponent.ROLE, "default" );
         testMapping = (LifecycleMapping) lookup( LifecycleMapping.ROLE, "test-mapping" );
@@ -43,7 +48,7 @@ public class LegacyLifecycleMappingParserTest
         throws LifecycleSpecificationException
     {
         List lifecycles = testComponent.getLifecycles();
-        LifecycleBindings bindings = LegacyLifecycleMappingParser.parseDefaultMappings( lifecycles );
+        LifecycleBindings bindings = parser.parseDefaultMappings( lifecycles );
 
         //        <clean>org.apache.maven.plugins:maven-clean-plugin:clean</clean>
         List cleanPhase = bindings.getCleanBinding().getClean().getBindings();
@@ -77,7 +82,7 @@ public class LegacyLifecycleMappingParserTest
     public void testParseMappings_SparselyPopulatedMappings()
         throws LifecycleSpecificationException
     {
-        LifecycleBindings bindings = LegacyLifecycleMappingParser.parseMappings( testMapping, "test-mapping" );
+        LifecycleBindings bindings = parser.parseMappings( testMapping, "test-mapping" );
 
         BuildBinding bb = bindings.getBuildBinding();
         assertNotNull( bb );
@@ -112,7 +117,7 @@ public class LegacyLifecycleMappingParserTest
     public void testParseMappings_MappingsWithTwoBindingsInOnePhase()
         throws LifecycleSpecificationException
     {
-        LifecycleBindings bindings = LegacyLifecycleMappingParser.parseMappings( testMapping2, "test-mapping2" );
+        LifecycleBindings bindings = parser.parseMappings( testMapping2, "test-mapping2" );
 
         BuildBinding bb = bindings.getBuildBinding();
         assertNotNull( bb );

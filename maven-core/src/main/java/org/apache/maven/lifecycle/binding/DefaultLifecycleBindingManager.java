@@ -1,14 +1,15 @@
 package org.apache.maven.lifecycle.binding;
 
-import org.apache.maven.lifecycle.LegacyLifecycleMappingParser;
 import org.apache.maven.lifecycle.LifecycleBindingLoader;
 import org.apache.maven.lifecycle.LifecycleLoaderException;
 import org.apache.maven.lifecycle.LifecycleSpecificationException;
 import org.apache.maven.lifecycle.LifecycleUtils;
-import org.apache.maven.lifecycle.MojoBindingUtils;
 import org.apache.maven.lifecycle.mapping.LifecycleMapping;
+import org.apache.maven.lifecycle.model.LifecycleBinding;
 import org.apache.maven.lifecycle.model.LifecycleBindings;
 import org.apache.maven.lifecycle.model.MojoBinding;
+import org.apache.maven.lifecycle.plan.BuildPlan;
+import org.apache.maven.lifecycle.plan.LifecyclePlannerException;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.model.PluginExecution;
 import org.apache.maven.model.ReportPlugin;
@@ -29,8 +30,10 @@ import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.StringTokenizer;
 
 //FIXME: This needs a better name!
@@ -43,6 +46,10 @@ public class DefaultLifecycleBindingManager
     private ActiveMap legacyMappingsByPackaging;
 
     private PluginLoader pluginLoader;
+
+    private MojoBindingFactory mojoBindingFactory;
+    
+    private LegacyLifecycleMappingParser legacyLifecycleMappingParser;
 
     private Logger logger;
 
@@ -71,7 +78,7 @@ public class DefaultLifecycleBindingManager
             LifecycleMapping mapping = (LifecycleMapping) legacyMappingsByPackaging.get( packaging );
             if ( mapping != null )
             {
-                bindings = LegacyLifecycleMappingParser.parseMappings( mapping, packaging );
+                bindings = legacyLifecycleMappingParser.parseMappings( mapping, packaging );
             }
         }
 
@@ -79,10 +86,14 @@ public class DefaultLifecycleBindingManager
         {
             bindings = searchPluginsWithExtensions( project );
         }
+        else
+        {
+            BindingUtils.injectProjectConfiguration( bindings, project );
+        }
 
         if ( bindings == null )
         {
-            bindings = getDefaultBindings();
+            bindings = getDefaultBindings( project );
         }
 
         return bindings;
@@ -146,7 +157,7 @@ public class DefaultLifecycleBindingManager
 
                     if ( mapping != null )
                     {
-                        bindings = LegacyLifecycleMappingParser.parseMappings( mapping, packaging );
+                        bindings = legacyLifecycleMappingParser.parseMappings( mapping, packaging );
                     }
                 }
 
@@ -157,13 +168,22 @@ public class DefaultLifecycleBindingManager
             }
         }
 
+        if ( bindings != null )
+        {
+            BindingUtils.injectProjectConfiguration( bindings, project );
+        }
+
         return bindings;
     }
 
-    public LifecycleBindings getDefaultBindings()
+    public LifecycleBindings getDefaultBindings( MavenProject project )
         throws LifecycleSpecificationException
     {
-        return LegacyLifecycleMappingParser.parseDefaultMappings( legacyLifecycles );
+        LifecycleBindings bindings = legacyLifecycleMappingParser.parseDefaultMappings( legacyLifecycles );
+
+        BindingUtils.injectProjectConfiguration( bindings, project );
+
+        return bindings;
     }
 
     public void enableLogging( Logger logger )
@@ -185,6 +205,8 @@ public class DefaultLifecycleBindingManager
             for ( Iterator it = plugins.iterator(); it.hasNext(); )
             {
                 Plugin plugin = (Plugin) it.next();
+                BindingUtils.injectPluginManagementInfo( plugin, project );
+
                 PluginDescriptor pluginDescriptor = null;
 
                 List executions = plugin.getExecutions();
@@ -205,7 +227,7 @@ public class DefaultLifecycleBindingManager
                             mojoBinding.setArtifactId( plugin.getArtifactId() );
                             mojoBinding.setVersion( plugin.getVersion() );
                             mojoBinding.setGoal( goal );
-                            mojoBinding.setConfiguration( execution.getConfiguration() );
+                            mojoBinding.setConfiguration( BindingUtils.mergeConfigurations( plugin, execution ) );
                             mojoBinding.setExecutionId( execution.getId() );
                             mojoBinding.setOrigin( "POM" );
 
@@ -247,7 +269,8 @@ public class DefaultLifecycleBindingManager
         return bindings;
     }
 
-    public LifecycleBindings getPluginLifecycleOverlay( PluginDescriptor pluginDescriptor, String lifecycleId )
+    public LifecycleBindings getPluginLifecycleOverlay( PluginDescriptor pluginDescriptor, String lifecycleId,
+                                                        MavenProject project )
         throws LifecycleLoaderException, LifecycleSpecificationException
     {
         Lifecycle lifecycleOverlay = null;
@@ -314,7 +337,7 @@ public class DefaultLifecycleBindingManager
                     MojoBinding binding;
                     if ( goal.indexOf( ":" ) > 0 )
                     {
-                        binding = MojoBindingUtils.parseMojoBinding( goal, false );
+                        binding = mojoBindingFactory.parseMojoBinding( goal, project, false );
                     }
                     else
                     {
@@ -402,7 +425,7 @@ public class DefaultLifecycleBindingManager
     private List getReportPluginsForProject( MavenProject project )
     {
         List reportPlugins = project.getReportPlugins();
-        
+
         if ( project.getReporting() == null || !project.getReporting().isExcludeDefaults() )
         {
             if ( reportPlugins == null )
@@ -417,7 +440,7 @@ public class DefaultLifecycleBindingManager
             for ( Iterator i = defaultReports.iterator(); i.hasNext(); )
             {
                 String report = (String) i.next();
-                
+
                 StringTokenizer tok = new StringTokenizer( report, ":" );
                 if ( tok.countTokens() != 2 )
                 {
@@ -448,7 +471,7 @@ public class DefaultLifecycleBindingManager
                 }
             }
         }
-        
+
         return reportPlugins;
     }
 
@@ -465,6 +488,9 @@ public class DefaultLifecycleBindingManager
             throw new LifecycleLoaderException( "Failed to load report plugin: " + reportPlugin.getKey() + ". Reason: "
                 + e.getMessage(), e );
         }
+
+        String pluginKey = BindingUtils.createPluginKey( reportPlugin.getGroupId(), reportPlugin.getArtifactId() );
+        Plugin plugin = (Plugin) BindingUtils.buildPluginMap( project ).get( pluginKey );
 
         List reports = new ArrayList();
         for ( Iterator i = pluginDescriptor.getMojos().iterator(); i.hasNext(); )
@@ -489,9 +515,131 @@ public class DefaultLifecycleBindingManager
                 binding.setExecutionId( id );
                 binding.setOrigin( "POM" );
 
+                Object reportConfig = BindingUtils.mergeConfigurations( reportPlugin, reportSet );
+
+                if ( plugin == null )
+                {
+                    plugin = new Plugin();
+                    plugin.setGroupId( pluginDescriptor.getGroupId() );
+                    plugin.setArtifactId( pluginDescriptor.getArtifactId() );
+                }
+                
+                BindingUtils.injectPluginManagementInfo( plugin, project );
+
+                Map execMap = plugin.getExecutionsAsMap();
+                PluginExecution exec = (PluginExecution) execMap.get( id );
+
+                Object pluginConfig = plugin.getConfiguration();
+                if ( exec != null )
+                {
+                    pluginConfig = BindingUtils.mergeConfigurations( plugin, exec );
+                }
+
+                reportConfig = BindingUtils.mergeRawConfigurations( reportConfig, pluginConfig );
+
+                binding.setConfiguration( reportConfig );
+
                 reports.add( binding );
             }
         }
         return reports;
     }
+
+    static boolean isSameOrSuperListOfMojoBindings( List superCandidate, List check )
+    {
+        if ( superCandidate == null || check == null )
+        {
+            return false;
+        }
+
+        if ( superCandidate.size() < check.size() )
+        {
+            return false;
+        }
+
+        List superKeys = new ArrayList( superCandidate.size() );
+        for ( Iterator it = superCandidate.iterator(); it.hasNext(); )
+        {
+            MojoBinding binding = (MojoBinding) it.next();
+
+            superKeys.add( LifecycleUtils.createMojoBindingKey( binding, true ) );
+        }
+
+        List checkKeys = new ArrayList( check.size() );
+        for ( Iterator it = check.iterator(); it.hasNext(); )
+        {
+            MojoBinding binding = (MojoBinding) it.next();
+
+            checkKeys.add( LifecycleUtils.createMojoBindingKey( binding, true ) );
+        }
+
+        return superKeys.subList( 0, checkKeys.size() ).equals( checkKeys );
+    }
+
+    public List assembleMojoBindingList( List tasks, LifecycleBindings bindings, MavenProject project )
+        throws LifecycleSpecificationException, LifecyclePlannerException, LifecycleLoaderException
+    {
+        return assembleMojoBindingList( tasks, bindings, Collections.EMPTY_MAP, project );
+    }
+
+    public List assembleMojoBindingList( List tasks, LifecycleBindings lifecycleBindings, Map directInvocationPlans,
+                                                MavenProject project )
+        throws LifecycleSpecificationException, LifecyclePlannerException, LifecycleLoaderException
+    {
+        List planBindings = new ArrayList();
+
+        List lastMojoBindings = null;
+        for ( Iterator it = tasks.iterator(); it.hasNext(); )
+        {
+            String task = (String) it.next();
+
+            LifecycleBinding binding = LifecycleUtils.findLifecycleBindingForPhase( task, lifecycleBindings );
+            if ( binding != null )
+            {
+                List mojoBindings = LifecycleUtils.getMojoBindingListForLifecycle( task, binding );
+
+                // save these so we can reference the originals...
+                List originalMojoBindings = mojoBindings;
+
+                // if these mojo bindings are a superset of the last bindings, only add the difference.
+                if ( isSameOrSuperListOfMojoBindings( mojoBindings, lastMojoBindings ) )
+                {
+                    List revised = new ArrayList( mojoBindings );
+                    revised.removeAll( lastMojoBindings );
+
+                    if ( revised.isEmpty() )
+                    {
+                        continue;
+                    }
+
+                    mojoBindings = revised;
+                }
+
+                planBindings.addAll( mojoBindings );
+                lastMojoBindings = originalMojoBindings;
+            }
+            else
+            {
+                MojoBinding mojoBinding = mojoBindingFactory.parseMojoBinding( task, project, true );
+                BindingUtils.injectProjectConfiguration( mojoBinding, project );
+
+                mojoBinding.setOrigin( "direct invocation" );
+
+                String key = LifecycleUtils.createMojoBindingKey( mojoBinding, true );
+                BuildPlan diPlan = (BuildPlan) directInvocationPlans.get( key );
+
+                if ( diPlan != null )
+                {
+                    planBindings.addAll( diPlan.getPlanMojoBindings( project, this ) );
+                }
+                else
+                {
+                    planBindings.add( mojoBinding );
+                }
+            }
+        }
+
+        return planBindings;
+    }
+
 }

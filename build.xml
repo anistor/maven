@@ -288,11 +288,11 @@ under the License.
 
     <java fork="true" classname="org.apache.maven.cli.MavenCli" failonerror="true">
       <classpath refid="maven.classpath"/>
-      <arg value="-e"/>
-      <arg value="-B"/>
 <!--
-      <arg value="-X"/>
+      <arg value="-e"/>
  -->
+      <arg value="-B"/>
+      <arg value="-X"/>
       <arg value="clean"/>
       <arg value="install"/>
     </java>
@@ -342,7 +342,10 @@ load ${bootstrapDir}/target/classes
       </classpath>
       <sysproperty key="classworlds.conf" value="${bootstrapDir}/m2.conf"/>
       <sysproperty key="bootstrapDir" value="${bootstrapDir}"/>
+      <arg value="-X"/>
+<!-- 
       <arg value="-e"/>
+ -->
       <arg line="${maven.goals}"/>
     </java>
 

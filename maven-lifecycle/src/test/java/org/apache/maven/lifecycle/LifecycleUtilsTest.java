@@ -50,17 +50,6 @@ public class LifecycleUtilsTest
         assertEquals( "group:artifact:goal:execution", key );
     }
 
-    public void testCreateMojoBindingKey_WithPrefixedMojo()
-    {
-        PrefixedMojoBinding binding = new PrefixedMojoBinding();
-        binding.setPrefix( "prefix" );
-        binding.setGoal( "goal" );
-
-        String key = LifecycleUtils.createMojoBindingKey( binding, false );
-
-        assertEquals( "prefix:goal", key );
-    }
-
     public void testFindLifecycleBindingForPhase_ShouldFindMojoBindingInPhase()
     {
         MojoBinding binding = newMojoBinding( "group", "artifact", "goal" );

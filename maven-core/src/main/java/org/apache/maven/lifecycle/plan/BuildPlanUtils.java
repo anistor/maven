@@ -1,87 +1,23 @@
 package org.apache.maven.lifecycle.plan;
 
+import org.apache.maven.lifecycle.LifecycleLoaderException;
 import org.apache.maven.lifecycle.LifecycleSpecificationException;
 import org.apache.maven.lifecycle.LifecycleUtils;
 import org.apache.maven.lifecycle.MojoBindingUtils;
-import org.apache.maven.lifecycle.model.LifecycleBinding;
+import org.apache.maven.lifecycle.binding.LifecycleBindingManager;
 import org.apache.maven.lifecycle.model.LifecycleBindings;
 import org.apache.maven.lifecycle.model.MojoBinding;
 import org.apache.maven.lifecycle.statemgmt.StateManagementUtils;
+import org.apache.maven.project.MavenProject;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
 public final class BuildPlanUtils
 {
 
     private BuildPlanUtils()
     {
-    }
-
-    public static List assembleMojoBindingList( List tasks, LifecycleBindings bindings )
-        throws LifecycleSpecificationException, LifecyclePlannerException
-    {
-        return assembleMojoBindingList( tasks, bindings, Collections.EMPTY_MAP );
-    }
-
-    public static List assembleMojoBindingList( List tasks, LifecycleBindings lifecycleBindings, Map directInvocationPlans )
-        throws LifecycleSpecificationException, LifecyclePlannerException
-    {
-        List planBindings = new ArrayList();
-
-        List lastMojoBindings = null;
-        for ( Iterator it = tasks.iterator(); it.hasNext(); )
-        {
-            String task = (String) it.next();
-
-            LifecycleBinding binding = LifecycleUtils.findLifecycleBindingForPhase( task, lifecycleBindings );
-            if ( binding != null )
-            {
-                List mojoBindings = LifecycleUtils.getMojoBindingListForLifecycle( task, binding );
-
-                // save these so we can reference the originals...
-                List originalMojoBindings = mojoBindings;
-
-                // if these mojo bindings are a superset of the last bindings, only add the difference.
-                if ( isSameOrSuperListOfMojoBindings( mojoBindings, lastMojoBindings ) )
-                {
-                    List revised = new ArrayList( mojoBindings );
-                    revised.removeAll( lastMojoBindings );
-
-                    if ( revised.isEmpty() )
-                    {
-                        continue;
-                    }
-
-                    mojoBindings = revised;
-                }
-
-                planBindings.addAll( mojoBindings );
-                lastMojoBindings = originalMojoBindings;
-            }
-            else
-            {
-                MojoBinding mojoBinding = MojoBindingUtils.parseMojoBinding( task, true );
-                mojoBinding.setOrigin( "direct invocation" );
-
-                String key = LifecycleUtils.createMojoBindingKey( mojoBinding, true );
-                BuildPlan diPlan = (BuildPlan) directInvocationPlans.get( key );
-
-                if ( diPlan != null )
-                {
-                    planBindings.addAll( diPlan.getPlanMojoBindings() );
-                }
-                else
-                {
-                    planBindings.add( mojoBinding );
-                }
-            }
-        }
-
-        return planBindings;
     }
 
     public static LifecycleBindings modifyPlanBindings( LifecycleBindings bindings, List planModifiers )
@@ -110,92 +46,125 @@ public final class BuildPlanUtils
         return result;
     }
 
-    public static String listBuildPlan( BuildPlan plan )
-        throws LifecycleSpecificationException, LifecyclePlannerException
+    public static String listBuildPlan( BuildPlan plan, MavenProject project, LifecycleBindingManager lifecycleBindingManager )
+        throws LifecycleSpecificationException, LifecyclePlannerException, LifecycleLoaderException
     {
-        List mojoBindings = plan.getPlanMojoBindings();
+        return listBuildPlan( plan, project, lifecycleBindingManager, false );
+    }
 
-        return listBuildPlan( mojoBindings );
+    public static String listBuildPlan( BuildPlan plan, MavenProject project, LifecycleBindingManager lifecycleBindingManager, boolean extendedInfo )
+        throws LifecycleSpecificationException, LifecyclePlannerException, LifecycleLoaderException
+    {
+        List mojoBindings = plan.getPlanMojoBindings( project, lifecycleBindingManager );
+
+        return listBuildPlan( mojoBindings, extendedInfo );
     }
 
     public static String listBuildPlan( List mojoBindings )
         throws LifecycleSpecificationException, LifecyclePlannerException
     {
+        return listBuildPlan( mojoBindings, false );
+    }
+
+    public static String listBuildPlan( List mojoBindings, boolean extendedInfo )
+        throws LifecycleSpecificationException, LifecyclePlannerException
+    {
         StringBuffer listing = new StringBuffer();
         int indentLevel = 0;
 
+        int counter = 1;
         for ( Iterator it = mojoBindings.iterator(); it.hasNext(); )
         {
             MojoBinding binding = (MojoBinding) it.next();
 
             if ( StateManagementUtils.isForkedExecutionStartMarker( binding ) )
             {
-                lineAndIndent( listing, indentLevel );
-                listing.append( "[fork start] " ).append( formatMojoListing( binding, indentLevel ) );
-                
+                newListingLine( listing, indentLevel, counter );
+                listing.append( "[fork start]" );
+
+                if ( extendedInfo )
+                {
+                    listing.append( ' ' ).append( formatMojoListing( binding, indentLevel, extendedInfo ) );
+                }
+
                 indentLevel++;
             }
             else if ( StateManagementUtils.isForkedExecutionEndMarker( binding ) )
             {
                 indentLevel--;
+
+                newListingLine( listing, indentLevel, counter );
+                listing.append( "[fork cleanup]" );
+
+                if ( extendedInfo )
+                {
+                    listing.append( ' ' ).append( formatMojoListing( binding, indentLevel, extendedInfo ) );
+                }
+            }
+            else if ( StateManagementUtils.isForkedExecutionEndMarker( binding ) )
+            {
+                indentLevel--;
+
+                newListingLine( listing, indentLevel, counter );
+                listing.append( "[fork end]" );
+
+                if ( extendedInfo )
+                {
+                    listing.append( ' ' ).append( formatMojoListing( binding, indentLevel, extendedInfo ) );
+                }
                 
-                lineAndIndent( listing, indentLevel );
-                listing.append( "[fork end] " ).append( formatMojoListing( binding, indentLevel ) );
+                indentLevel++;
             }
             else
             {
-                lineAndIndent( listing, indentLevel );
-                listing.append( formatMojoListing( binding, indentLevel ) );
+                newListingLine( listing, indentLevel, counter );
+                listing.append( formatMojoListing( binding, indentLevel, extendedInfo ) );
             }
+
+            counter++;
         }
 
         return listing.toString();
     }
 
-    private static void lineAndIndent( StringBuffer listing, int indentLevel )
+    private static void newListingLine( StringBuffer listing, int indentLevel, int counter )
     {
         listing.append( '\n' );
-        
+
+        listing.append( counter ).append( "." );
+
         for ( int i = 0; i < indentLevel; i++ )
         {
             listing.append( "  " );
         }
+
+        // adding a minimal offset from the counter (line-number) of the listing.
+        listing.append( ' ' );
+
     }
 
     public static String formatMojoListing( MojoBinding binding, int indentLevel )
     {
-        return MojoBindingUtils.toString( binding ) + " [execution: " + binding.getExecutionId() + "] (origin: " + binding.getOrigin() + ")";
+        return formatMojoListing( binding, indentLevel, false );
     }
 
-    private static boolean isSameOrSuperListOfMojoBindings( List superCandidate, List check )
+    public static String formatMojoListing( MojoBinding binding, int indentLevel, boolean extendedInfo )
     {
-        if ( superCandidate == null || check == null )
+        StringBuffer listing = new StringBuffer();
+
+        listing.append( MojoBindingUtils.toString( binding ) );
+        listing.append( " [executionId: " ).append( binding.getExecutionId() ).append( "]" );
+
+        if ( extendedInfo )
         {
-            return false;
+            listing.append( "\nOrigin: " ).append( binding.getOrigin() );
+            listing.append( "\nConfiguration:\n\t" ).append(
+                                                             String.valueOf( binding.getConfiguration() ).replaceAll( "\\n",
+                                                                                                                      "\n\t" ) ).append(
+                                                                                                                                         '\n' );
         }
 
-        if ( superCandidate.size() < check.size() )
-        {
-            return false;
-        }
-
-        List superKeys = new ArrayList( superCandidate.size() );
-        for ( Iterator it = superCandidate.iterator(); it.hasNext(); )
-        {
-            MojoBinding binding = (MojoBinding) it.next();
-
-            superKeys.add( LifecycleUtils.createMojoBindingKey( binding, true ) );
-        }
-
-        List checkKeys = new ArrayList( check.size() );
-        for ( Iterator it = check.iterator(); it.hasNext(); )
-        {
-            MojoBinding binding = (MojoBinding) it.next();
-
-            checkKeys.add( LifecycleUtils.createMojoBindingKey( binding, true ) );
-        }
-
-        return superKeys.subList( 0, checkKeys.size() ).equals( checkKeys );
+        return listing.toString();
     }
 
 }

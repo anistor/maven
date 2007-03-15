@@ -5,7 +5,6 @@ import org.apache.maven.artifact.resolver.ArtifactResolutionException;
 import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException;
 import org.apache.maven.context.BuildContextManager;
 import org.apache.maven.execution.SessionContext;
-import org.apache.maven.lifecycle.PrefixedMojoBinding;
 import org.apache.maven.lifecycle.model.MojoBinding;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.model.ReportPlugin;
@@ -90,41 +89,12 @@ public class DefaultPluginLoader
     {
         PluginDescriptor pluginDescriptor = null;
         
-        Plugin plugin = null;
-        if ( mojoBinding instanceof PrefixedMojoBinding )
-        {
-            PrefixedMojoBinding prefixed = (PrefixedMojoBinding) mojoBinding;
+        Plugin plugin = new Plugin();
+        plugin.setGroupId( mojoBinding.getGroupId() );
+        plugin.setArtifactId( mojoBinding.getArtifactId() );
+        plugin.setVersion( mojoBinding.getVersion() );
 
-            pluginDescriptor = loadByPrefix( prefixed, project );
-
-            if ( pluginDescriptor == null )
-            {
-                pluginDescriptor = loadFromProject( prefixed, project );
-            }
-                
-            if ( pluginDescriptor == null )
-            {
-                plugin = new Plugin();
-                plugin.setArtifactId( PluginDescriptor.getDefaultPluginArtifactId( prefixed.getPrefix() ) );
-                plugin.setVersion( mojoBinding.getVersion() );
-                
-                pluginDescriptor = loadPlugin( plugin, project );
-            }
-            
-            if ( pluginDescriptor == null )
-            {
-                throw new PluginLoaderException( "Cannot find plugin with prefix: " + prefixed.getPrefix() );
-            }
-        }
-        else
-        {
-            plugin = new Plugin();
-            plugin.setGroupId( mojoBinding.getGroupId() );
-            plugin.setArtifactId( mojoBinding.getArtifactId() );
-            plugin.setVersion( mojoBinding.getVersion() );
-
-            pluginDescriptor = loadPlugin( plugin, project );
-        }
+        pluginDescriptor = loadPlugin( plugin, project );
 
         // fill in any blanks once we know more about this plugin.
         if ( pluginDescriptor != null )
@@ -136,8 +106,34 @@ public class DefaultPluginLoader
 
         return pluginDescriptor;
     }
+    
+    public PluginDescriptor findPluginForPrefix( String prefix, MavenProject project )
+        throws PluginLoaderException
+    {
+        PluginDescriptor pluginDescriptor = loadByPrefix( prefix, project );
 
-    private PluginDescriptor loadFromProject( PrefixedMojoBinding prefixed, MavenProject project )
+        if ( pluginDescriptor == null )
+        {
+            pluginDescriptor = loadFromProject( prefix, project );
+        }
+            
+        if ( pluginDescriptor == null )
+        {
+            Plugin plugin = new Plugin();
+            plugin.setArtifactId( PluginDescriptor.getDefaultPluginArtifactId( prefix ) );
+            
+            pluginDescriptor = loadPlugin( plugin, project );
+        }
+        
+        if ( pluginDescriptor == null )
+        {
+            throw new PluginLoaderException( "Cannot find plugin with prefix: " + prefix );
+        }
+        
+        return pluginDescriptor;
+    }
+
+    private PluginDescriptor loadFromProject( String prefix, MavenProject project )
         throws PluginLoaderException
     {
         PluginDescriptor result = null;
@@ -147,7 +143,7 @@ public class DefaultPluginLoader
             Plugin plugin = (Plugin) it.next();
             
             PluginDescriptor pluginDescriptor = loadPlugin( plugin, project );
-            if ( prefixed.getPrefix().equals( pluginDescriptor.getGoalPrefix() ) )
+            if ( prefix.equals( pluginDescriptor.getGoalPrefix() ) )
             {
                 result = pluginDescriptor;
                 break;
@@ -157,17 +153,17 @@ public class DefaultPluginLoader
         return result;
     }
 
-    private PluginDescriptor loadByPrefix( PrefixedMojoBinding prefixed, MavenProject project )
+    private PluginDescriptor loadByPrefix( String prefix, MavenProject project )
         throws PluginLoaderException
     {
-        PluginDescriptor pluginDescriptor = pluginCollector.getPluginDescriptorForPrefix( prefixed.getPrefix() );
+        PluginDescriptor pluginDescriptor = pluginCollector.getPluginDescriptorForPrefix( prefix );
         
         SessionContext ctx = SessionContext.read( buildContextManager );
         Settings settings = ctx.getSettings();
         
         if ( pluginDescriptor == null )
         {
-            Plugin plugin = pluginMappingManager.getByPrefix( prefixed.getPrefix(), settings.getPluginGroups(),
+            Plugin plugin = pluginMappingManager.getByPrefix( prefix, settings.getPluginGroups(),
                                                        project.getPluginArtifactRepositories(), ctx.getLocalRepository() );
             
             if ( plugin != null )
@@ -187,8 +183,6 @@ public class DefaultPluginLoader
             plugin.setGroupId( PluginDescriptor.getDefaultPluginGroupId() );
         }
         
-        project.injectPluginManagementInfo( plugin );
-
         SessionContext ctx = SessionContext.read( buildContextManager );
 
         try

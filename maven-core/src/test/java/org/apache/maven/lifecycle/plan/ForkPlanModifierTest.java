@@ -33,7 +33,7 @@ public class ForkPlanModifierTest
 
         target = new ForkPlanModifier( mojo, additions ).modifyBindings( target );
 
-        assertEquals( 5, target.getBuildBinding().getCompile().getBindings().size() );
+        assertEquals( 6, target.getBuildBinding().getCompile().getBindings().size() );
 
         Iterator it = target.getBuildBinding().getCompile().getBindings().iterator();
         
@@ -45,12 +45,16 @@ public class ForkPlanModifierTest
 
         assertMojo( "group", "artifact", "compile", (MojoBinding) it.next() );
 
+        assertMojo( StateManagementUtils.GROUP_ID, StateManagementUtils.ARTIFACT_ID,
+                    StateManagementUtils.END_FORKED_EXECUTION_GOAL,
+                    (MojoBinding) it.next() );
+        
         assertMojo( mojo.getGroupId(), mojo.getArtifactId(), mojo.getGoal(),
                     (MojoBinding) it.next() );
 
         assertMojo( StateManagementUtils.GROUP_ID, StateManagementUtils.ARTIFACT_ID,
-                    StateManagementUtils.END_FORKED_EXECUTION_GOAL,
-                    (MojoBinding) it.next() );
+                    StateManagementUtils.CLEAR_FORKED_EXECUTION_GOAL, (MojoBinding) it.next() );
+
     }
 
     public void testModifyBindings_AddTwoMojosBetweenTwoExistingCompileMojos()
@@ -74,7 +78,7 @@ public class ForkPlanModifierTest
 
         target = new ForkPlanModifier( mojo2, additions ).modifyBindings( target );
 
-        assertEquals( 6, target.getBuildBinding().getCompile().getBindings().size() );
+        assertEquals( 7, target.getBuildBinding().getCompile().getBindings().size() );
 
         Iterator it = target.getBuildBinding().getCompile().getBindings().iterator();
         
@@ -89,12 +93,15 @@ public class ForkPlanModifierTest
 
         assertMojo( "group", "artifact", "compile", (MojoBinding) it.next() );
 
+        assertMojo( StateManagementUtils.GROUP_ID, StateManagementUtils.ARTIFACT_ID,
+                    StateManagementUtils.END_FORKED_EXECUTION_GOAL,
+                    (MojoBinding) it.next() );
+        
         assertMojo( mojo2.getGroupId(), mojo2.getArtifactId(), mojo2.getGoal(),
                     (MojoBinding) it.next() );
 
         assertMojo( StateManagementUtils.GROUP_ID, StateManagementUtils.ARTIFACT_ID,
-                    StateManagementUtils.END_FORKED_EXECUTION_GOAL,
-                    (MojoBinding) it.next() );
+                    StateManagementUtils.CLEAR_FORKED_EXECUTION_GOAL, (MojoBinding) it.next() );
 
     }
 
@@ -128,7 +135,7 @@ public class ForkPlanModifierTest
 
         target = modder.modifyBindings( target );
 
-        assertEquals( 10, target.getBuildBinding().getCompile().getBindings().size() );
+        assertEquals( 12, target.getBuildBinding().getCompile().getBindings().size() );
 
         Iterator it = target.getBuildBinding().getCompile().getBindings().iterator();
         
@@ -144,21 +151,27 @@ public class ForkPlanModifierTest
 
         assertMojo( "group2", "artifact", "compile", (MojoBinding) it.next() );
 
+        assertMojo( StateManagementUtils.GROUP_ID, StateManagementUtils.ARTIFACT_ID,
+                    StateManagementUtils.END_FORKED_EXECUTION_GOAL,
+                    (MojoBinding) it.next() );
+        
         assertMojo( mojo3.getGroupId(), mojo3.getArtifactId(), mojo3.getGoal(),
                     (MojoBinding) it.next() );
 
         assertMojo( StateManagementUtils.GROUP_ID, StateManagementUtils.ARTIFACT_ID,
-                    StateManagementUtils.END_FORKED_EXECUTION_GOAL,
-                    (MojoBinding) it.next() );
+                    StateManagementUtils.CLEAR_FORKED_EXECUTION_GOAL, (MojoBinding) it.next() );
 
         assertMojo( "group", "artifact", "compile", (MojoBinding) it.next() );
-
-        assertMojo( mojo.getGroupId(), mojo.getArtifactId(), mojo.getGoal(),
-                    (MojoBinding) it.next() );
 
         assertMojo( StateManagementUtils.GROUP_ID, StateManagementUtils.ARTIFACT_ID,
                     StateManagementUtils.END_FORKED_EXECUTION_GOAL,
                     (MojoBinding) it.next() );
+        
+        assertMojo( mojo.getGroupId(), mojo.getArtifactId(), mojo.getGoal(),
+                    (MojoBinding) it.next() );
+
+        assertMojo( StateManagementUtils.GROUP_ID, StateManagementUtils.ARTIFACT_ID,
+                    StateManagementUtils.CLEAR_FORKED_EXECUTION_GOAL, (MojoBinding) it.next() );
 
         assertMojo( mojo2.getGroupId(), mojo2.getArtifactId(), mojo2.getGoal(),
                     (MojoBinding) it.next() );

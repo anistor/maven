@@ -1428,7 +1428,7 @@ public class MavenProject
 
     public MavenProject getExecutionProject()
     {
-        return executionProject;
+        return ( executionProject == null ? this : executionProject );
     }
 
     public void setExecutionProject( MavenProject executionProject )
@@ -1634,6 +1634,10 @@ public class MavenProject
         if ( !previousExecutionProjects.isEmpty() )
         {
             executionProject = (MavenProject) previousExecutionProjects.pop();
+        }
+        else
+        {
+            executionProject = null;
         }
     }
 }

@@ -261,6 +261,12 @@ under the License.
       <implementation>org.apache.maven.lifecycle.DefaultLifecycleExecutor</implementation>
       <requirements>
         <requirement>
+          <role>org.apache.maven.context.BuildContextManager</role>
+        </requirement>
+        <requirement>
+          <role>org.apache.maven.lifecycle.binding.LifecycleBindingManager</role>
+        </requirement>
+        <requirement>
           <role>org.apache.maven.plugin.loader.PluginLoader</role>
         </requirement>
         <requirement>
@@ -271,6 +277,9 @@ under the License.
         </requirement>
         <requirement>
           <role>org.apache.maven.lifecycle.plan.BuildPlanner</role>
+        </requirement>
+        <requirement>
+          <role>org.apache.maven.lifecycle.binding.MojoBindingFactory</role>
         </requirement>
       </requirements>
     </component>
@@ -595,6 +604,12 @@ under the License.
           <role-hint>legacy-lifecycle-mappings-by-packaging</role-hint>
           <field-name>legacyMappingsByPackaging</field-name>
         </requirement>
+        <requirement>
+          <role>org.apache.maven.lifecycle.binding.MojoBindingFactory</role>
+        </requirement>
+        <requirement>
+          <role>org.apache.maven.lifecycle.binding.LegacyLifecycleMappingParser</role>
+        </requirement>
       </requirements>
       <configuration>
         <legacyLifecycles>
@@ -680,6 +695,31 @@ under the License.
         </requirement>
         <requirement>
           <role>org.apache.maven.lifecycle.binding.LifecycleBindingManager</role>
+        </requirement>
+        <requirement>
+          <role>org.apache.maven.lifecycle.binding.MojoBindingFactory</role>
+        </requirement>
+      </requirements>
+    </component>
+    
+    <component>
+      <role>org.apache.maven.lifecycle.binding.MojoBindingFactory</role>
+      <role-hint>default</role-hint>
+      <implementation>org.apache.maven.lifecycle.binding.DefaultMojoBindingFactory</implementation>
+      <requirements>
+        <requirement>
+          <role>org.apache.maven.plugin.loader.PluginLoader</role>
+        </requirement>
+      </requirements>
+    </component>
+    
+    <component>
+      <role>org.apache.maven.lifecycle.binding.LegacyLifecycleMappingParser</role>
+      <role-hint>default</role-hint>
+      <implementation>org.apache.maven.lifecycle.binding.LegacyLifecycleMappingParser</implementation>
+      <requirements>
+        <requirement>
+          <role>org.apache.maven.lifecycle.binding.MojoBindingFactory</role>
         </requirement>
       </requirements>
     </component>
