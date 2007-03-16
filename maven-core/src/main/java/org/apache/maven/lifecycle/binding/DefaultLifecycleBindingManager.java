@@ -36,7 +36,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
 
-//FIXME: This needs a better name!
+/**
+ * Responsible for the gross construction of LifecycleBindings, or mappings of MojoBinding instances
+ * to different parts of the three lifecycles: clean, build, and site. Also, handles transcribing
+ * these LifecycleBindings instances into lists of MojoBinding's, which can be consumed by the
+ * LifecycleExecutor.
+ * 
+ * @author jdcasey
+ *
+ */
 public class DefaultLifecycleBindingManager
     implements LifecycleBindingManager, LogEnabled
 {
@@ -59,6 +67,11 @@ public class DefaultLifecycleBindingManager
     // configured. Moved out of DefaultLifecycleExecutor...
     private List defaultReports;
 
+    /**
+     * Retrieve the LifecycleBindings given by the lifecycle mapping component/file for the project's
+     * packaging. Any applicable mojo configuration will be injected into the LifecycleBindings from
+     * the POM.
+     */
     public LifecycleBindings getBindingsForPackaging( MavenProject project )
         throws LifecycleLoaderException, LifecycleSpecificationException
     {
@@ -99,6 +112,13 @@ public class DefaultLifecycleBindingManager
         return bindings;
     }
 
+    /**
+     * Search all plugins configured in the POM that have extensions == true, looking for either a
+     * {@link LifecycleBindingLoader} instance, or a {@link LifecycleMapping} instance that matches
+     * the project's packaging. For the first match found, construct the corresponding LifecycleBindings
+     * instance and return it after POM configurations have been injected into any appropriate
+     * MojoBinding instances contained within.
+     */
     private LifecycleBindings searchPluginsWithExtensions( MavenProject project )
         throws LifecycleLoaderException, LifecycleSpecificationException
     {
@@ -176,6 +196,10 @@ public class DefaultLifecycleBindingManager
         return bindings;
     }
 
+    /**
+     * Construct the LifecycleBindings for the default lifecycle mappings, including injection of 
+     * configuration from the project into each MojoBinding, where appropriate.
+     */
     public LifecycleBindings getDefaultBindings( MavenProject project )
         throws LifecycleSpecificationException
     {
@@ -191,6 +215,10 @@ public class DefaultLifecycleBindingManager
         this.logger = logger;
     }
 
+    /**
+     * Construct the LifecycleBindings that constitute the extra mojos bound to the lifecycle within
+     * the POM itself.
+     */
     public LifecycleBindings getProjectCustomBindings( MavenProject project )
         throws LifecycleLoaderException, LifecycleSpecificationException
     {
@@ -269,6 +297,11 @@ public class DefaultLifecycleBindingManager
         return bindings;
     }
 
+    /**
+     * Construct the LifecycleBindings that constitute the mojos mapped to the lifecycles by an overlay
+     * specified in a plugin. Inject mojo configuration from the POM into all appropriate MojoBinding
+     * instances.
+     */
     public LifecycleBindings getPluginLifecycleOverlay( PluginDescriptor pluginDescriptor, String lifecycleId,
                                                         MavenProject project )
         throws LifecycleLoaderException, LifecycleSpecificationException
@@ -385,6 +418,18 @@ public class DefaultLifecycleBindingManager
         return bindings;
     }
 
+    /**
+     * Retrieve the list of MojoBinding instances that correspond  to the reports configured for the
+     * specified project. Inject all appropriate configuration from the POM for each MojoBinding, using
+     * the following precedence rules:
+     * <br/>
+     * <ol>
+     *   <li>report-set-level configuration</li>
+     *   <li>reporting-level configuration</li>
+     *   <li>execution-level configuration</li>
+     *   <li>plugin-level configuration</li>
+     * </ol>
+     */
     public List getReportBindings( MavenProject project )
         throws LifecycleLoaderException, LifecycleSpecificationException
     {
@@ -422,6 +467,9 @@ public class DefaultLifecycleBindingManager
         return reports;
     }
 
+    /**
+     * Retrieve the ReportPlugin instances referenced in the specified POM.
+     */
     private List getReportPluginsForProject( MavenProject project )
     {
         List reportPlugins = project.getReportPlugins();
@@ -475,6 +523,9 @@ public class DefaultLifecycleBindingManager
         return reportPlugins;
     }
 
+    /**
+     * Retrieve any reports from the specified ReportPlugin which are referenced in the specified POM.
+     */
     private List getReportsForPlugin( ReportPlugin reportPlugin, ReportSet reportSet, MavenProject project )
         throws LifecycleLoaderException
     {
@@ -545,7 +596,12 @@ public class DefaultLifecycleBindingManager
         return reports;
     }
 
-    static boolean isSameOrSuperListOfMojoBindings( List superCandidate, List check )
+    /**
+     * Determine whether the first list contains all of the same MojoBinding instances, in the same
+     * order, starting at index zero, as the second list. If so, it is either a perfect super-list
+     * or an equal list, and return true. Return false otherwise.
+     */
+    private static boolean isSameOrSuperListOfMojoBindings( List superCandidate, List check )
     {
         if ( superCandidate == null || check == null )
         {
@@ -576,12 +632,32 @@ public class DefaultLifecycleBindingManager
         return superKeys.subList( 0, checkKeys.size() ).equals( checkKeys );
     }
 
+    /**
+     * Traverse the specified LifecycleBindings instance for all of the specified tasks. If the task
+     * is found to be a phase name, construct the list of all MojoBindings that lead up to that phase
+     * in that lifecycle, and add them to the master MojoBinding list. If the task is not a phase name,
+     * treat it as a direct mojo invocation, parse it into a MojoBinding (resolving the plugin prefix
+     * first if necessary), and add it to the master MojoBinding list. Finally, return the master list.
+     */
     public List assembleMojoBindingList( List tasks, LifecycleBindings bindings, MavenProject project )
         throws LifecycleSpecificationException, LifecyclePlannerException, LifecycleLoaderException
     {
         return assembleMojoBindingList( tasks, bindings, Collections.EMPTY_MAP, project );
     }
 
+    /**
+     * Traverse the specified LifecycleBindings instance for all of the specified tasks. If the task
+     * is found to be a phase name, construct the list of all MojoBindings that lead up to that phase
+     * in that lifecycle, and add them to the master MojoBinding list. If the task is not a phase name,
+     * treat it as a direct mojo invocation, parse it into a MojoBinding (resolving the plugin prefix
+     * first if necessary), and add it to the master MojoBinding list.
+     * 
+     * Then, iterate through all MojoBindings in the master list, and for each one that maps to an 
+     * entry in directInvocationModifiers, substitute the resultant MojoBinding list from that 
+     * modifier in place of the original MojoBinding.
+     * 
+     * Finally, return the modified master list.
+     */
     public List assembleMojoBindingList( List tasks, LifecycleBindings lifecycleBindings, Map directInvocationModifiers,
                                                 MavenProject project )
         throws LifecycleSpecificationException, LifecyclePlannerException, LifecycleLoaderException

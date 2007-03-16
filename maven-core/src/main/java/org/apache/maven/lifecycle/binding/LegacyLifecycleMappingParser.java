@@ -16,6 +16,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
 
+/**
+ * Responsible for parsing the Maven-2.0.x lifecycle-definition syntaxes. This class is partitioned
+ * from the others, because this syntax should be deprecated and removed from support, eventually.
+ * 
+ * @author jdcasey
+ *
+ */
 public class LegacyLifecycleMappingParser
 {
 

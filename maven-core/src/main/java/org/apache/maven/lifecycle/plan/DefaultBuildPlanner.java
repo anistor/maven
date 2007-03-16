@@ -22,8 +22,16 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
-// FIXME: The forkingBindings collections are misused; they will probably not prevent cyclic build 
-// processes consisting of > 1 elements.
+/**
+ * Responsible for creating a plan of execution for a given project and list of tasks. This build plan
+ * consists of MojoBinding instances that carry all the information necessary to execute a mojo,
+ * including configuration from the POM and other sources. NOTE: the build plan may be constructed
+ * of a main lifecycle binding-set, plus any number of lifecycle modifiers and direct-invocation
+ * modifiers, to handle cases of forked execution.
+ * 
+ * @author jdcasey
+ *
+ */
 public class DefaultBuildPlanner
     implements BuildPlanner, LogEnabled
 {
@@ -36,7 +44,10 @@ public class DefaultBuildPlanner
 
     private MojoBindingFactory mojoBindingFactory;
 
-    public BuildPlan constructLifecyclePlan( List tasks, MavenProject project )
+    /**
+     * Orchestrates construction of the build plan which will be used by the user of LifecycleExecutor.
+     */
+    public BuildPlan constructBuildPlan( List tasks, MavenProject project )
         throws LifecycleLoaderException, LifecycleSpecificationException, LifecyclePlannerException
     {
         LifecycleBindings defaultBindings = lifecycleBindingManager.getDefaultBindings( project );
@@ -67,6 +78,11 @@ public class DefaultBuildPlanner
         this.logger = logger;
     }
 
+    /**
+     * Traverses all MojoBinding instances discovered from the POM and its packaging-mappings, and
+     * orchestrates the process of injecting any modifiers that are necessary to accommodate forked
+     * execution.
+     */
     private void addForkedLifecycleModifiers( ModifiablePlanElement planElement, LifecycleBindings lifecycleBindings,
                                               MavenProject project, List tasks )
         throws LifecyclePlannerException, LifecycleSpecificationException, LifecycleLoaderException
@@ -98,6 +114,11 @@ public class DefaultBuildPlanner
         }
     }
 
+    /**
+     * Traverses all MojoBinding instances discovered from the POM and its packaging-mappings, and
+     * orchestrates the process of injecting any modifiers that are necessary to accommodate mojos
+     * that require access to the project's configured reports.
+     */
     private void addReportingLifecycleModifiers( ModifiablePlanElement planElement, LifecycleBindings lifecycleBindings,
                                                  MavenProject project, List tasks )
         throws LifecyclePlannerException, LifecycleSpecificationException, LifecycleLoaderException
@@ -140,6 +161,10 @@ public class DefaultBuildPlanner
         }
     }
 
+    /**
+     * Explores a single MojoBinding, and injects any necessary plan modifiers to accommodate any
+     * of the three types of forked execution, along with any new mojos/lifecycles that entails.
+     */
     private void findForkModifiers( MojoBinding mojoBinding, PluginDescriptor pluginDescriptor,
                                     ModifiablePlanElement planElement, LifecycleBindings mergedBindings, MavenProject project,
                                     LinkedList forkingBindings, List tasks )
@@ -169,6 +194,10 @@ public class DefaultBuildPlanner
         }
     }
 
+    /**
+     * Handles exploration of a single-mojo forked execution for further forkings, and also performs
+     * the actual build-plan modification for that single-mojo forked execution.
+     */
     private void modifyBuildPlanForForkedDirectInvocation( MojoBinding invokedBinding, MojoBinding invokedVia,
                                                            PluginDescriptor pluginDescriptor, ModifiablePlanElement planElement,
                                                            LifecycleBindings mergedBindings, MavenProject project,
@@ -208,6 +237,10 @@ public class DefaultBuildPlanner
         }
     }
 
+    /**
+     * Handles exploration of a lifecycle-based forked execution for further forkings, and also performs
+     * the actual build-plan modification for that lifecycle-based forked execution.
+     */
     private void modifyBuildPlanForForkedLifecycle( MojoBinding mojoBinding, PluginDescriptor pluginDescriptor,
                                                     ModifiablePlanElement planElement, LifecycleBindings bindings,
                                                     MavenProject project, LinkedList forkingBindings, List tasks )
@@ -272,6 +305,15 @@ public class DefaultBuildPlanner
         }
     }
 
+    /**
+     * Constructs the lifecycle bindings used to execute a particular fork, given the forking mojo
+     * binding. If the mojo binding specifies a lifecycle overlay, this method will add that into
+     * the forked lifecycle, and calculate the bindings to inject based on the phase in that new
+     * lifecycle which should be executed.
+     * 
+     * Hands off to the {@link DefaultBuildPlanner#modifyBuildPlanForForkedLifecycle(MojoBinding, PluginDescriptor, ModifiablePlanElement, LifecycleBindings, MavenProject, LinkedList, List)}
+     * method to handle the actual plan modification.
+     */
     private void recursePhaseMojoFork( MojoBinding mojoBinding, PluginDescriptor pluginDescriptor,
                                        ModifiablePlanElement planElement, LifecycleBindings mergedBindings, MavenProject project,
                                        LinkedList forkingBindings, List tasks )
@@ -322,6 +364,11 @@ public class DefaultBuildPlanner
         modifyBuildPlanForForkedLifecycle( mojoBinding, pluginDescriptor, planElement, cloned, project, forkingBindings, tasks );
     }
 
+    /**
+     * Retrieves the information necessary to create a new MojoBinding for a single-mojo forked
+     * execution, then hands off to the {@link DefaultBuildPlanner#modifyBuildPlanForForkedDirectInvocation(MojoBinding, MojoBinding, PluginDescriptor, ModifiablePlanElement, LifecycleBindings, MavenProject, LinkedList, List)}
+     * method to actually inject the modification.
+     */
     private void recurseSingleMojoFork( MojoBinding mojoBinding, PluginDescriptor pluginDescriptor,
                                         ModifiablePlanElement planElement, LifecycleBindings mergedBindings,
                                         MavenProject project, LinkedList forkingBindings, List tasks )

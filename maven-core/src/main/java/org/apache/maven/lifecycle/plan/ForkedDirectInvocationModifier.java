@@ -8,6 +8,13 @@ import org.apache.maven.project.MavenProject;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Inject a list of MojoBindings in place of the forking binding, bracketing the forked bindings with
+ * special mojos to control the forked-execution context.
+ * 
+ * @author jdcasey
+ *
+ */
 public class ForkedDirectInvocationModifier
     implements DirectInvocationModifier
 {
@@ -21,6 +28,10 @@ public class ForkedDirectInvocationModifier
         this.forkedBindings = forkedBindings;
     }
 
+    /**
+     * Return a list containing forked-execution context control MojoBindings, the forked-execution
+     * bindings themselves, and finally the binding that forked off a new execution branch.
+     */
     public List getModifiedBindings( MavenProject project, LifecycleBindingManager bindingManager )
     {
         List result = new ArrayList();
@@ -34,6 +45,9 @@ public class ForkedDirectInvocationModifier
         return result;
     }
 
+    /**
+     * Return the MojoBinding that forks execution to include the bindings in this modifier.
+     */
     public MojoBinding getBindingToModify()
     {
         return forkingBinding;

@@ -83,7 +83,7 @@ public class DefaultLifecycleExecutor
     
     private PluginLoader pluginLoader;
     
-    private BuildPlanner lifecyclePlanner;
+    private BuildPlanner buildPlanner;
 
     private ArtifactHandlerManager artifactHandlerManager;
 
@@ -178,11 +178,16 @@ public class DefaultLifecycleExecutor
 
                     dispatcher.dispatchStart( event, target );
 
+                    // NEW: To support forked execution under the new lifecycle architecture, the current project
+                    // is stored in a build-context managed data type. This context type holds the current project
+                    // for the fork being executed, plus a stack of projects used in the ancestor execution contexts.
                     LifecycleExecutionContext ctx = new LifecycleExecutionContext( rootProject );
                     ctx.store( buildContextManager );
                     
+                    // NEW: Build up the execution plan, including configuration.
                     List mojoBindings = getLifecycleBindings( segment.getTasks(), rootProject, target );
                     
+                    // NEW: Then, iterate over each binding in that plan, and execute the associated mojo.
                     // only call once, with the top-level project (assumed to be provided as a parameter)...
                     for ( Iterator mojoIterator = mojoBindings.iterator(); mojoIterator.hasNext(); )
                     {
@@ -192,6 +197,7 @@ public class DefaultLifecycleExecutor
                                                       target );
                     }
                     
+                    // clean up the execution context, so we don't pollute for future project-executions.
                     LifecycleExecutionContext.delete( buildContextManager );
                     
                     rm.registerBuildSuccess( rootProject, System.currentTimeMillis() - buildStartTime );
@@ -279,13 +285,19 @@ public class DefaultLifecycleExecutor
         }
     }
 
+    /**
+     * Retrieves the build plan for the current project, given the specified list of tasks. This
+     * build plan will consist of MojoBindings, each fully configured to execute, which enables us
+     * to enumerate the full build plan to the debug log-level, complete with the configuration each
+     * mojo will use.
+     */
     private List getLifecycleBindings( List tasks, MavenProject project, String targetDescription )
         throws LifecycleExecutionException
     {
         List mojoBindings;
         try
         {
-            BuildPlan plan = lifecyclePlanner.constructLifecyclePlan( tasks, project );
+            BuildPlan plan = buildPlanner.constructBuildPlan( tasks, project );
             
             if ( getLogger().isDebugEnabled() )
             {
@@ -307,9 +319,14 @@ public class DefaultLifecycleExecutor
                                                long buildStartTime, String target )
         throws BuildFailureException, LifecycleExecutionException
     {
+        // NEW: Retrieve/use the current project stored in the execution context, for consistency.
         LifecycleExecutionContext ctx = LifecycleExecutionContext.read( buildContextManager );
         MavenProject project = ctx.getCurrentProject();
         
+        // NEW: Since the MojoBinding instances are configured when the build plan is constructed,
+        // all that remains to be done here is to load the PluginDescriptor, construct a MojoExecution
+        // instance, and call PluginManager.executeMojo( execution ). The MojoExecutor is constructed
+        // using both the PluginDescriptor and the MojoBinding.
         try
         {
             PluginDescriptor pluginDescriptor = null;

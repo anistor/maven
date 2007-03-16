@@ -10,6 +10,14 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+/**
+ * Inject a list of forked-execution bindings at the point where the modification point is bound to
+ * the supplied LifecycleBindings, bracketed by special mojo bindings to control the forked-execution
+ * context.
+ * 
+ * @author jdcasey
+ *
+ */
 public class ForkPlanModifier
     implements BuildPlanModifier
 {
@@ -25,11 +33,19 @@ public class ForkPlanModifier
         this.mojoBindings = mojoBindings;
     }
 
+    /**
+     * Retrieve the MojoBinding which serves as the injection point for the forked bindings.
+     */
     public MojoBinding getModificationPoint()
     {
         return modificationPoint;
     }
 
+    /**
+     * Modify the LifeycleBindings from a BuildPlan by locating the modification point MojoBinding,
+     * and prepending the forked-execution bindings in the plan, bracketed by mojos that control the
+     * forked-execution context.
+     */
     public LifecycleBindings modifyBindings( LifecycleBindings bindings )
         throws LifecyclePlannerException
     {
@@ -78,11 +94,17 @@ public class ForkPlanModifier
         return bindings;
     }
 
+    /**
+     * Add a new modifier to further adjust the LifecycleBindings which are modified here.
+     */
     public void addModifier( BuildPlanModifier planModifier )
     {
         planModifiers.add( planModifier );
     }
 
+    /**
+     * Return true if this modifier itself has modifiers.
+     */
     public boolean hasModifiers()
     {
         return !planModifiers.isEmpty();

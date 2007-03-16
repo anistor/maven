@@ -10,12 +10,24 @@ import org.apache.maven.project.MavenProject;
 
 import java.util.StringTokenizer;
 
+/**
+ * Responsible for constructing or parsing MojoBinding instances from one of several sources, potentially
+ * using the {@link PluginLoader} to resolve any plugin prefixes first.
+ * 
+ * @author jdcasey
+ *
+ */
 public class DefaultMojoBindingFactory
     implements MojoBindingFactory
 {
 
     PluginLoader pluginLoader;
 
+    /**
+     * Parse the specified mojo string into a MojoBinding, optionally allowing plugin-prefix references.
+     * If a plugin-prefix is allowed and used, resolve the prefix and use the resulting PluginDescriptor
+     * to set groupId and artifactId on the MojoBinding instance.
+     */
     public MojoBinding parseMojoBinding( String bindingSpec, MavenProject project, boolean allowPrefixReference )
         throws LifecycleSpecificationException, LifecycleLoaderException
     {
@@ -79,6 +91,10 @@ public class DefaultMojoBindingFactory
         return binding;
     }
 
+    /**
+     * Create a new MojoBinding instance with the specified information, and inject POM configurations
+     * appropriate to that mojo before returning it.
+     */
     public MojoBinding createMojoBinding( String groupId, String artifactId, String version, String goal, MavenProject project )
     {
         MojoBinding binding = new MojoBinding();
@@ -93,6 +109,11 @@ public class DefaultMojoBindingFactory
         return binding;
     }
 
+    /**
+     * Simplified version of {@link MojoBindingFactory#parseMojoBinding(String, MavenProject, boolean)}
+     * which assumes the project is null and prefixes are not allowed. This method will <b>never</b>
+     * result in the {@link PluginLoader} being used to resolve the PluginDescriptor.
+     */
     public MojoBinding parseMojoBinding( String bindingSpec )
         throws LifecycleSpecificationException
     {
