@@ -36,8 +36,10 @@ import org.apache.maven.artifact.resolver.filter.ScopeArtifactFilter;
 import org.apache.maven.artifact.versioning.DefaultArtifactVersion;
 import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException;
 import org.apache.maven.artifact.versioning.VersionRange;
+import org.apache.maven.context.BuildContextManager;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.execution.RuntimeInformation;
+import org.apache.maven.lifecycle.LifecycleExecutionContext;
 import org.apache.maven.lifecycle.statemgmt.StateManagementUtils;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.model.ReportPlugin;
@@ -130,6 +132,8 @@ public class DefaultPluginManager
     protected MavenProjectBuilder mavenProjectBuilder;
 
     protected PluginMappingManager pluginMappingManager;
+
+    private BuildContextManager buildContextManager;
 
     // END component requirements
 
@@ -610,9 +614,18 @@ public class DefaultPluginManager
 
             plugin.execute();
             
+            // NEW: If the mojo that just executed is a report, store it in the LifecycleExecutionContext
+            // for reference by future mojos.
             if ( plugin instanceof MavenReport )
             {
-                session.addReport( mojoDescriptor, (MavenReport) plugin );
+                LifecycleExecutionContext ctx = LifecycleExecutionContext.read( buildContextManager );
+                if ( ctx == null )
+                {
+                    ctx = new LifecycleExecutionContext( project );
+                }
+                
+                ctx.addReport( mojoDescriptor, (MavenReport) plugin );
+                ctx.store( buildContextManager );
             }
             
             container.setLookupRealm( oldRealm );
@@ -786,9 +799,16 @@ public class DefaultPluginManager
         //            PlexusConfiguration mergedConfiguration = mergeConfiguration( pomConfiguration,
         //                                                                          mojoDescriptor.getConfiguration() );
 
-        ExpressionEvaluator expressionEvaluator = new PluginParameterExpressionEvaluator( session, mojoExecution,
-                                                                                          pathTranslator, getLogger(),
-                                                                                          project,
+        // NEW: Pass in the LifecycleExecutionContext so we have access to the current project, 
+        // forked project stack (future), and reports.
+        LifecycleExecutionContext ctx = LifecycleExecutionContext.read( buildContextManager );
+        if ( ctx == null )
+        {
+            ctx = new LifecycleExecutionContext( project );
+        }
+        
+        ExpressionEvaluator expressionEvaluator = new PluginParameterExpressionEvaluator( session, mojoExecution, pathTranslator,
+                                                                                          ctx, getLogger(),
                                                                                           session.getExecutionProperties() );
 
         PlexusConfiguration extractedMojoConfiguration =

@@ -2,6 +2,12 @@ package org.apache.maven.lifecycle.plan;
 
 import org.apache.maven.lifecycle.LifecycleException;
 
+/**
+ * Signals an error during build-plan construction.
+ * 
+ * @author jdcasey
+ *
+ */
 public class LifecyclePlannerException
     extends LifecycleException
 {

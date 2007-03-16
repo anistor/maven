@@ -3,6 +3,13 @@ package org.apache.maven.lifecycle.statemgmt;
 import org.apache.maven.lifecycle.model.MojoBinding;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 
+/**
+ * Constructs and matches MojoBinding instances that refer to the forked-execution context manager
+ * mojos.
+ * 
+ * @author jdcasey
+ *
+ */
 public final class StateManagementUtils
 {
 
@@ -26,6 +33,11 @@ public final class StateManagementUtils
     {
     }
 
+    /**
+     * Create a new MojoBinding instance that refers to the internal mojo used to setup a new 
+     * forked-execution context. Also, set the configuration to contain the forkId for this new
+     * context.
+     */
     public static MojoBinding createStartForkedExecutionMojoBinding()
     {
         MojoBinding binding = new MojoBinding();
@@ -49,6 +61,11 @@ public final class StateManagementUtils
         return binding;
     }
 
+    /**
+     * Create a new MojoBinding instance that refers to the internal mojo used to end a 
+     * forked-execution context. Also, set the configuration to contain the forkId for this new
+     * context.
+     */
     public static MojoBinding createEndForkedExecutionMojoBinding()
     {
         MojoBinding binding = new MojoBinding();
@@ -70,6 +87,11 @@ public final class StateManagementUtils
         return binding;
     }
 
+    /**
+     * Create a new MojoBinding instance that refers to the internal mojo used to cleanup a completed 
+     * forked-execution context. Also, set the configuration to contain the forkId for this new
+     * context.
+     */
     public static MojoBinding createClearForkedExecutionMojoBinding()
     {
         MojoBinding binding = new MojoBinding();
@@ -91,18 +113,33 @@ public final class StateManagementUtils
         return binding;
     }
     
+    /**
+     * Return true if the specified MojoBinding refers to the internal mojo used to setup a new
+     * forked-execution context. This is useful for formatting when listing the build plan, when
+     * expression of these actual mojo names isn't necessarily useful, and can be confusing.
+     */
     public static boolean isForkedExecutionStartMarker( MojoBinding binding )
     {
         return GROUP_ID.equals( binding.getGroupId() ) && ARTIFACT_ID.equals( binding.getArtifactId() )
             && START_FORKED_EXECUTION_GOAL.equals( binding.getGoal() );
     }
 
+    /**
+     * Return true if the specified MojoBinding refers to the internal mojo used to end a
+     * forked-execution context. This is useful for formatting when listing the build plan, when
+     * expression of these actual mojo names isn't necessarily useful, and can be confusing.
+     */
     public static boolean isForkedExecutionEndMarker( MojoBinding binding )
     {
         return GROUP_ID.equals( binding.getGroupId() ) && ARTIFACT_ID.equals( binding.getArtifactId() )
             && END_FORKED_EXECUTION_GOAL.equals( binding.getGoal() );
     }
 
+    /**
+     * Return true if the specified MojoBinding refers to the internal mojo used to clean up a completed
+     * forked-execution context. This is useful for formatting when listing the build plan, when
+     * expression of these actual mojo names isn't necessarily useful, and can be confusing.
+     */
     public static boolean isForkedExecutionClearMarker( MojoBinding binding )
     {
         return GROUP_ID.equals( binding.getGroupId() ) && ARTIFACT_ID.equals( binding.getArtifactId() )

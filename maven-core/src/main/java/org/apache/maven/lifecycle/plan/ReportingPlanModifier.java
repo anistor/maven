@@ -9,6 +9,13 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+/**
+ * Inject the MojoBindings necessary to execute and make available the report instances that another
+ * mojo in the build plan needs.
+ * 
+ * @author jdcasey
+ *
+ */
 public class ReportingPlanModifier
     implements BuildPlanModifier
 {
@@ -23,6 +30,10 @@ public class ReportingPlanModifier
         this.reportBindings = reportBindings;
     }
 
+    /**
+     * Find the mojo that requested reports, and inject the reporting MojoBinding instances just
+     * ahead of it in the lifecycle bindings.
+     */
     public LifecycleBindings modifyBindings( LifecycleBindings bindings )
         throws LifecyclePlannerException
     {
@@ -64,11 +75,17 @@ public class ReportingPlanModifier
         return bindings;
     }
 
+    /**
+     * Add further lifecycle modifications to this report-injecting modifier.
+     */
     public void addModifier( BuildPlanModifier planModifier )
     {
         planModifiers.add( planModifier );
     }
 
+    /**
+     * Return true if this report-injecting modifier contains further modifications for the lifecycle.
+     */
     public boolean hasModifiers()
     {
         return !planModifiers.isEmpty();

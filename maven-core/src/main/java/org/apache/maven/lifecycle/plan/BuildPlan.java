@@ -8,7 +8,7 @@ import org.apache.maven.project.MavenProject;
 import java.util.List;
 
 public interface BuildPlan
-    extends ModifiablePlanElement, DirectInvocationOriginElement
+    extends ModifiablePlanElement
 {
 
     List getPlanMojoBindings(MavenProject project, LifecycleBindingManager bindingManager)
