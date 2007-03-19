@@ -173,6 +173,7 @@ public class DefaultPluginManager
         // All version-resolution logic has been moved to DefaultPluginVersionManager.
         if ( plugin.getVersion() == null )
         {
+            getLogger().debug( "Resolving version for plugin: " + plugin.getKey() );
             String version = pluginVersionManager.resolvePluginVersion( plugin.getGroupId(), plugin.getArtifactId(),
                                                                         project, session );
             plugin.setVersion( version );

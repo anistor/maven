@@ -35,7 +35,7 @@ public class LifecycleExecutionContext
     private MavenProject currentProject;
     private Stack forkedProjectStack = new Stack();
 
-    private Map reports;
+    private Map reports = new HashMap();
     
     public LifecycleExecutionContext( MavenProject project )
     {

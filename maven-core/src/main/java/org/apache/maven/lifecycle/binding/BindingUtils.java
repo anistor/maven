@@ -102,7 +102,22 @@ final class BindingUtils
      */
     static Object mergeConfigurations( ReportPlugin reportPlugin, ReportSet reportSet )
     {
-        return mergeRawConfigurations( reportSet.getConfiguration(), reportPlugin.getConfiguration() );
+        if ( reportPlugin == null && reportSet == null )
+        {
+            return null;
+        }
+        else if ( reportSet == null )
+        {
+            return reportPlugin.getConfiguration();
+        }
+        else if ( reportPlugin == null )
+        {
+            return reportSet.getConfiguration();
+        }
+        else
+        {
+            return mergeRawConfigurations( reportSet.getConfiguration(), reportPlugin.getConfiguration() );
+        }
     }
 
     /**

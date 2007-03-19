@@ -245,47 +245,62 @@ public class DefaultLifecycleBindingManager
                         PluginExecution execution = (PluginExecution) execIt.next();
 
                         List goals = execution.getGoals();
-                        for ( Iterator goalIterator = goals.iterator(); goalIterator.hasNext(); )
+                        if ( goals != null && !goals.isEmpty() )
                         {
-                            String goal = (String) goalIterator.next();
-
-                            MojoBinding mojoBinding = new MojoBinding();
-
-                            mojoBinding.setGroupId( plugin.getGroupId() );
-                            mojoBinding.setArtifactId( plugin.getArtifactId() );
-                            mojoBinding.setVersion( plugin.getVersion() );
-                            mojoBinding.setGoal( goal );
-                            mojoBinding.setConfiguration( BindingUtils.mergeConfigurations( plugin, execution ) );
-                            mojoBinding.setExecutionId( execution.getId() );
-                            mojoBinding.setOrigin( "POM" );
-
-                            String phase = execution.getPhase();
-                            if ( phase == null )
+                            for ( Iterator goalIterator = goals.iterator(); goalIterator.hasNext(); )
                             {
-                                if ( pluginDescriptor == null )
+                                String goal = (String) goalIterator.next();
+                                
+                                if ( goal == null )
                                 {
-                                    try
-                                    {
-                                        pluginDescriptor = pluginLoader.loadPlugin( plugin, project );
-                                    }
-                                    catch ( PluginLoaderException e )
-                                    {
-                                        throw new LifecycleLoaderException( "Failed to load plugin: " + plugin + ". Reason: "
-                                            + e.getMessage(), e );
-                                    }
+                                    logger.warn( "Execution: " + execution.getId() + " in plugin: " + plugin.getKey() + " in the POM has a null goal." );
+                                    continue;
                                 }
 
-                                MojoDescriptor mojoDescriptor = pluginDescriptor.getMojo( goal );
-                                phase = mojoDescriptor.getPhase();
+                                MojoBinding mojoBinding = new MojoBinding();
 
+                                mojoBinding.setGroupId( plugin.getGroupId() );
+                                mojoBinding.setArtifactId( plugin.getArtifactId() );
+                                mojoBinding.setVersion( plugin.getVersion() );
+                                mojoBinding.setGoal( goal );
+                                mojoBinding.setConfiguration( BindingUtils.mergeConfigurations( plugin, execution ) );
+                                mojoBinding.setExecutionId( execution.getId() );
+                                mojoBinding.setOrigin( "POM" );
+
+                                String phase = execution.getPhase();
                                 if ( phase == null )
                                 {
-                                    throw new LifecycleSpecificationException( "No phase specified for goal: " + goal
-                                        + " in plugin: " + plugin.getKey() + " from POM: " + projectId );
-                                }
-                            }
+                                    if ( pluginDescriptor == null )
+                                    {
+                                        try
+                                        {
+                                            pluginDescriptor = pluginLoader.loadPlugin( plugin, project );
+                                        }
+                                        catch ( PluginLoaderException e )
+                                        {
+                                            throw new LifecycleLoaderException( "Failed to load plugin: " + plugin + ". Reason: "
+                                                + e.getMessage(), e );
+                                        }
+                                    }
+                                    
+                                    if ( pluginDescriptor.getMojos() == null )
+                                    {
+                                        logger.error( "Somehow, the PluginDescriptor for plugin: " + plugin.getKey() + " contains no mojos. This is highly irregular. Ignoring..." );
+                                        continue;
+                                    }
 
-                            LifecycleUtils.addMojoBinding( phase, mojoBinding, bindings );
+                                    MojoDescriptor mojoDescriptor = pluginDescriptor.getMojo( goal );
+                                    phase = mojoDescriptor.getPhase();
+
+                                    if ( phase == null )
+                                    {
+                                        throw new LifecycleSpecificationException( "No phase specified for goal: " + goal
+                                            + " in plugin: " + plugin.getKey() + " from POM: " + projectId );
+                                    }
+                                }
+
+                                LifecycleUtils.addMojoBinding( phase, mojoBinding, bindings );
+                            }
                         }
                     }
                 }
