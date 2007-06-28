@@ -37,13 +37,31 @@ import java.util.Set;
  */
 public interface ArtifactCollector
 {
+    /**
+     * The plexus role for this component.
+     * 
+     * @since 2.0.8
+     */
+    String ROLE = ArtifactCollector.class.getName();
+
+    // TODO: deprecate since conflict resolvers should always be specified
     ArtifactResolutionResult collect( Set artifacts, Artifact originatingArtifact, ArtifactRepository localRepository,
                                       List remoteRepositories, ArtifactMetadataSource source, ArtifactFilter filter,
                                       List listeners )
         throws ArtifactResolutionException;
 
+    // TODO: deprecate since conflict resolvers should always be specified
     ArtifactResolutionResult collect( Set artifacts, Artifact originatingArtifact, Map managedVersions,
                                       ArtifactRepository localRepository, List remoteRepositories,
                                       ArtifactMetadataSource source, ArtifactFilter filter, List listeners )
+        throws ArtifactResolutionException;
+
+    /**
+     * @since 2.0.8
+     */
+    ArtifactResolutionResult collect( Set artifacts, Artifact originatingArtifact, Map managedVersions,
+                                      ArtifactRepository localRepository, List remoteRepositories,
+                                      ArtifactMetadataSource source, ArtifactFilter filter, List listeners,
+                                      List conflictResolvers )
         throws ArtifactResolutionException;
 }

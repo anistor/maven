@@ -32,10 +32,13 @@ import org.apache.maven.artifact.resolver.ArtifactNotFoundException;
 import org.apache.maven.artifact.resolver.ArtifactResolutionException;
 import org.apache.maven.artifact.resolver.ArtifactResolutionResult;
 import org.apache.maven.artifact.resolver.ArtifactResolver;
+import org.apache.maven.artifact.resolver.conflict.ConflictResolverFactory;
+import org.apache.maven.artifact.resolver.conflict.ConflictResolverNotFoundException;
 import org.apache.maven.artifact.resolver.filter.ArtifactFilter;
 import org.apache.maven.model.Extension;
 import org.apache.maven.plugin.DefaultPluginManager;
 import org.apache.maven.project.MavenProject;
+import org.apache.maven.project.ProjectUtils;
 import org.apache.maven.wagon.Wagon;
 import org.codehaus.plexus.PlexusConstants;
 import org.codehaus.plexus.PlexusContainer;
@@ -77,6 +80,8 @@ public class DefaultExtensionManager
     private ArtifactFilter artifactFilter = MavenArtifactFilterManager.createStandardFilter();
 
     private WagonManager wagonManager;
+    
+    private ConflictResolverFactory conflictResolverFactory;
 
     private static final String CONTAINER_NAME = "extensions";
 
@@ -118,12 +123,26 @@ public class DefaultExtensionManager
             // Make sure that we do not influence the dependenecy resolution of extensions with the project's
             // dependencyManagement
 
+            List conflictResolvers = null;
+            try
+            {
+                conflictResolvers = ProjectUtils.buildConflictResolvers( project, conflictResolverFactory );
+                
+                getLogger().debug( "Using conflict resolvers: " + conflictResolvers );
+            }
+            catch ( ConflictResolverNotFoundException exception )
+            {
+                // TODO: propagate exception when possible
+                getLogger().warn( "Cannot build conflict resolvers, using default", exception );
+            }
+            
             ArtifactResolutionResult result = artifactResolver.resolveTransitively( dependencies, project.getArtifact(),
                                                                                     Collections.EMPTY_MAP,
                                                                                     //project.getManagedVersionMap(),
                                                                                     localRepository,
                                                                                     project.getRemoteArtifactRepositories(),
-                                                                                    artifactMetadataSource, filter );
+                                                                                    artifactMetadataSource, filter, null,
+                                                                                    conflictResolvers );
             // create a child container for the extension
             // TODO: this could surely be simpler/different on trunk with the new classworlds
 

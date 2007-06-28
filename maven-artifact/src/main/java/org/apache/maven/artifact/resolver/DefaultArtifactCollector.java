@@ -24,6 +24,7 @@ import org.apache.maven.artifact.metadata.ArtifactMetadataRetrievalException;
 import org.apache.maven.artifact.metadata.ArtifactMetadataSource;
 import org.apache.maven.artifact.metadata.ResolutionGroup;
 import org.apache.maven.artifact.repository.ArtifactRepository;
+import org.apache.maven.artifact.resolver.conflict.ConflictResolver;
 import org.apache.maven.artifact.resolver.filter.ArtifactFilter;
 import org.apache.maven.artifact.resolver.filter.AndArtifactFilter;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
@@ -49,6 +50,11 @@ import java.util.Set;
 public class DefaultArtifactCollector
     implements ArtifactCollector
 {
+    /**
+     * The conflict resolver to use when none is specified.
+     */
+    private ConflictResolver defaultConflictResolver;
+    
     public ArtifactResolutionResult collect( Set artifacts, Artifact originatingArtifact,
                                              ArtifactRepository localRepository, List remoteRepositories,
                                              ArtifactMetadataSource source, ArtifactFilter filter, List listeners )
@@ -63,6 +69,23 @@ public class DefaultArtifactCollector
                                              ArtifactMetadataSource source, ArtifactFilter filter, List listeners )
         throws ArtifactResolutionException
     {
+        return collect( artifacts, originatingArtifact, managedVersions, localRepository, remoteRepositories,
+                        source, filter, listeners, null );
+    }
+
+    public ArtifactResolutionResult collect( Set artifacts, Artifact originatingArtifact, Map managedVersions,
+                                             ArtifactRepository localRepository, List remoteRepositories,
+                                             ArtifactMetadataSource source, ArtifactFilter filter, List listeners,
+                                             List conflictResolvers )
+        throws ArtifactResolutionException
+    {
+        if ( conflictResolvers == null )
+        {
+            // TODO: warn that we're using the default conflict resolver
+            
+            conflictResolvers = Collections.singletonList( defaultConflictResolver );
+        }
+        
         Map resolvedArtifacts = new HashMap();
 
         ResolutionNode root = new ResolutionNode( originatingArtifact, remoteRepositories );
@@ -72,7 +95,7 @@ public class DefaultArtifactCollector
         ManagedVersionMap versionMap = getManagedVersionsMap( originatingArtifact, managedVersions );
 
         recurse( root, resolvedArtifacts, versionMap, localRepository, remoteRepositories, source, filter,
-                 listeners );
+                 listeners, conflictResolvers );
 
         Set set = new HashSet();
 
@@ -142,7 +165,7 @@ public class DefaultArtifactCollector
 
     private void recurse( ResolutionNode node, Map resolvedArtifacts, ManagedVersionMap managedVersions,
                           ArtifactRepository localRepository, List remoteRepositories, ArtifactMetadataSource source,
-                          ArtifactFilter filter, List listeners )
+                          ArtifactFilter filter, List listeners, List conflictResolvers )
         throws CyclicDependencyException, ArtifactResolutionException, OverConstrainedVersionException
     {
         fireEvent( ResolutionListener.TEST_ARTIFACT, listeners, node );
@@ -202,13 +225,34 @@ public class DefaultArtifactCollector
                     }
 
                     // Conflict Resolution
-                    // TODO: use as conflict resolver(s), chain
+                    ResolutionNode resolved = null;
+                    for ( Iterator j = conflictResolvers.iterator(); resolved == null && j.hasNext(); )
+                    {
+                        ConflictResolver conflictResolver = (ConflictResolver) j.next();
+
+                        resolved = conflictResolver.resolveConflict( previous, node );
+                    }
+
+                    if ( resolved == null )
+                    {
+                        // TODO: throw better exception that can detail the two conflicting artifacts
+                        throw new ArtifactResolutionException( "Cannot resolve artifact version conflict between "
+                                        + previous.getArtifact().getVersion() + " and "
+                                        + node.getArtifact().getVersion(), previous.getArtifact() );
+                    }
+                    
+                    if ( resolved != previous && resolved != node )
+                    {
+                        // TODO: throw better exception
+                        throw new ArtifactResolutionException( "Conflict resolver returned unknown resolution node: ",
+                                                               resolved.getArtifact() );
+                    }
 
                     // TODO: should this be part of mediation?
                     // previous one is more dominant
                     ResolutionNode nearest;
                     ResolutionNode farthest;
-                    if ( previous.getDepth() <= node.getDepth() )
+                    if ( resolved == previous )
                     {
                         nearest = previous;
                         farthest = node;
@@ -366,7 +410,7 @@ public class DefaultArtifactCollector
                     }
 
                     recurse( child, resolvedArtifacts, managedVersions, localRepository, remoteRepositories, source,
-                             filter, listeners );
+                             filter, listeners, conflictResolvers );
                 }
             }
 

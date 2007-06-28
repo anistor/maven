@@ -260,17 +260,8 @@ public class DefaultArtifactResolver
                                                          ArtifactFilter filter )
         throws ArtifactResolutionException, ArtifactNotFoundException
     {
-        // TODO: this is simplistic
-        List listeners = new ArrayList();
-        if ( getLogger().isDebugEnabled() )
-        {
-            listeners.add( new DebugResolutionListener( getLogger() ) );
-        }
-
-        listeners.add( new WarningResolutionListener( getLogger() ) );
-
         return resolveTransitively( artifacts, originatingArtifact, managedVersions, localRepository,
-                                    remoteRepositories, source, filter, listeners );
+                                    remoteRepositories, source, filter, null );
 
     }
 
@@ -280,10 +271,32 @@ public class DefaultArtifactResolver
                                                          ArtifactFilter filter, List listeners )
         throws ArtifactResolutionException, ArtifactNotFoundException
     {
+        return resolveTransitively( artifacts, originatingArtifact, managedVersions, localRepository,
+                                    remoteRepositories, source, filter, listeners, null );
+    }
+    
+    public ArtifactResolutionResult resolveTransitively( Set artifacts, Artifact originatingArtifact,
+                                                         Map managedVersions, ArtifactRepository localRepository,
+                                                         List remoteRepositories, ArtifactMetadataSource source,
+                                                         ArtifactFilter filter, List listeners, List conflictResolvers )
+        throws ArtifactResolutionException, ArtifactNotFoundException
+    {
+        if ( listeners == null )
+        {
+            // TODO: this is simplistic
+            listeners = new ArrayList();
+            if ( getLogger().isDebugEnabled() )
+            {
+                listeners.add( new DebugResolutionListener( getLogger() ) );
+            }
+
+            listeners.add( new WarningResolutionListener( getLogger() ) );
+        }
+
         ArtifactResolutionResult artifactResolutionResult;
         artifactResolutionResult = artifactCollector.collect( artifacts, originatingArtifact, managedVersions,
                                                               localRepository, remoteRepositories, source, filter,
-                                                              listeners );
+                                                              listeners, conflictResolvers );
 
         List missingArtifacts = new ArrayList();
         for ( Iterator i = artifactResolutionResult.getArtifactResolutionNodes().iterator(); i.hasNext(); )

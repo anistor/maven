@@ -24,6 +24,9 @@ import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.artifact.repository.ArtifactRepositoryFactory;
 import org.apache.maven.artifact.repository.ArtifactRepositoryPolicy;
 import org.apache.maven.artifact.repository.layout.ArtifactRepositoryLayout;
+import org.apache.maven.artifact.resolver.conflict.ConflictResolver;
+import org.apache.maven.artifact.resolver.conflict.ConflictResolverFactory;
+import org.apache.maven.artifact.resolver.conflict.ConflictResolverNotFoundException;
 import org.apache.maven.model.DeploymentRepository;
 import org.apache.maven.model.Repository;
 import org.apache.maven.model.RepositoryBase;
@@ -37,6 +40,11 @@ import java.util.List;
 
 public final class ProjectUtils
 {
+    /**
+     * The POM property name for the comma-separated list of conflict resolver types.
+     */
+    private static final String CONFLICT_RESOLVERS_PROPERTY = "maven.conflict.resolvers";
+    
     private ProjectUtils()
     {
     }
@@ -108,6 +116,48 @@ public final class ProjectUtils
         {
             return null;
         }
+    }
+    
+    /**
+     * Gets a list of conflict resolvers for the specified project. The project's conflict resolvers are defined by the
+     * POM property <code>maven.conflict.resolvers</code> as a comma-separated list of conflict resolver types.
+     * Conflict resolver instances for these types are then obtained from the factory and returned.
+     * 
+     * @param project
+     *            the project
+     * @param conflictResolverFactory
+     *            the factory to use to obtain the conflict resolvers from
+     * @return the list of conflict resolvers
+     * @throws ConflictResolverNotFoundException
+     *             if a specified conflict resolver cannot be found
+     */
+    public static List buildConflictResolvers( MavenProject project, ConflictResolverFactory conflictResolverFactory )
+        throws ConflictResolverNotFoundException
+    {
+        List conflictResolvers;
+
+        Object value = project.getProperties().get( CONFLICT_RESOLVERS_PROPERTY );
+
+        if ( value instanceof String )
+        {
+            conflictResolvers = new ArrayList();
+            
+            String[] types = ( (String) value ).split( "," );
+
+            for ( int i = 0; i < types.length; i++ )
+            {
+                String type = types[i].trim();
+
+                ConflictResolver conflictResolver = conflictResolverFactory.getConflictResolver( type );
+                conflictResolvers.add( conflictResolver );
+            }
+        }
+        else
+        {
+            conflictResolvers = null;
+        }
+
+        return conflictResolvers;
     }
 
     private static ArtifactRepositoryPolicy buildArtifactRepositoryPolicy( RepositoryPolicy policy )

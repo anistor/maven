@@ -30,6 +30,8 @@ import org.apache.maven.artifact.resolver.ArtifactNotFoundException;
 import org.apache.maven.artifact.resolver.ArtifactResolutionException;
 import org.apache.maven.artifact.resolver.ArtifactResolutionResult;
 import org.apache.maven.artifact.resolver.ArtifactResolver;
+import org.apache.maven.artifact.resolver.conflict.ConflictResolverFactory;
+import org.apache.maven.artifact.resolver.conflict.ConflictResolverNotFoundException;
 import org.apache.maven.artifact.resolver.filter.ArtifactFilter;
 import org.apache.maven.artifact.resolver.filter.ScopeArtifactFilter;
 import org.apache.maven.artifact.versioning.DefaultArtifactVersion;
@@ -53,6 +55,7 @@ import org.apache.maven.plugin.version.PluginVersionResolutionException;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.MavenProjectBuilder;
 import org.apache.maven.project.ProjectBuildingException;
+import org.apache.maven.project.ProjectUtils;
 import org.apache.maven.project.artifact.InvalidDependencyVersionException;
 import org.apache.maven.project.artifact.MavenMetadataSource;
 import org.apache.maven.project.path.PathTranslator;
@@ -123,6 +126,8 @@ public class DefaultPluginManager
     protected MavenProjectBuilder mavenProjectBuilder;
 
     protected PluginMappingManager pluginMappingManager;
+    
+    private ConflictResolverFactory conflictResolverFactory;
 
     // END component requirements
 
@@ -651,11 +656,25 @@ public class DefaultPluginManager
             repositories.addAll( resolutionGroup.getResolutionRepositories() );
             repositories.addAll( project.getRemoteArtifactRepositories() );
 
+            List conflictResolvers = null;
+            try
+            {
+                conflictResolvers = ProjectUtils.buildConflictResolvers( project, conflictResolverFactory );
+                
+                getLogger().debug( "Using conflict resolvers: " + conflictResolvers );
+            }
+            catch ( ConflictResolverNotFoundException exception )
+            {
+                // TODO: propagate exception when possible
+                getLogger().warn( "Cannot build conflict resolvers, using default", exception );
+            }
+            
             ArtifactResolutionResult result = artifactResolver.resolveTransitively( dependencies, pluginArtifact,
                                                                                     Collections.EMPTY_MAP,
                                                                                     localRepository, repositories,
                                                                                     artifactMetadataSource,
-                                                                                    artifactFilter );
+                                                                                    artifactFilter, null,
+                                                                                    conflictResolvers );
 
             Set resolved = result.getArtifacts();
 
@@ -1235,12 +1254,27 @@ public class DefaultPluginManager
         {
             project.setDependencyArtifacts( project.createArtifacts( artifactFactory, null, null ) );
         }
+        
+        List conflictResolvers = null;
+        try
+        {
+            conflictResolvers = ProjectUtils.buildConflictResolvers( project, conflictResolverFactory );
+            
+            getLogger().debug( "Using conflict resolvers: " + conflictResolvers );
+        }
+        catch ( ConflictResolverNotFoundException exception )
+        {
+            // TODO: propagate exception when possible
+            getLogger().warn( "Cannot build conflict resolvers, using default", exception );
+        }
+        
         ArtifactResolutionResult result = artifactResolver.resolveTransitively( project.getDependencyArtifacts(),
                                                                                 artifact,
                                                                                 project.getManagedVersionMap(),
                                                                                 context.getLocalRepository(),
                                                                                 project.getRemoteArtifactRepositories(),
-                                                                                artifactMetadataSource, filter );
+                                                                                artifactMetadataSource, filter, null,
+                                                                                conflictResolvers );
 
         project.setArtifacts( result.getArtifacts() );
     }

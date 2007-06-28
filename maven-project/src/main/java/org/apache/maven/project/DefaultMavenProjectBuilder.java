@@ -33,6 +33,8 @@ import org.apache.maven.artifact.resolver.ArtifactNotFoundException;
 import org.apache.maven.artifact.resolver.ArtifactResolutionException;
 import org.apache.maven.artifact.resolver.ArtifactResolutionResult;
 import org.apache.maven.artifact.resolver.ArtifactResolver;
+import org.apache.maven.artifact.resolver.conflict.ConflictResolverFactory;
+import org.apache.maven.artifact.resolver.conflict.ConflictResolverNotFoundException;
 import org.apache.maven.artifact.resolver.filter.ExcludesArtifactFilter;
 import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException;
 import org.apache.maven.artifact.versioning.VersionRange;
@@ -172,6 +174,8 @@ public class DefaultMavenProjectBuilder
     private ModelInterpolator modelInterpolator;
 
     private ArtifactRepositoryFactory artifactRepositoryFactory;
+    
+    private ConflictResolverFactory conflictResolverFactory;
 
     // ----------------------------------------------------------------------
     // I am making this available for use with a new method that takes a
@@ -364,11 +368,25 @@ public class DefaultMavenProjectBuilder
             wagonManager.setDownloadMonitor( transferListener );
         }
 
+        List conflictResolvers = null;
+        try
+        {
+            conflictResolvers = ProjectUtils.buildConflictResolvers( project, conflictResolverFactory );
+            
+            getLogger().debug( "Using conflict resolvers: " + conflictResolvers );
+        }
+        catch ( ConflictResolverNotFoundException exception )
+        {
+            // TODO: propagate exception when possible
+            getLogger().warn( "Cannot build conflict resolvers, using default", exception );
+        }
+        
         ArtifactResolutionResult result = artifactResolver.resolveTransitively( project.getDependencyArtifacts(),
                                                                                 projectArtifact, managedVersions,
                                                                                 localRepository,
                                                                                 project.getRemoteArtifactRepositories(),
-                                                                                artifactMetadataSource );
+                                                                                artifactMetadataSource, null, null,
+                                                                                conflictResolvers );
 
         project.setArtifacts( result.getArtifacts() );
 

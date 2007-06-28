@@ -190,6 +190,17 @@ under the License.
       <role>org.apache.maven.artifact.repository.ArtifactRepositoryFactory</role>
       <implementation>org.apache.maven.artifact.repository.DefaultArtifactRepositoryFactory</implementation>
     </component>
+    
+    <!--
+     |
+     | ConflictResolverFactory
+     |
+     -->
+    <component>
+      <role>org.apache.maven.artifact.resolver.conflict.ConflictResolverFactory</role>
+      <implementation>org.apache.maven.artifact.resolver.conflict.DefaultConflictResolverFactory</implementation>
+    </component>
+    
   </components>
 
 </component-set>
