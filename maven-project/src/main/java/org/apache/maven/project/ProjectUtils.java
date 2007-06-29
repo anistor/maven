@@ -43,7 +43,7 @@ public final class ProjectUtils
     /**
      * The POM property name for the comma-separated list of conflict resolver types.
      */
-    private static final String CONFLICT_RESOLVERS_PROPERTY = "maven.conflict.resolvers";
+    private static final String CONFLICT_RESOLVERS_PROPERTY = "mavenConflictResolvers";
     
     private ProjectUtils()
     {
@@ -120,8 +120,8 @@ public final class ProjectUtils
     
     /**
      * Gets a list of conflict resolvers for the specified project. The project's conflict resolvers are defined by the
-     * POM property <code>maven.conflict.resolvers</code> as a comma-separated list of conflict resolver types.
-     * Conflict resolver instances for these types are then obtained from the factory and returned.
+     * POM property <code>mavenConflictResolvers</code> as a comma-separated list of conflict resolver types. Conflict
+     * resolver instances for these types are then obtained from the factory and returned.
      * 
      * @param project
      *            the project
