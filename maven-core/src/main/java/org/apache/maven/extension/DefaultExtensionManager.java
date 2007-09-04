@@ -36,11 +36,14 @@ import org.apache.maven.artifact.resolver.ArtifactNotFoundException;
 import org.apache.maven.artifact.resolver.ArtifactResolutionException;
 import org.apache.maven.artifact.resolver.ArtifactResolutionResult;
 import org.apache.maven.artifact.resolver.ArtifactResolver;
+import org.apache.maven.artifact.resolver.conflict.ConflictResolverFactory;
+import org.apache.maven.artifact.resolver.conflict.ConflictResolverNotFoundException;
 import org.apache.maven.artifact.resolver.filter.ArtifactFilter;
 import org.apache.maven.model.Extension;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.Parent;
 import org.apache.maven.project.MavenProject;
+import org.apache.maven.project.ProjectUtils;
 import org.codehaus.plexus.PlexusConstants;
 import org.codehaus.plexus.PlexusContainer;
 import org.codehaus.plexus.PlexusContainerException;
@@ -78,6 +81,8 @@ public class DefaultExtensionManager
     private ArtifactFilterManager artifactFilterManager;
 
     private WagonManager wagonManager;
+    
+    private ConflictResolverFactory conflictResolverFactory;
 
     public void addExtension( Extension extension,
                               Model originatingModel,
@@ -159,11 +164,27 @@ public class DefaultExtensionManager
 
             dependencies.add( extensionArtifact );
 
+            List conflictResolvers = null;
+            // FIXME: reimplement for changes between 2.0.x and 2.1.x
+            /*
+            try
+            {
+                conflictResolvers = ProjectUtils.buildConflictResolvers( project, conflictResolverFactory );
+
+                getLogger().debug( "Using conflict resolvers: " + conflictResolvers );
+            }
+            catch ( ConflictResolverNotFoundException exception )
+            {
+                // TODO: propagate exception when possible
+                getLogger().warn( "Cannot build conflict resolvers, using default", exception );
+            }
+            */
+            
             // TODO: Make this work with managed dependencies, or an analogous management section in the POM.
             ArtifactResolutionResult result =
                 artifactResolver.resolveTransitively( dependencies, projectArtifact,
                                                       Collections.EMPTY_MAP, localRepository, remoteRepositories,
-                                                      artifactMetadataSource, filter );
+                                                      artifactMetadataSource, filter, null, conflictResolvers );
 
             for ( Iterator i = result.getArtifacts().iterator(); i.hasNext(); )
             {

@@ -34,6 +34,8 @@ import org.apache.maven.artifact.resolver.ArtifactResolutionException;
 import org.apache.maven.artifact.resolver.ArtifactResolutionRequest;
 import org.apache.maven.artifact.resolver.ArtifactResolutionResult;
 import org.apache.maven.artifact.resolver.ArtifactResolver;
+import org.apache.maven.artifact.resolver.conflict.ConflictResolverFactory;
+import org.apache.maven.artifact.resolver.conflict.ConflictResolverNotFoundException;
 import org.apache.maven.artifact.resolver.filter.ExcludesArtifactFilter;
 import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException;
 import org.apache.maven.artifact.versioning.ManagedVersionMap;
@@ -184,6 +186,8 @@ public class DefaultMavenProjectBuilder
     // ----------------------------------------------------------------------
 
     private WagonManager wagonManager;
+
+    private ConflictResolverFactory conflictResolverFactory;
 
     public static final String MAVEN_MODEL_VERSION = "4.0.0";
 
@@ -339,13 +343,27 @@ public class DefaultMavenProjectBuilder
             wagonManager.setDownloadMonitor( transferListener );
         }
 
+        List conflictResolvers = null;
+        try
+        {
+            conflictResolvers = ProjectUtils.buildConflictResolvers( project, conflictResolverFactory );
+
+            getLogger().debug( "Using conflict resolvers: " + conflictResolvers );
+        }
+        catch ( ConflictResolverNotFoundException exception )
+        {
+            // TODO: propagate exception when possible
+            getLogger().warn( "Cannot build conflict resolvers, using default", exception );
+        }
+
         ArtifactResolutionRequest request = new ArtifactResolutionRequest()
             .setArtifact( projectArtifact )
             .setArtifactDependencies( project.getDependencyArtifacts() )
             .setLocalRepository( localRepository )
             .setRemoteRepostories( project.getRemoteArtifactRepositories() )
             .setManagedVersionMap( managedVersions )
-            .setMetadataSource( artifactMetadataSource );
+            .setMetadataSource( artifactMetadataSource )
+            .setConflictResolvers( conflictResolvers );
 
         ArtifactResolutionResult result = artifactResolver.resolve( request );
 
