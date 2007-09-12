@@ -48,10 +48,6 @@ under the License.
       <groupId>org.apache.maven</groupId>
       <artifactId>maven-model</artifactId>
     </dependency>
-    <dependency>
-      <groupId>org.apache.maven</groupId>
-      <artifactId>maven-artifact-manager</artifactId>
-    </dependency>
 
     <dependency>
       <groupId>org.apache.maven</groupId>
@@ -62,7 +58,7 @@ under the License.
       <artifactId>plexus-utils</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.apache.maven</groupId>
+      <groupId>org.apache.maven.artifact</groupId>
       <artifactId>maven-artifact</artifactId>
     </dependency>
     <dependency>

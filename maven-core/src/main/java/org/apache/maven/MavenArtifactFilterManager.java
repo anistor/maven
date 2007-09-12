@@ -42,7 +42,6 @@ public class MavenArtifactFilterManager
         artifacts.add( "doxia-sink-api" );
         artifacts.add( "jsch" );
         artifacts.add( "maven-artifact" );
-        artifacts.add( "maven-artifact-manager" );
         artifacts.add( "maven-core" );
         artifacts.add( "maven-error-diagnoser" );
         artifacts.add( "maven-model" );
@@ -54,7 +53,6 @@ public class MavenArtifactFilterManager
         artifacts.add( "maven-profile" );
         artifacts.add( "maven-project" );
         artifacts.add( "maven-reporting-api" );
-        artifacts.add( "maven-repository-metadata" );
         artifacts.add( "maven-settings" );
         artifacts.add( "plexus-container-default" );
         artifacts.add( "plexus-interactivity-api" );

@@ -46,7 +46,7 @@ under the License.
       <artifactId>maven-plugin-api</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.apache.maven</groupId>
+      <groupId>org.apache.maven.artifact</groupId>
       <artifactId>maven-artifact</artifactId>
     </dependency>
     <dependency>

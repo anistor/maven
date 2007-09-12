@@ -100,8 +100,6 @@ under the License.
     </pluginManagement>
   </build>
   <modules>
-    <module>maven-artifact</module>
-    <module>maven-artifact-manager</module>
     <module>maven-artifact-test</module>
     <module>maven-core</module>
     <module>maven-error-diagnostics</module>
@@ -114,7 +112,6 @@ under the License.
     <module>maven-profile</module>
     <module>maven-project</module>
     <module>maven-reporting</module>
-    <module>maven-repository-metadata</module>
     <module>maven-script</module>
     <module>maven-settings</module>
   </modules>
@@ -158,19 +155,9 @@ under the License.
         <version>${mavenVersion}</version>
       </dependency>
       <dependency>
-        <groupId>org.apache.maven</groupId>
-        <artifactId>maven-repository-metadata</artifactId>
-        <version>${mavenVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.maven</groupId>
+        <groupId>org.apache.maven.artifact</groupId>
         <artifactId>maven-artifact</artifactId>
-        <version>${mavenVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.maven</groupId>
-        <artifactId>maven-artifact-manager</artifactId>
-        <version>${mavenVersion}</version>
+        <version>3.0-SNAPSHOT</version>
       </dependency>
       <dependency>
         <groupId>org.apache.maven</groupId>
@@ -216,7 +203,7 @@ under the License.
       <dependency>
         <groupId>org.codehaus.plexus</groupId>
         <artifactId>plexus-utils</artifactId>
-        <version>1.4.1</version>
+        <version>1.4.5</version>
       </dependency>
       <dependency>
         <groupId>org.apache.maven.wagon</groupId>

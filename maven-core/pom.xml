@@ -112,7 +112,7 @@ under the License.
       <artifactId>maven-model</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.apache.maven</groupId>
+      <groupId>org.apache.maven.artifact</groupId>
       <artifactId>maven-artifact</artifactId>
     </dependency>
     <dependency>
@@ -122,10 +122,6 @@ under the License.
     <dependency>
       <groupId>org.codehaus.plexus</groupId>
       <artifactId>plexus-container-default</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.maven</groupId>
-      <artifactId>maven-repository-metadata</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.maven</groupId>
@@ -177,10 +173,6 @@ under the License.
           <groupId>org.codehaus.plexus</groupId>
         </exclusion>
       </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.maven</groupId>
-      <artifactId>maven-artifact-manager</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.maven</groupId>
