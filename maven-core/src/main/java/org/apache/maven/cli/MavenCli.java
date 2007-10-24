@@ -19,6 +19,14 @@ package org.apache.maven.cli;
  * under the License.
  */
 
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Properties;
+import java.util.StringTokenizer;
+
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
@@ -54,16 +62,8 @@ import org.codehaus.plexus.component.repository.exception.ComponentLookupExcepti
 import org.codehaus.plexus.embed.Embedder;
 import org.codehaus.plexus.logging.Logger;
 import org.codehaus.plexus.logging.LoggerManager;
+import org.codehaus.plexus.util.Os;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Properties;
-import java.util.StringTokenizer;
 
 /**
  * @author <a href="mailto:jason@maven.org">Jason van Zyl</a>
@@ -73,14 +73,7 @@ import java.util.StringTokenizer;
 public class MavenCli
 {
     private static Embedder embedder;
-    
-    public static final String OS_NAME = System.getProperty( "os.name" ).toLowerCase( Locale.US );
-
-    public static final String OS_ARCH = System.getProperty( "os.arch" ).toLowerCase( Locale.US );
-
-    public static final String OS_VERSION = System.getProperty( "os.version" ).toLowerCase( Locale.US );
-
-
+   
     /**
      * @noinspection ConfusingMainMethod
      */
@@ -219,14 +212,14 @@ public class MavenCli
                 // TODO:Additionally, we can't change the mojo level because the component key includes the version and it isn't known ahead of time. This seems worth changing.
             }
 
-            ProfileManager profileManager = new DefaultProfileManager( embedder.getContainer() );
+            ProfileManager profileManager = new DefaultProfileManager( embedder.getContainer(),System.getProperties() );
 
             if ( commandLine.hasOption( CLIManager.ACTIVATE_PROFILES ) )
             {
                 String profilesLine = commandLine.getOptionValue( CLIManager.ACTIVATE_PROFILES );
 
                 StringTokenizer profileTokens = new StringTokenizer( profilesLine, "," );
-
+                
                 while ( profileTokens.hasMoreTokens() )
                 {
                     String profileAction = profileTokens.nextToken().trim();
@@ -545,13 +538,8 @@ public class MavenCli
             
             System.out.println( "Java version: " + System.getProperty( "java.version", "<unknown java version>" ) );
 
-            /*
-             * TODO: when plexus can return the family type, add that here
-             * because it will make it easier to know what profile activation
-             * settings to use
-             */
-            System.out.println( "OS name: \"" + OS_NAME + "\" version: \"" + OS_VERSION + "\" arch: \"" + OS_ARCH
-                + "\"" );
+            System.out.println( "OS name: \"" + Os.OS_NAME + "\" version: \"" + Os.OS_VERSION +
+                                "\" arch: \"" + Os.OS_ARCH + "\" Family: \"" + Os.OS_FAMILY + "\"" );
                                            
         }
         catch ( IOException e )
