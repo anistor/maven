@@ -21,7 +21,6 @@ package org.apache.maven.project.artifact;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.ArtifactUtils;
-import org.apache.maven.artifact.factory.ArtifactFactory;
 import org.apache.maven.artifact.resolver.filter.ArtifactFilter;
 import org.apache.maven.artifact.resolver.filter.ScopeArtifactFilter;
 import org.apache.maven.model.Dependency;
@@ -66,14 +65,12 @@ public class MavenMetadataSourceTest
         List deps = new ArrayList();
         deps.add( dep1 );
         deps.add( dep2 );
-        
-        ArtifactFactory factory = ( ArtifactFactory ) lookup( ArtifactFactory.ROLE );
-        
+
         ArtifactFilter dependencyFilter = new ScopeArtifactFilter( Artifact.SCOPE_COMPILE );
         
         MavenProject project = new MavenProject( new Model() );
         
-        Set result = MavenMetadataSource.createArtifacts( factory, deps, null, dependencyFilter, project );
+        Set result = MavenMetadataSource.createArtifacts( deps, null, dependencyFilter, project );
         
         for ( Iterator it = result.iterator(); it.hasNext(); )
         {
@@ -106,9 +103,7 @@ public class MavenMetadataSourceTest
 
         MavenProject project = new MavenProject( model );
 
-        ArtifactFactory factory = (ArtifactFactory) lookup( ArtifactFactory.ROLE );
-
-        project.setArtifacts( project.createArtifacts( factory, null, null ) );
+        project.setArtifacts( project.createArtifacts( null, null ) );
 
         String key = ArtifactUtils.versionlessKey( groupId, artifactId );
 
@@ -159,9 +154,7 @@ public class MavenMetadataSourceTest
 
         injector.injectDefaults( model );
 
-        ArtifactFactory factory = (ArtifactFactory) lookup( ArtifactFactory.ROLE );
-
-        project.setArtifacts( project.createArtifacts( factory, null, null ) );
+        project.setArtifacts( project.createArtifacts( null, null ) );
 
         String key = ArtifactUtils.versionlessKey( groupId, artifactId );
 

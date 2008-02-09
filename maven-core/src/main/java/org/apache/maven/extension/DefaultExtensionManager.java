@@ -22,7 +22,7 @@ package org.apache.maven.extension;
 import org.apache.maven.ArtifactFilterManager;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.ArtifactUtils;
-import org.apache.maven.artifact.factory.ArtifactFactory;
+import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.artifact.manager.WagonManager;
 import org.apache.maven.artifact.metadata.ArtifactMetadataRetrievalException;
 import org.apache.maven.artifact.metadata.ArtifactMetadataSource;
@@ -79,8 +79,6 @@ public class DefaultExtensionManager
     extends AbstractLogEnabled
     implements ExtensionManager, Contextualizable
 {
-    private ArtifactFactory artifactFactory;
-
     private ArtifactResolver artifactResolver;
 
     private ArtifactMetadataSource artifactMetadataSource;
@@ -94,14 +92,13 @@ public class DefaultExtensionManager
     private PluginManager pluginManager;
 
     // used for unit testing.
-    protected DefaultExtensionManager( ArtifactFactory artifactFactory,
+    protected DefaultExtensionManager(
                                     ArtifactResolver artifactResolver,
                                     ArtifactMetadataSource artifactMetadataSource,
                                     MutablePlexusContainer container,
                                     ArtifactFilterManager artifactFilterManager,
                                     WagonManager wagonManager )
     {
-        this.artifactFactory = artifactFactory;
         this.artifactResolver = artifactResolver;
         this.artifactMetadataSource = artifactMetadataSource;
         this.container = container;
@@ -120,9 +117,9 @@ public class DefaultExtensionManager
                               MavenExecutionRequest request )
         throws ExtensionManagerException
     {
-        Artifact extensionArtifact = artifactFactory.createBuildArtifact( extension.getGroupId(),
+        Artifact extensionArtifact = new DefaultArtifact( extension.getGroupId(),
                                                                           extension.getArtifactId(),
-                                                                          extension.getVersion(), "jar" );
+                                                                          extension.getVersion(), "jar", null, false, Artifact.SCOPE_RUNTIME, null );
 
         Parent originatingParent = originatingModel.getParent();
 
@@ -142,7 +139,7 @@ public class DefaultExtensionManager
             version = originatingParent.getVersion();
         }
 
-        Artifact projectArtifact = artifactFactory.createProjectArtifact( groupId, artifactId, version );
+        Artifact projectArtifact = new DefaultArtifact( groupId, artifactId, version, "pom", null, false, Artifact.SCOPE_RUNTIME, null );
 
         addExtension( extensionArtifact,
                       projectArtifact,
@@ -188,9 +185,9 @@ public class DefaultExtensionManager
             pluginVersion = Artifact.RELEASE_VERSION;
         }
 
-        Artifact pluginArtifact = artifactFactory.createBuildArtifact( plugin.getGroupId(),
+        Artifact pluginArtifact = new DefaultArtifact( plugin.getGroupId(),
                                                                        plugin.getArtifactId(),
-                                                                       pluginVersion, "maven-plugin" );
+                                                                       pluginVersion, "maven-plugin", null, false, Artifact.SCOPE_RUNTIME, null );
 
         getLogger().debug( "Starting extension-addition process for: " + pluginArtifact );
 
@@ -438,7 +435,7 @@ public class DefaultExtensionManager
         }
     }
 
-    public static void checkPlexusUtils( ResolutionGroup resolutionGroup, ArtifactFactory artifactFactory )
+    public static void checkPlexusUtils( ResolutionGroup resolutionGroup )
     {
         // ----------------------------------------------------------------------------
         // If the plugin already declares a dependency on plexus-utils then we're all
@@ -482,9 +479,9 @@ public class DefaultExtensionManager
             // version to the latest version we know that works as of the 2.0.6 release. We set the scope to runtime
             // as this is what's implicitly happening in 2.0.6.
 
-            resolutionGroup.getArtifacts().add( artifactFactory.createArtifact( "org.codehaus.plexus",
-                                                                                "plexus-utils", "1.1",
-                                                                                Artifact.SCOPE_RUNTIME, "jar" ) );
+            resolutionGroup.getArtifacts().add( new DefaultArtifact( "org.codehaus.plexus",
+                "plexus-utils", "1.1",
+                "jar", null, false, Artifact.SCOPE_RUNTIME, null ) );
         }
     }
 }

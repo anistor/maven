@@ -21,7 +21,7 @@ package org.apache.maven.plugin;
 
 import org.apache.maven.ArtifactFilterManager;
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.factory.ArtifactFactory;
+import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.artifact.metadata.ArtifactMetadataRetrievalException;
 import org.apache.maven.artifact.metadata.ArtifactMetadataSource;
 import org.apache.maven.artifact.metadata.ResolutionGroup;
@@ -119,8 +119,6 @@ public class DefaultPluginManager
     protected MavenPluginCollector pluginCollector;
 
     protected PluginVersionManager pluginVersionManager;
-
-    protected ArtifactFactory artifactFactory;
 
     protected ArtifactResolver artifactResolver;
 
@@ -359,7 +357,6 @@ public class DefaultPluginManager
         try
         {
             projectPluginDependencies = MavenMetadataSource.createArtifacts(
-                                                                             artifactFactory,
                                                                              plugin.getDependencies(),
                                                                              null,
                                                                              coreArtifactFilterManager.getCoreArtifactFilter(),
@@ -492,8 +489,7 @@ public class DefaultPluginManager
                 MavenProject p = (MavenProject) i.next();
 
                 resolveTransitiveDependencies( session, artifactResolver,
-                                               mojoDescriptor.isDependencyResolutionRequired(),
-                                               artifactFactory, p );
+                                               mojoDescriptor.isDependencyResolutionRequired(), p );
             }
 
             downloadDependencies( project, session, artifactResolver );
@@ -1293,7 +1289,6 @@ public class DefaultPluginManager
     private void resolveTransitiveDependencies( MavenSession context,
                                                 ArtifactResolver artifactResolver,
                                                 String scope,
-                                                ArtifactFactory artifactFactory,
                                                 MavenProject project )
         throws ArtifactResolutionException, ArtifactNotFoundException,
         InvalidDependencyVersionException
@@ -1301,10 +1296,10 @@ public class DefaultPluginManager
         ArtifactFilter filter = new ScopeArtifactFilter( scope );
 
         // TODO: such a call in MavenMetadataSource too - packaging not really the intention of type
-        Artifact artifact = artifactFactory.createBuildArtifact( project.getGroupId(),
+        Artifact artifact = new DefaultArtifact( project.getGroupId(),
                                                                  project.getArtifactId(),
                                                                  project.getVersion(),
-                                                                 project.getPackaging() );
+                                                                 project.getPackaging(), null, false, Artifact.SCOPE_RUNTIME, null );
 
         // TODO: we don't need to resolve over and over again, as long as we are sure that the parameters are the same
         // check this with yourkit as a hot spot.
@@ -1312,7 +1307,7 @@ public class DefaultPluginManager
         if ( project.getDependencyArtifacts() == null )
         {
             // NOTE: Don't worry about covering this case with the error-reporter bindings...it's already handled by the project error reporter.
-            project.setDependencyArtifacts( project.createArtifacts( artifactFactory, null, null ) );
+            project.setDependencyArtifacts( project.createArtifacts( null, null ) );
         }
         ArtifactResolutionResult result = artifactResolver.resolveTransitively(
                                                                                 project.getDependencyArtifacts(),
@@ -1346,8 +1341,7 @@ public class DefaultPluginManager
         }
     }
 
-    public static void checkPlexusUtils( ResolutionGroup resolutionGroup,
-                                         ArtifactFactory artifactFactory )
+    public static void checkPlexusUtils( ResolutionGroup resolutionGroup )
     {
         // ----------------------------------------------------------------------------
         // If the plugin already declares a dependency on plexus-utils then we're all
@@ -1392,10 +1386,7 @@ public class DefaultPluginManager
             // as this is what's implicitly happening in 2.0.6.
 
             resolutionGroup.getArtifacts()
-                           .add(
-                                 artifactFactory.createArtifact( "org.codehaus.plexus",
-                                                                 "plexus-utils", "1.1",
-                                                                 Artifact.SCOPE_RUNTIME, "jar" ) );
+                .add( new DefaultArtifact( "org.codehaus.plexus", "plexus-utils", "1.1", "jar", null, false, Artifact.SCOPE_RUNTIME, null ) );
         }
     }
 

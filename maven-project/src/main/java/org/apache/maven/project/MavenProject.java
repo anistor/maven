@@ -22,7 +22,6 @@ package org.apache.maven.project;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.ArtifactUtils;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
-import org.apache.maven.artifact.factory.ArtifactFactory;
 import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.artifact.resolver.filter.ArtifactFilter;
@@ -1573,12 +1572,10 @@ public class MavenProject
      * @todo the lazy initialisation of this makes me uneasy.
      * @return {@link Set} &lt; {@link Artifact} >
      */
-    public Set createArtifacts( ArtifactFactory artifactFactory, String inheritedScope,
-                                ArtifactFilter dependencyFilter )
+    public Set createArtifacts( String inheritedScope, ArtifactFilter dependencyFilter )
         throws InvalidDependencyVersionException
     {
-        return MavenMetadataSource.createArtifacts( artifactFactory, getDependencies(), inheritedScope,
-                                                    dependencyFilter, this );
+        return MavenMetadataSource.createArtifacts( getDependencies(), inheritedScope, dependencyFilter, this );
     }
 
     public void addProjectReference( MavenProject project )

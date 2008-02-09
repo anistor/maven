@@ -22,7 +22,7 @@ package org.apache.maven.project.build.model;
 import org.apache.maven.MavenTools;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.InvalidRepositoryException;
-import org.apache.maven.artifact.factory.ArtifactFactory;
+import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.artifact.resolver.ArtifactNotFoundException;
 import org.apache.maven.artifact.resolver.ArtifactResolutionException;
@@ -57,10 +57,7 @@ import java.util.Set;
 public class DefaultModelLineageBuilder
     implements ModelLineageBuilder, LogEnabled
 {
-
     public static final String ROLE_HINT = "default";
-
-    private ArtifactFactory artifactFactory;
 
     private ArtifactResolver artifactResolver;
 
@@ -74,16 +71,11 @@ public class DefaultModelLineageBuilder
     {
     }
 
-    public DefaultModelLineageBuilder( ArtifactResolver resolver,
-                                       ArtifactFactory artifactFactory )
+    public DefaultModelLineageBuilder( ArtifactResolver resolver )
     {
         artifactResolver = resolver;
-        this.artifactFactory = artifactFactory;
     }
 
-    /**
-     * @see org.apache.maven.project.build.model.ModelLineageBuilder#buildModelLineage(java.io.File, org.apache.maven.artifact.repository.ArtifactRepository, java.util.List)
-     */
     public ModelLineage buildModelLineage( File pom,
                                            ArtifactRepository localRepository,
                                            List remoteRepositories,
@@ -225,7 +217,7 @@ public class DefaultModelLineageBuilder
      * Update the remote repository set used to resolve parent POMs, by adding those declared in
      * the given model to the HEAD of a new list, then appending the old remote repositories list.
      * The specified pomFile is used for error reporting.
-     * @param profileManager
+     * @param externalProfileManager
      */
     private List updateRepositorySet( Model model,
                                       List oldArtifactRepositories,
@@ -315,7 +307,6 @@ public class DefaultModelLineageBuilder
     /**
      * Pull the parent specification out of the given model, construct an Artifact instance, and
      * resolve that artifact...then, return the resolved POM file for the parent.
-     * @param projectBuildCache
      * @param allowStubs
      */
     private ModelAndFile resolveParentPom( ModelAndFile child,
@@ -442,10 +433,10 @@ public class DefaultModelLineageBuilder
                                                 File childPomFile )
         throws ProjectBuildingException
     {
-        Artifact parentPomArtifact = artifactFactory.createBuildArtifact( modelParent.getGroupId(),
-                                                                          modelParent.getArtifactId(),
-                                                                          modelParent.getVersion(),
-                                                                          "pom" );
+        Artifact parentPomArtifact = new DefaultArtifact( modelParent.getGroupId(),
+            modelParent.getArtifactId(),
+            modelParent.getVersion(),
+            "pom", null, false, Artifact.SCOPE_RUNTIME, null );
 
         try
         {

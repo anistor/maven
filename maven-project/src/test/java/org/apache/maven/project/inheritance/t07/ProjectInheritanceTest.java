@@ -58,7 +58,6 @@ public class ProjectInheritanceTest
         File pom1 = new File( pom0Basedir, "p1/pom.xml" );
 
         // load everything...
-        MavenProject project0 = getProjectWithDependencies( pom0 );
         MavenProject project1 = getProjectWithDependencies( pom1 );
 
         assertEquals( pom0Basedir, project1.getParent().getBasedir().getCanonicalFile() );

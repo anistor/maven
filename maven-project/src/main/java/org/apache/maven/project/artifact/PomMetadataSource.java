@@ -20,7 +20,7 @@ package org.apache.maven.project.artifact;
  */
 
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.factory.ArtifactFactory;
+import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.artifact.metadata.ArtifactMetadataRetrievalException;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.artifact.resolver.metadata.ArtifactMetadata;
@@ -59,8 +59,6 @@ public class PomMetadataSource
 
     private MavenProjectBuilder mavenProjectBuilder;
 
-    private ArtifactFactory artifactFactory;
-
     // lazily instantiated and cached.
     private MavenProject superProject;
 
@@ -86,11 +84,10 @@ public class PomMetadataSource
 
         MavenProject project = null;
 
-        Artifact pomArtifact = artifactFactory.createProjectArtifact(
+        Artifact pomArtifact = new DefaultArtifact(
             artifactMetadata.getGroupId()
             , artifactMetadata.getArtifactId()
-            , artifactMetadata.getVersion()
-        );
+            , artifactMetadata.getVersion(), "pom", null, false, Artifact.SCOPE_RUNTIME, null );
 
         try
         {

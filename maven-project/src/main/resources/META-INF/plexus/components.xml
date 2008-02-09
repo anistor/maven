@@ -46,9 +46,6 @@ under the License.
           <role-hint>default</role-hint>
         </requirement>
         <requirement>
-          <role>org.apache.maven.artifact.factory.ArtifactFactory</role>
-        </requirement>
-        <requirement>
           <role>org.apache.maven.MavenTools</role>
         </requirement>
         <requirement>
@@ -133,9 +130,6 @@ under the License.
         </requirement>
         <requirement>
           <role>org.apache.maven.project.path.PathTranslator</role>
-        </requirement>
-        <requirement>
-          <role>org.apache.maven.artifact.factory.ArtifactFactory</role>
         </requirement>
         <requirement>
           <role>org.apache.maven.artifact.resolver.ArtifactResolver</role>
@@ -257,9 +251,6 @@ under the License.
       </configuration>
       <requirements>
         <requirement>
-          <role>org.apache.maven.artifact.factory.ArtifactFactory</role>
-        </requirement>
-        <requirement>
           <role>org.apache.maven.artifact.repository.metadata.RepositoryMetadataManager</role>
         </requirement>
         <requirement>
@@ -274,9 +265,6 @@ under the License.
       <implementation>org.apache.maven.project.artifact.MavenMetadataSource</implementation>
       <requirements>
         <requirement>
-          <role>org.apache.maven.artifact.factory.ArtifactFactory</role>
-        </requirement>
-        <requirement>
           <role>org.apache.maven.artifact.repository.metadata.RepositoryMetadataManager</role>
         </requirement>
         <requirement>
@@ -291,9 +279,6 @@ under the License.
       <implementation>org.apache.maven.project.artifact.MavenMetadataSource</implementation>
       <requirements>
         <requirement>
-          <role>org.apache.maven.artifact.factory.ArtifactFactory</role>
-        </requirement>
-        <requirement>
           <role>org.apache.maven.artifact.repository.metadata.RepositoryMetadataManager</role>
         </requirement>
         <requirement>
@@ -306,11 +291,6 @@ under the License.
       <role>org.apache.maven.artifact.resolver.metadata.MetadataSource</role>
       <role-hint>default</role-hint>
       <implementation>org.apache.maven.project.artifact.PomMetadataSource</implementation>
-      <requirements>
-        <requirement>
-          <role>org.apache.maven.artifact.factory.ArtifactFactory</role>
-        </requirement>
-      </requirements>
     </component>
 
     <component>

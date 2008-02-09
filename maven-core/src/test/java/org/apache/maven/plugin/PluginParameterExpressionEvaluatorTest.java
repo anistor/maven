@@ -21,7 +21,7 @@ package org.apache.maven.plugin;
 
 
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.factory.ArtifactFactory;
+import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.artifact.repository.DefaultArtifactRepository;
 import org.apache.maven.artifact.repository.layout.ArtifactRepositoryLayout;
@@ -321,10 +321,8 @@ public class PluginParameterExpressionEvaluatorTest
                                        String version )
         throws Exception
     {
-        ArtifactFactory artifactFactory = (ArtifactFactory) lookup( ArtifactFactory.ROLE );
-
         // TODO: used to be SCOPE_COMPILE, check
-        return artifactFactory.createBuildArtifact( groupId, artifactId, version, "jar" );
+        return new DefaultArtifact( groupId, artifactId, version, "jar", null, false, Artifact.SCOPE_RUNTIME, null );
     }
 
 }

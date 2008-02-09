@@ -19,20 +19,6 @@ under the License.
 
 <plexus>
   <components>
-    <!-- Due to PLX-108, have to work around it...
-    <component>
-      <role>org.apache.maven.artifact.ArtifactResolver</role>
-      <implementation>org.apache.maven.project.TestArtifactResolvertion>
-      <requirements>
-        <requirement>
-          <role>org.apache.maven.artifact.manager.WagonManager</role>
-        </requirement>
-        <requirement>
-          <role>org.apache.maven.artifact.factory.ArtifactFactory</role>
-        </requirement>
-      </requirements>
-    </component>
-    -->
     <component>
       <role>org.apache.maven.profiles.injection.ProfileInjector</role>
       <role-hint>test</role-hint>
@@ -44,9 +30,6 @@ under the License.
       <requirements>
         <requirement>
           <role>org.apache.maven.artifact.manager.WagonManager</role>
-        </requirement>
-        <requirement>
-          <role>org.apache.maven.artifact.factory.ArtifactFactory</role>
         </requirement>
         <requirement>
           <role>org.apache.maven.artifact.repository.ArtifactRepositoryFactory</role>
@@ -103,9 +86,6 @@ under the License.
         </requirement>
         <requirement>
           <role>org.apache.maven.project.path.PathTranslator</role>
-        </requirement>
-        <requirement>
-          <role>org.apache.maven.artifact.factory.ArtifactFactory</role>
         </requirement>
         <requirement>
           <role>org.apache.maven.artifact.resolver.ArtifactResolver</role>

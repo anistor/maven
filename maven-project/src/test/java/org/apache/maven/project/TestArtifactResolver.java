@@ -21,7 +21,7 @@ package org.apache.maven.project;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.InvalidRepositoryException;
-import org.apache.maven.artifact.factory.ArtifactFactory;
+import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.artifact.metadata.ArtifactMetadataRetrievalException;
 import org.apache.maven.artifact.metadata.ArtifactMetadataSource;
 import org.apache.maven.artifact.metadata.ResolutionGroup;
@@ -67,16 +67,12 @@ public class TestArtifactResolver
     static class Source
         implements ArtifactMetadataSource
     {
-        private ArtifactFactory artifactFactory;
-
         private final ArtifactRepositoryFactory repositoryFactory;
 
         private final PlexusContainer container;
 
-        public Source( ArtifactFactory artifactFactory, ArtifactRepositoryFactory repositoryFactory,
-                       PlexusContainer container )
+        public Source( ArtifactRepositoryFactory repositoryFactory, PlexusContainer container )
         {
-            this.artifactFactory = artifactFactory;
             this.repositoryFactory = repositoryFactory;
             this.container = container;
         }
@@ -166,9 +162,10 @@ public class TestArtifactResolver
                 }
 
                 VersionRange versionRange = VersionRange.createFromVersionSpec( d.getVersion() );
-                Artifact artifact = artifactFactory.createDependencyArtifact( d.getGroupId(), d.getArtifactId(),
+
+                Artifact artifact = new DefaultArtifact( d.getGroupId(), d.getArtifactId(),
                                                                               versionRange, d.getType(),
-                                                                              d.getClassifier(), scope,
+                                                                              d.getClassifier(), false, scope,
                                                                               inheritedScope );
                 if ( artifact != null )
                 {
@@ -182,7 +179,7 @@ public class TestArtifactResolver
 
     public Source source()
     {
-        return new Source( artifactFactory, repositoryFactory, container );
+        return new Source( repositoryFactory, container );
     }
 
     /**
@@ -200,7 +197,7 @@ public class TestArtifactResolver
         throws ArtifactResolutionException, ArtifactNotFoundException
     {
         return super.resolveTransitively( artifacts, originatingArtifact, localRepository, remoteRepositories,
-                                          new Source( artifactFactory, repositoryFactory, container ), filter );
+                                          new Source( repositoryFactory, container ), filter );
     }
 
     public ArtifactResolutionResult resolveTransitively( Set artifacts, Artifact originatingArtifact,
@@ -209,7 +206,7 @@ public class TestArtifactResolver
         throws ArtifactResolutionException, ArtifactNotFoundException
     {
         return super.resolveTransitively( artifacts, originatingArtifact, remoteRepositories, localRepository,
-                                          new Source( artifactFactory, repositoryFactory, container ) );
+                                          new Source( repositoryFactory, container ) );
     }
 
     public void contextualize( Context context )

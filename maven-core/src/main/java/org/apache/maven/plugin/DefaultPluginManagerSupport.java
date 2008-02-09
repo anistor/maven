@@ -1,7 +1,7 @@
 package org.apache.maven.plugin;
 
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.factory.ArtifactFactory;
+import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.artifact.resolver.ArtifactNotFoundException;
 import org.apache.maven.artifact.resolver.ArtifactResolutionException;
@@ -39,8 +39,6 @@ public class DefaultPluginManagerSupport
 
     private ArtifactResolver artifactResolver;
 
-    private ArtifactFactory artifactFactory;
-
     private MavenProjectBuilder mavenProjectBuilder;
 
     private RuntimeInformation runtimeInformation;
@@ -71,8 +69,6 @@ public class DefaultPluginManagerSupport
 
         List remoteRepositories = new ArrayList();
 
-//        remoteRepositories.addAll( project.getPluginArtifactRepositories() );
-
         remoteRepositories.addAll( project.getRemoteArtifactRepositories() );
 
         MavenProject pluginProject = buildPluginProject( plugin,
@@ -83,9 +79,7 @@ public class DefaultPluginManagerSupport
 
         checkPluginDependencySpec( plugin, pluginProject );
 
-        Artifact pluginArtifact = artifactFactory.createPluginArtifact( plugin.getGroupId(),
-                                                                        plugin.getArtifactId(),
-                                                                        versionRange );
+        Artifact pluginArtifact = new DefaultArtifact( plugin.getGroupId(), plugin.getArtifactId(), versionRange, "maven-plugin", null, false, Artifact.SCOPE_RUNTIME, null );
 
         pluginArtifact = project.replaceWithActiveArtifact( pluginArtifact );
 
@@ -99,9 +93,8 @@ public class DefaultPluginManagerSupport
                                             List remoteRepositories )
         throws InvalidPluginException
     {
-        Artifact artifact = artifactFactory.createProjectArtifact( plugin.getGroupId(),
-                                                                   plugin.getArtifactId(),
-                                                                   plugin.getVersion() );
+        Artifact artifact = new DefaultArtifact( plugin.getGroupId(), plugin.getArtifactId(), plugin.getVersion(),
+            "pom", null, false, Artifact.SCOPE_RUNTIME, null );
 
         try
         {
@@ -152,7 +145,7 @@ public class DefaultPluginManagerSupport
         ArtifactFilter filter = new ScopeArtifactFilter( "runtime" );
         try
         {
-            pluginProject.createArtifacts( artifactFactory, null, filter );
+            pluginProject.createArtifacts( null, filter );
         }
         catch ( InvalidDependencyVersionException e )
         {

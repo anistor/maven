@@ -21,7 +21,7 @@ package org.apache.maven.embedder;
 
 import org.apache.maven.Maven;
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.factory.ArtifactFactory;
+import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.artifact.handler.ArtifactHandler;
 import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.artifact.repository.ArtifactRepository;
@@ -149,8 +149,6 @@ public class MavenEmbedder
     private PluginDescriptorBuilder pluginDescriptorBuilder;
 
     private ArtifactRepositoryFactory artifactRepositoryFactory;
-
-    private ArtifactFactory artifactFactory;
 
     private ArtifactResolver artifactResolver;
 
@@ -485,7 +483,7 @@ public class MavenEmbedder
                                     String scope,
                                     String type )
     {
-        return artifactFactory.createArtifact( groupId, artifactId, version, scope, type );
+        return new DefaultArtifact( groupId, artifactId, version, type, null, false, Artifact.SCOPE_RUNTIME, null );
     }
 
     public Artifact createArtifactWithClassifier( String groupId,
@@ -494,7 +492,7 @@ public class MavenEmbedder
                                                   String type,
                                                   String classifier )
     {
-        return artifactFactory.createArtifactWithClassifier( groupId, artifactId, version, type, classifier );
+        return new DefaultArtifact( groupId, artifactId, version, type, classifier, false, Artifact.SCOPE_RUNTIME, null );
     }
 
     public void resolve( Artifact artifact,
@@ -677,8 +675,6 @@ public class MavenEmbedder
             // ----------------------------------------------------------------------
 
             artifactRepositoryFactory = (ArtifactRepositoryFactory) container.lookup( ArtifactRepositoryFactory.ROLE );
-
-            artifactFactory = (ArtifactFactory) container.lookup( ArtifactFactory.ROLE );
 
             artifactResolver = (ArtifactResolver) container.lookup( ArtifactResolver.ROLE, "default" );
 

@@ -1,7 +1,7 @@
 package org.apache.maven.execution;
 
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.factory.ArtifactFactory;
+import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.realm.DefaultMavenRealmManager;
 import org.codehaus.plexus.PlexusTestCase;
 import org.codehaus.plexus.logging.Logger;
@@ -14,14 +14,9 @@ import java.util.Collections;
 public class DefaultMavenRealmManagerTest
     extends PlexusTestCase
 {
-
-    private ArtifactFactory factory;
-
     protected void setUp() throws Exception
     {
         super.setUp();
-
-        factory = (ArtifactFactory) lookup( ArtifactFactory.ROLE );
     }
 
     public void test_ReuseSingleExtensionRealmFromMultipleProjectRealms_UsingTwoManagerInstances()
@@ -30,8 +25,8 @@ public class DefaultMavenRealmManagerTest
         ClassLoader cloader = Thread.currentThread().getContextClassLoader();
         URL jarResource = cloader.getResource( "org/apache/maven/execution/test-extension-1.jar" );
 
-        Artifact ext1 = factory.createBuildArtifact( "org.group", "artifact-ext", "1", "jar" );
-        Artifact ext2 = factory.createBuildArtifact( "org.group", "artifact-ext", "1", "jar" );
+        Artifact ext1 = new DefaultArtifact( "org.group", "artifact-ext", "1", "jar", null, false, Artifact.SCOPE_RUNTIME, null );
+        Artifact ext2 = new DefaultArtifact( "org.group", "artifact-ext", "1", "jar", null, false, Artifact.SCOPE_RUNTIME, null );
 
         assertNotSame( ext1, ext2 );
 
@@ -57,7 +52,7 @@ public class DefaultMavenRealmManagerTest
 
         mgr1.importExtensionsIntoProjectRealm( "org.group", pAid1, "2", ext1 );
 
-        String targetClass = ArtifactFactory.ROLE;
+        String targetClass = "org.apache.maven.artifact.factory.ArtifactFactory"; //ArtifactFactory.ROLE;
 
         Object result1 = getContainer().lookup( targetClass, "test", mgr1.getProjectRealm( "org.group", pAid1, "2" ) );
 

@@ -21,7 +21,7 @@ package org.apache.maven.plugin.version;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.ArtifactUtils;
-import org.apache.maven.artifact.factory.ArtifactFactory;
+import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.artifact.metadata.ArtifactMetadataRetrievalException;
 import org.apache.maven.artifact.metadata.ArtifactMetadataSource;
 import org.apache.maven.artifact.metadata.ResolutionGroup;
@@ -48,8 +48,6 @@ public class DefaultPluginVersionManager
     extends AbstractLogEnabled
     implements PluginVersionManager
 {
-    private ArtifactFactory artifactFactory;
-
     private ArtifactMetadataSource artifactMetadataSource;
 
     private MavenProjectBuilder mavenProjectBuilder;
@@ -181,7 +179,7 @@ public class DefaultPluginVersionManager
     {
         getLogger().info( "Attempting to resolve a version for plugin: " + groupId + ":" + artifactId + " using meta-version: " + metaVersionId  );
 
-        Artifact artifact = artifactFactory.createProjectArtifact( groupId, artifactId, metaVersionId );
+        Artifact artifact = new DefaultArtifact( groupId, artifactId, metaVersionId, "pom", null, false, Artifact.SCOPE_RUNTIME, null );
 
         String key = artifact.getDependencyConflictId();
 
@@ -215,7 +213,7 @@ public class DefaultPluginVersionManager
                 MavenProject pluginProject;
                 try
                 {
-                    artifact = artifactFactory.createProjectArtifact( groupId, artifactId, artifactVersion );
+                    artifact = new DefaultArtifact( groupId, artifactId, artifactVersion, "pom", null, false, Artifact.SCOPE_RUNTIME, null );
 
                     pluginProject = mavenProjectBuilder.buildFromRepository( artifact, project.getRemoteArtifactRepositories(), localRepository );
                 }

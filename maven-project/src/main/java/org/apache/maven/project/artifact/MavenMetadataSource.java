@@ -20,7 +20,7 @@ package org.apache.maven.project.artifact;
  */
 
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.factory.ArtifactFactory;
+import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.artifact.metadata.ArtifactMetadataRetrievalException;
 import org.apache.maven.artifact.metadata.ArtifactMetadataSource;
@@ -76,8 +76,6 @@ public class MavenMetadataSource
 
     private MavenProjectBuilder mavenProjectBuilder;
 
-    private ArtifactFactory artifactFactory;
-
     private RepositoryMetadataManager repositoryMetadataManager;
 
     // lazily instantiated and cached.
@@ -115,8 +113,8 @@ public class MavenMetadataSource
         do
         {
             // TODO: can we just modify the original?
-            pomArtifact = artifactFactory.createProjectArtifact( artifact.getGroupId(), artifact.getArtifactId(),
-                                                                 artifact.getVersion(), artifact.getScope() );
+            pomArtifact = new DefaultArtifact( artifact.getGroupId(), artifact.getArtifactId(), artifact.getVersion(),
+                "pom", null, false, artifact.getScope(), null );
 
             if ( Artifact.SCOPE_SYSTEM.equals( artifact.getScope() ) )
             {
@@ -252,8 +250,7 @@ public class MavenMetadataSource
                 // or used the inherited scope (should that be passed to the buildFromRepository method above?)
                 try
                 {
-                    artifacts = project.createArtifacts( artifactFactory, artifact.getScope(),
-                                                         artifact.getDependencyFilter() );
+                    artifacts = project.createArtifacts( artifact.getScope(), artifact.getDependencyFilter() );
                 }
                 catch ( InvalidDependencyVersionException e )
                 {
@@ -337,8 +334,7 @@ public class MavenMetadataSource
      * @todo desperately needs refactoring. It's just here because it's implementation is maven-project specific
      * @return {@link Set} &lt; {@link Artifact} >
      */
-    public static Set createArtifacts( ArtifactFactory artifactFactory, List dependencies, String inheritedScope,
-                                       ArtifactFilter dependencyFilter, MavenProject project )
+    public static Set createArtifacts( List dependencies, String inheritedScope, ArtifactFilter dependencyFilter, MavenProject project )
         throws InvalidDependencyVersionException
     {
         Set projectArtifacts = new LinkedHashSet( dependencies.size() );
@@ -365,9 +361,11 @@ public class MavenMetadataSource
             {
                 throw new InvalidDependencyVersionException( project.getId(), d, project.getFile(), e );
             }
-            Artifact artifact = artifactFactory.createDependencyArtifact( d.getGroupId(), d.getArtifactId(),
-                                                                          versionRange, d.getType(), d.getClassifier(),
-                                                                          scope, inheritedScope, d.isOptional() );
+
+            //TODO
+            Artifact artifact = new DefaultArtifact( d.getGroupId(), d.getArtifactId(),
+                versionRange, d.getType(), d.getClassifier(), d.isOptional(),
+                scope, inheritedScope );
 
             if ( Artifact.SCOPE_SYSTEM.equals( scope ) )
             {

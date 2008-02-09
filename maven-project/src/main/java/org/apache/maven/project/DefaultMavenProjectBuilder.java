@@ -25,8 +25,8 @@ import org.apache.maven.artifact.ArtifactStatus;
 import org.apache.maven.artifact.ArtifactUtils;
 import org.apache.maven.artifact.InvalidRepositoryException;
 import org.apache.maven.artifact.UnknownRepositoryLayoutException;
+import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
-import org.apache.maven.artifact.factory.ArtifactFactory;
 import org.apache.maven.artifact.metadata.ArtifactMetadataSource;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.artifact.repository.ArtifactRepositoryPolicy;
@@ -141,8 +141,6 @@ public class DefaultMavenProjectBuilder
     protected ArtifactResolver artifactResolver;
 
     protected ArtifactMetadataSource artifactMetadataSource;
-
-    private ArtifactFactory artifactFactory;
 
     private ModelInheritanceAssembler modelInheritanceAssembler;
 
@@ -334,7 +332,7 @@ public class DefaultMavenProjectBuilder
 
         try
         {
-            project.setDependencyArtifacts( project.createArtifacts( artifactFactory, null, null ) );
+            project.setDependencyArtifacts( project.createArtifacts( null, null ) );
         }
         catch ( InvalidDependencyVersionException e )
         {
@@ -362,8 +360,7 @@ public class DefaultMavenProjectBuilder
     //
     // ----------------------------------------------------------------------
 
-    private Map createManagedVersionMap( String projectId,
-                                         DependencyManagement dependencyManagement, File pomFile )
+    private Map createManagedVersionMap( String projectId, DependencyManagement dependencyManagement, File pomFile )
         throws ProjectBuildingException
     {
         Map map = null;
@@ -385,8 +382,8 @@ public class DefaultMavenProjectBuilder
                 {
                     VersionRange versionRange = VersionRange.createFromVersionSpec( d.getVersion() );
 
-                    Artifact artifact = artifactFactory.createDependencyArtifact( d.getGroupId(), d.getArtifactId(), versionRange, d.getType(),
-                        d.getClassifier(), d.getScope(), d.isOptional() );
+                    Artifact artifact = new DefaultArtifact( d.getGroupId(), d.getArtifactId(), versionRange, d.getType(),
+                        d.getClassifier(), d.isOptional(), d.getScope(), null );
 
                     if ( Artifact.SCOPE_SYSTEM.equals( d.getScope() ) && ( d.getSystemPath() != null ) )
                     {
@@ -478,10 +475,8 @@ public class DefaultMavenProjectBuilder
                 + artifact.getArtifactId() + ":" + artifact.getVersion() + ") of type: "
                 + artifact.getType() + "; constructing POM artifact instead." );
 
-            projectArtifact = artifactFactory.createProjectArtifact( artifact.getGroupId(),
-                artifact.getArtifactId(),
-                artifact.getVersion(),
-                artifact.getScope() );
+            projectArtifact = new DefaultArtifact( artifact.getGroupId(), artifact.getArtifactId(),
+                artifact.getVersion(), "pom", null, false, artifact.getScope(), null );
         }
 
         Model model;
@@ -938,8 +933,8 @@ public class DefaultMavenProjectBuilder
 
         // TODO: such a call in MavenMetadataSource too - packaging not really the intention of type
         // TODO: maybe not strictly correct, while we should enfore that packaging has a type handler of the same id, we don't
-        Artifact projectArtifact = artifactFactory.createBuildArtifact( project.getGroupId(), project.getArtifactId(),
-            project.getVersion(), project.getPackaging() );
+        Artifact projectArtifact = new DefaultArtifact( project.getGroupId(), project.getArtifactId(), project.getVersion(), project.getPackaging(),
+            null, false, Artifact.SCOPE_RUNTIME, null );
         project.setArtifact( projectArtifact );
 
 //        project.setPluginArtifactRepositories( mavenTools.buildArtifactRepositories( model.getPluginRepositories() ) );
@@ -1053,8 +1048,8 @@ public class DefaultMavenProjectBuilder
                 lastProject.setParent( project );
                 project = lastProject.getParent();
 
-                lastProject.setParentArtifact( artifactFactory.createParentArtifact( project.getGroupId(), project
-                    .getArtifactId(), project.getVersion() ) );
+                lastProject.setParentArtifact( new DefaultArtifact( project.getGroupId(), project.getArtifactId(), project.getVersion(), "pom", 
+                    null, false, Artifact.SCOPE_RUNTIME, null ) );
             }
 
             // NOTE: the caching aspect may replace the parent project instance, so we apply profiles here.
@@ -1112,8 +1107,9 @@ public class DefaultMavenProjectBuilder
                     Dependency dep = (Dependency)iter.next();
                     if (dep.getType().equals("pom"))
                     {
-                        Artifact artifact = artifactFactory.createProjectArtifact( dep.getGroupId(), dep.getArtifactId(),
-                                                                                  dep.getVersion(), dep.getScope() );
+                        Artifact artifact = new DefaultArtifact( dep.getGroupId(), dep.getArtifactId(),
+                            dep.getVersion(), "pom", null, false, dep.getScope(), null );
+
                         MavenProject project = buildFromRepository(artifact, parentSearchRepositories, localRepository, false);
 
                         DependencyManagement depMgmt = project.getDependencyManagement();
@@ -1243,8 +1239,7 @@ public class DefaultMavenProjectBuilder
             Artifact artifact;
             try
             {
-                artifact = artifactFactory.createPluginArtifact( p.getGroupId(), p.getArtifactId(),
-                    VersionRange.createFromVersionSpec( version ) );
+                artifact = new DefaultArtifact( p.getGroupId(), p.getArtifactId(), VersionRange.createFromVersionSpec( version ), "maven-plugin", null, false, Artifact.SCOPE_RUNTIME, null );
             }
             catch ( InvalidVersionSpecificationException e )
             {
@@ -1301,8 +1296,9 @@ public class DefaultMavenProjectBuilder
                 Artifact artifact;
                 try
                 {
-                    artifact = artifactFactory.createPluginArtifact( p.getGroupId(), p.getArtifactId(),
-                        VersionRange.createFromVersionSpec( version ) );
+                    artifact = new DefaultArtifact( p.getGroupId(), p.getArtifactId(),
+                        VersionRange.createFromVersionSpec( version ), "maven-plugin", null, false,
+                        Artifact.SCOPE_RUNTIME, null );
                 }
                 catch ( InvalidVersionSpecificationException e )
                 {
@@ -1360,9 +1356,7 @@ public class DefaultMavenProjectBuilder
                 Artifact artifact;
                 try
                 {
-                    VersionRange versionRange = VersionRange.createFromVersionSpec( version );
-                    artifact =
-                        artifactFactory.createExtensionArtifact( ext.getGroupId(), ext.getArtifactId(), versionRange );
+                    artifact = new DefaultArtifact( ext.getGroupId(), ext.getArtifactId(), VersionRange.createFromVersionSpec( version ), "jar", null, false, Artifact.SCOPE_RUNTIME, null );                    
                 }
                 catch ( InvalidVersionSpecificationException e )
                 {

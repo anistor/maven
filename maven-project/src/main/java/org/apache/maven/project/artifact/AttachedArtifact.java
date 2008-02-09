@@ -39,8 +39,7 @@ public class AttachedArtifact
 
     public AttachedArtifact( Artifact parent, String type, String classifier )
     {
-        super( parent.getGroupId(), parent.getArtifactId(), parent.getVersionRange(), parent.getScope(), type,
-               classifier, parent.isOptional() );
+        super( parent.getGroupId(), parent.getArtifactId(), parent.getVersionRange(), type, classifier, parent.isOptional(), parent.getScope(), null );
 
         setDependencyTrail( Collections.singletonList( parent.getId() ) );
 
