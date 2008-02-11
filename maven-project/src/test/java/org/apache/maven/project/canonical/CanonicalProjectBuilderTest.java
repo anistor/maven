@@ -39,6 +39,7 @@ public class CanonicalProjectBuilderTest
     public void testProjectBuilder()
         throws Exception
     {
+        // TODO: test for 4.1.0
         File f = getFileForClasspathResource( "canonical-pom.xml" );
 
         MavenProject project = getProject( f );
@@ -47,7 +48,8 @@ public class CanonicalProjectBuilderTest
         // Top-level elements
         // ----------------------------------------------------------------------
 
-        assertEquals( "4.0.0", project.getModelVersion() );
+        assertEquals( "4.0.0", project.getOriginalModelVersion() );
+        assertEquals( "4.1.0", project.getModelVersion() );
 
         // ----------------------------------------------------------------------
         // Plugins

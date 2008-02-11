@@ -635,7 +635,7 @@ public final class ModelUtils
 
             newProfile.setReporting( cloneProfileReporting( profile.getReporting() ) );
 
-            newProfile.setReports( profile.getReports() );
+            // no need to convert reports, it's deprecated
 
             newProfile.setRepositories( cloneProfileRepositories( profile.getRepositories() ) );
 

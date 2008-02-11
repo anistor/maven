@@ -36,7 +36,7 @@ import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException
 import org.apache.maven.artifact.versioning.VersionRange;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Model;
-import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
+import org.apache.maven.model.io.stax.MavenStaxReader;
 import org.codehaus.plexus.PlexusConstants;
 import org.codehaus.plexus.PlexusContainer;
 import org.codehaus.plexus.context.Context;
@@ -46,6 +46,7 @@ import org.codehaus.plexus.util.IOUtil;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
+import javax.xml.stream.XMLStreamException;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -94,8 +95,8 @@ public class TestArtifactResolver
                 {
                     String name = "/projects/scope/transitive-" + scope + "-dep.xml";
                     r = new InputStreamReader( getClass().getResourceAsStream( name ) );
-                    MavenXpp3Reader reader = new MavenXpp3Reader();
-                    model = reader.read( r );
+                    ModelReader reader = new ModelReader();
+                    model = reader.readModel( IOUtil.toString( r ), true );
                 }
                 else
                 {
@@ -108,7 +109,7 @@ public class TestArtifactResolver
             {
                 throw new ArtifactMetadataRetrievalException( e );
             }
-            catch ( XmlPullParserException e )
+            catch ( XMLStreamException e )
             {
                 throw new ArtifactMetadataRetrievalException( e );
             }

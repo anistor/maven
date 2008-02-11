@@ -35,9 +35,24 @@ under the License.
         <groupId>org.codehaus.modello</groupId>
         <artifactId>modello-maven-plugin</artifactId>
         <configuration>
-          <version>4.0.0</version>
+          <version>4.1.0</version>
           <model>src/main/mdo/maven.mdo</model>
+          <packagedVersions>
+            <packagedVersion>4.0.0</packagedVersion>
+            <packagedVersion>4.1.0</packagedVersion>
+          </packagedVersions>
         </configuration>
+        <executions>
+          <execution>
+            <id>standard</id>
+            <goals>
+              <goal>converters</goal>
+              <goal>java</goal>
+              <goal>stax-reader</goal>
+              <goal>xpp3-writer</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
@@ -49,7 +64,6 @@ under the License.
           <plugin>
             <groupId>org.codehaus.modello</groupId>
             <artifactId>modello-maven-plugin</artifactId>
-            <version>1.0-alpha-8</version>
             <executions>
               <execution>
                 <id>v3</id>
@@ -85,6 +99,11 @@ under the License.
     </profile>
   </profiles>
   <dependencies>
+    <dependency>
+      <groupId>stax</groupId>
+      <artifactId>stax-api</artifactId>
+      <version>1.0.1</version>
+    </dependency>
     <dependency>
       <groupId>org.codehaus.plexus</groupId>
       <artifactId>plexus-utils</artifactId>

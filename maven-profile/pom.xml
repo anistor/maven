@@ -37,6 +37,16 @@ under the License.
           <version>1.0.0</version>
           <model>src/main/mdo/profiles.mdo</model>
         </configuration>
+        <executions>
+          <execution>
+            <id>standard</id>
+            <goals>
+              <goal>java</goal>
+              <goal>xpp3-reader</goal>
+              <goal>xpp3-writer</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

@@ -1,0 +1,93 @@
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+
+<!-- START SNIPPET: superpom -->
+<project xmlns="http://maven.apache.org/POM/4.1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.1.0 http://maven.apache.org/maven-4.1.0.xsd">
+  <!-- TODO: shouldn't be needed if Modello used the namespace -->
+  <modelVersion>4.1.0</modelVersion>
+  <name>Maven Default Project</name>
+
+  <repositories>
+    <repository id="central" name="Maven Central Repository" layout="default" url="http://repo1.maven.org/maven2">
+      <snapshots enabled="false"/>
+    </repository>
+  </repositories>
+
+  <pluginRepositories>
+    <pluginRepository id="central" name="Maven Plugin Repository" layout="default" url="http://repo1.maven.org/maven2">
+      <snapshots enabled="false"/>
+      <releases updatePolicy="never"/>
+    </pluginRepository>
+  </pluginRepositories>
+
+  <build directory="target"
+         outputDirectory="target/classes"
+         finalName="${artifactId}-${version}"
+         testOutputDirectory="target/test-classes"
+         sourceDirectory="src/main/java"
+         scriptSourceDirectory="src/main/scripts"
+         testSourceDirectory="src/test/java">
+    <resources>
+      <resource directory="src/main/resources"/>
+    </resources>
+    <testResources>
+      <testResource directory="src/test/resources" />
+    </testResources>
+  </build>
+
+  <reporting outputDirectory="target/site" />
+
+  <profiles>
+    <profile id="release-profile">
+      <activation>
+        <property name="performRelease" value="true" />
+      </activation>
+
+      <build>
+        <plugins>
+          <plugin inherited="true" groupId="org.apache.maven.plugins" artifactId="maven-source-plugin">
+            <executions>
+              <execution id="attach-sources">
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin inherited="true" groupId="org.apache.maven.plugins" artifactId="maven-javadoc-plugin">
+            <executions>
+              <execution id="attach-javadocs">
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin inherited="true" groupId="org.apache.maven.plugins" artifactId="maven-deploy-plugin">
+            <configuration>
+              <updateReleaseInfo>true</updateReleaseInfo>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+</project>
+    <!-- END SNIPPET: superpom -->

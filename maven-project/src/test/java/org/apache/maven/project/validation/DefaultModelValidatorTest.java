@@ -20,10 +20,13 @@ package org.apache.maven.project.validation;
  */
 
 import org.apache.maven.model.Model;
-import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
+import org.apache.maven.model.io.stax.MavenStaxReader;
 import org.apache.maven.project.AbstractMavenProjectTestCase;
+import org.apache.maven.project.ModelReader;
 import org.codehaus.plexus.util.ReaderFactory;
+import org.codehaus.plexus.util.IOUtil;
 
+import javax.xml.stream.XMLStreamException;
 import java.io.Reader;
 import java.util.List;
 
@@ -41,11 +44,16 @@ public class DefaultModelValidatorTest
     public void testMissingModelVersion()
         throws Exception
     {
-        ModelValidationResult result = validate( "missing-modelVersion-pom.xml" );
+        try
+        {
+            validate( "missing-modelVersion-pom.xml" );
 
-        assertEquals( 1, result.getMessageCount() );
-
-        assertEquals( "'modelVersion' is missing.", result.getMessage( 0 ) );
+            fail( "Should have failed to parse missing model version" );
+        }
+        catch ( XMLStreamException e )
+        {
+            assertTrue( true );
+        }
     }
 
     public void testMissingArtifactId()
@@ -165,17 +173,16 @@ public class DefaultModelValidatorTest
     public void testMissingAll()
         throws Exception
     {
-        ModelValidationResult result = validate( "missing-1-pom.xml" );
+        try
+        {
+            validate( "missing-1-pom.xml" );
 
-        assertEquals( 4, result.getMessageCount() );
-
-        List messages = result.getMessages();
-
-        assertTrue( messages.contains( "\'modelVersion\' is missing." ) );
-        assertTrue( messages.contains( "\'groupId\' is missing." ) );
-        assertTrue( messages.contains( "\'artifactId\' is missing." ) );
-        assertTrue( messages.contains( "\'version\' is missing." ) );
-        // type is inherited from the super pom
+            fail( "Should have failed to parse missing model version" );
+        }
+        catch ( XMLStreamException e )
+        {
+            assertTrue( true );
+        }
     }
 
     public void testMissingPluginArtifactId()
@@ -221,11 +228,13 @@ public class DefaultModelValidatorTest
     {
         Reader input = ReaderFactory.newXmlReader( getFileForClasspathResource( "validation/" + testName ) );
 
-        MavenXpp3Reader reader = new MavenXpp3Reader();
+        ModelReader reader = new ModelReader();
 
         validator = (ModelValidator) lookup( ModelValidator.ROLE );
 
-        model = reader.read( input );
+        String modelSource = IOUtil.toString( input );
+
+        model = reader.readModel( modelSource, true );
 
         ModelValidationResult result = validator.validate( model );
 

@@ -87,8 +87,7 @@ public class ProjectInheritanceTest
         // Value taken from super model
         // ----------------------------------------------------------------------
 
-        assertEquals( "4.0.0", p4.getModelVersion() );
-
-        assertEquals( "4.0.0", p4.getModelVersion() );
+        assertEquals( "4.0.0", p4.getOriginalModelVersion() );
+        assertEquals( "4.1.0", p4.getModelVersion() );
     }
 }

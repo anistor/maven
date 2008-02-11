@@ -20,8 +20,8 @@ package org.apache.maven.project.interpolation;
  */
 
 import org.apache.maven.model.Model;
-import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
 import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
+import org.apache.maven.model.io.stax.MavenStaxReader;
 import org.codehaus.plexus.logging.AbstractLogEnabled;
 import org.codehaus.plexus.logging.Logger;
 import org.codehaus.plexus.util.StringUtils;
@@ -29,6 +29,7 @@ import org.codehaus.plexus.util.cli.CommandLineUtils;
 import org.codehaus.plexus.util.introspection.ReflectionValueExtractor;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
+import javax.xml.stream.XMLStreamException;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
@@ -99,7 +100,8 @@ public class RegexBasedModelInterpolator
 
         StringReader sReader = new StringReader( serializedModel );
 
-        MavenXpp3Reader modelReader = new MavenXpp3Reader();
+        // no need for conversion tools, we are always reading the latest version
+        MavenStaxReader modelReader = new MavenStaxReader();
         try
         {
             model = modelReader.read( sReader );
@@ -109,7 +111,7 @@ public class RegexBasedModelInterpolator
             throw new ModelInterpolationException(
                 "Cannot read project model from interpolating filter of serialized version.", e );
         }
-        catch ( XmlPullParserException e )
+        catch ( XMLStreamException e )
         {
             throw new ModelInterpolationException(
                 "Cannot read project model from interpolating filter of serialized version.", e );

@@ -115,8 +115,9 @@ public class ProjectInheritanceTest
         // Value taken from super model
         // ----------------------------------------------------------------------
 
-        assertEquals( "4.0.0", project4.getModelVersion() );
-        
+        assertEquals( "4.1.0", project4.getModelVersion() );
+        assertEquals( "4.0.0", project4.getOriginalModelVersion() );
+
         Build build = project4.getBuild();
         List plugins = build.getPlugins();
         

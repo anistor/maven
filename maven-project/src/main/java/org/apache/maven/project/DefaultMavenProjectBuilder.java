@@ -49,7 +49,8 @@ import org.apache.maven.model.Plugin;
 import org.apache.maven.model.Profile;
 import org.apache.maven.model.ReportPlugin;
 import org.apache.maven.model.Repository;
-import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
+import org.apache.maven.model.io.stax.MavenStaxReaderDelegate;
+import org.apache.maven.model.io.stax.MavenStaxReader;
 import org.apache.maven.profiles.DefaultProfileManager;
 import org.apache.maven.profiles.MavenProfilesBuilder;
 import org.apache.maven.profiles.ProfileManager;
@@ -79,6 +80,7 @@ import org.codehaus.plexus.util.ReaderFactory;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
+import javax.xml.stream.XMLStreamException;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -137,7 +139,7 @@ Notes
  */
 public class DefaultMavenProjectBuilder
     extends AbstractLogEnabled
-    implements MavenProjectBuilder, Initializable, Contextualizable
+    implements MavenProjectBuilder, Contextualizable
 {
     // TODO: remove
     private PlexusContainer container;
@@ -160,8 +162,7 @@ public class DefaultMavenProjectBuilder
 
     private Map processedProjectCache = new HashMap();
 
-    // TODO: make it a component
-    private MavenXpp3Reader modelReader;
+    private ModelReader modelReader = new ModelReader();
 
     private PathTranslator pathTranslator;
 
@@ -179,12 +180,7 @@ public class DefaultMavenProjectBuilder
 
     private WagonManager wagonManager;
 
-    public static final String MAVEN_MODEL_VERSION = "4.0.0";
-
-    public void initialize()
-    {
-        modelReader = new MavenXpp3Reader();
-    }
+    public static final String DEFAULT_SUPER_MODEL_VERSION = "4.1.0";
 
     // ----------------------------------------------------------------------
     // MavenProjectBuilder Implementation
@@ -256,7 +252,7 @@ public class DefaultMavenProjectBuilder
                                                      ProfileManager profileManager )
         throws ProjectBuildingException
     {
-        Model superModel = getSuperModel();
+        Model superModel = getSuperModel( DEFAULT_SUPER_MODEL_VERSION );
 
         superModel.setGroupId( STANDALONE_SUPERPOM_GROUPID );
 
@@ -475,7 +471,7 @@ public class DefaultMavenProjectBuilder
         Model model = readModel( "unknown", projectDescriptor, true );
 
         MavenProject project = buildInternal( projectDescriptor.getAbsolutePath(), model, localRepository,
-                                              buildArtifactRepositories( getSuperModel() ), projectDescriptor,
+                                              buildArtifactRepositories( getSuperModel( model.getModelVersion() ) ), projectDescriptor,
                                               profileManager, true );
 
         if ( checkDistributionManagementStatus )
@@ -711,7 +707,7 @@ public class DefaultMavenProjectBuilder
             projectDir = projectDescriptor.getAbsoluteFile().getParentFile();
         }
 
-        Model superModel = getSuperModel();
+        Model superModel = getSuperModel( model.getModelVersion() );
 
         //TODO mkleint - use the (Container, Properties) constructor to make system properties embeddable
         // shall the ProfileManager intefrace expose the properties?
@@ -1514,18 +1510,11 @@ public class DefaultMavenProjectBuilder
     {
         String modelSource = IOUtil.toString( reader );
 
-        if ( modelSource.indexOf( "<modelVersion>" + MAVEN_MODEL_VERSION ) < 0 )
-        {
-            throw new InvalidProjectModelException( projectId, pomLocation, "Not a v" + MAVEN_MODEL_VERSION  + " POM." );
-        }
-
-        StringReader sReader = new StringReader( modelSource );
-
         try
         {
-            return modelReader.read( sReader, strict );
+            return modelReader.readModel( modelSource, strict );
         }
-        catch ( XmlPullParserException e )
+        catch ( XMLStreamException e )
         {
             throw new InvalidProjectModelException( projectId, pomLocation,
                                                     "Parse error reading POM. Reason: " + e.getMessage(), e );
@@ -1700,10 +1689,10 @@ public class DefaultMavenProjectBuilder
     //
     // ----------------------------------------------------------------------
 
-    private Model getSuperModel()
+    private Model getSuperModel( String mavenModelVersion )
         throws ProjectBuildingException
     {
-        URL url = DefaultMavenProjectBuilder.class.getResource( "pom-" + MAVEN_MODEL_VERSION + ".xml" );
+        URL url = DefaultMavenProjectBuilder.class.getResource( "pom-" + mavenModelVersion + ".xml" );
 
         String projectId = safeVersionlessKey( STANDALONE_SUPERPOM_GROUPID, STANDALONE_SUPERPOM_ARTIFACTID );
 

@@ -82,11 +82,11 @@ import org.codehaus.plexus.util.xml.Xpp3Dom;
 public class MavenProject
 {
     public static final String EMPTY_PROJECT_GROUP_ID = "unknown";
-    
+
     public static final String EMPTY_PROJECT_ARTIFACT_ID = "empty-project";
-    
+
     public static final String EMPTY_PROJECT_VERSION = "0";
-    
+
     private Model model;
 
     private MavenProject parent;
@@ -147,17 +147,17 @@ public class MavenProject
     private Build buildOverlay;
 
     private boolean executionRoot;
-    
+
     private Map moduleAdjustments;
 
     public MavenProject()
     {
         Model model = new Model();
-        
+
         model.setGroupId( EMPTY_PROJECT_GROUP_ID );
         model.setArtifactId( EMPTY_PROJECT_ARTIFACT_ID );
         model.setVersion( EMPTY_PROJECT_VERSION );
-        
+
         this.model = model;
     }
 
@@ -178,71 +178,71 @@ public class MavenProject
         {
             this.dependencyArtifacts = Collections.unmodifiableSet( project.dependencyArtifacts );
         }
-        
+
         if ( project.artifacts != null )
         {
             this.artifacts = Collections.unmodifiableSet( project.artifacts );
         }
-        
+
         if ( project.pluginArtifacts != null )
         {
             this.pluginArtifacts = Collections.unmodifiableSet( project.pluginArtifacts );
         }
-        
+
         if ( project.reportArtifacts != null )
         {
             this.reportArtifacts = Collections.unmodifiableSet( project.reportArtifacts );
-        }        
-        
+        }
+
         if ( project.extensionArtifacts != null )
         {
             this.extensionArtifacts = Collections.unmodifiableSet( project.extensionArtifacts );
-        }        
-        
+        }
+
         this.parentArtifact = project.parentArtifact;
 
         if ( project.remoteArtifactRepositories != null )
         {
             this.remoteArtifactRepositories = Collections.unmodifiableList( project.remoteArtifactRepositories );
-        }        
-        
+        }
+
         if ( project.pluginArtifactRepositories != null )
         {
             this.pluginArtifactRepositories = Collections.unmodifiableList( project.pluginArtifactRepositories );
-        }        
-        
+        }
+
         if ( project.collectedProjects != null )
         {
             this.collectedProjects = Collections.unmodifiableList( project.collectedProjects );
-        }        
-        
+        }
+
         if ( project.activeProfiles != null )
         {
             this.activeProfiles = Collections.unmodifiableList( project.activeProfiles );
-        }        
-        
+        }
+
         if ( project.getAttachedArtifacts() != null )
         {
             // clone properties modifyable by plugins in a forked lifecycle
             this.attachedArtifacts = new ArrayList( project.getAttachedArtifacts() );
-        }        
-        
+        }
+
         if ( project.compileSourceRoots != null )
         {
             // clone source roots
             this.compileSourceRoots = new ArrayList( project.compileSourceRoots );
-        }        
-        
+        }
+
         if ( project.testCompileSourceRoots != null )
         {
             this.testCompileSourceRoots = new ArrayList( project.testCompileSourceRoots );
-        }        
-        
+        }
+
         if ( project.scriptSourceRoots != null )
         {
             this.scriptSourceRoots = new ArrayList( project.scriptSourceRoots );
-        }        
-        
+        }
+
         this.model = ModelUtils.cloneModel( project.model );
 
         if ( project.originalModel != null )
@@ -261,42 +261,42 @@ public class MavenProject
         {
             setManagedVersionMap( new ManagedVersionMap( project.getManagedVersionMap() ) );
         }
-        
+
         if ( project.releaseArtifactRepository != null )
         {
             releaseArtifactRepository = project.releaseArtifactRepository;
         }
-        
+
         if ( project.snapshotArtifactRepository != null )
         {
             snapshotArtifactRepository = project.snapshotArtifactRepository;
         }
     }
-    
+
     public String getModulePathAdjustment( MavenProject moduleProject ) throws IOException
     {
         // FIXME: This is hacky. What if module directory doesn't match artifactid, and parent
         // is coming from the repository??
-        
+
         // FIXME: If there is a hierarchy of three projects, with the url specified at the top, 
         // and the top two projects are referenced from copies that are in the repository, the
         // middle-level POM doesn't have a File associated with it (or the file's directory is
         // of an unexpected name), and module path adjustments fail.
         String module = moduleProject.getArtifactId();
-        
+
         File moduleFile = moduleProject.getFile();
-        
+
         if ( moduleFile != null )
         {
             File moduleDir = moduleFile.getCanonicalFile().getParentFile();
-            
+
             module = moduleDir.getName();
         }
-        
+
         if ( moduleAdjustments == null )
         {
             moduleAdjustments = new HashMap();
-            
+
             List modules = getModules();
             if ( modules != null )
             {
@@ -304,21 +304,21 @@ public class MavenProject
                 {
                     String modulePath = (String) it.next();
                     String moduleName = modulePath;
-                    
+
                     if ( moduleName.endsWith( "/" ) || moduleName.endsWith( "\\" ) )
                     {
                         moduleName = moduleName.substring( 0, moduleName.length() - 1 );
                     }
-                    
+
                     int lastSlash = moduleName.lastIndexOf( '/' );
-                    
+
                     if ( lastSlash < 0 )
                     {
                         lastSlash = moduleName.lastIndexOf( '\\' );
                     }
-                    
+
                     String adjustment = null;
-                    
+
                     if ( lastSlash > -1 )
                     {
                         moduleName = moduleName.substring( lastSlash + 1 );
@@ -329,7 +329,7 @@ public class MavenProject
                 }
             }
         }
-        
+
         return (String) moduleAdjustments.get( module );
     }
 
@@ -568,7 +568,7 @@ public class MavenProject
         list.add( getBuild().getTestOutputDirectory() );
 
         list.add( getBuild().getOutputDirectory() );
-        
+
         for ( Iterator i = getArtifacts().iterator(); i.hasNext(); )
         {
             Artifact a = (Artifact) i.next();
@@ -842,12 +842,12 @@ public class MavenProject
     public String getGroupId()
     {
         String groupId = model.getGroupId();
-        
+
         if ( groupId == null && model.getParent() != null )
         {
             groupId = model.getParent().getGroupId();
         }
-        
+
         return groupId;
     }
 
@@ -887,12 +887,12 @@ public class MavenProject
     public String getVersion()
     {
         String version = model.getVersion();
-        
+
         if ( version == null && model.getParent() != null )
         {
             version = model.getParent().getVersion();
         }
-        
+
         return version;
     }
 
@@ -1109,7 +1109,7 @@ public class MavenProject
     /**
      * All dependencies that this project has, including transitive ones.
      * Contents are lazily populated, so depending on what phases have run dependencies in some scopes won't be included.
-     * eg. if only compile phase has run, dependencies with scope test won't be included. 
+     * eg. if only compile phase has run, dependencies with scope test won't be included.
      * @return {@link Set} &lt; {@link Artifact} >
      * @see #getDependencyArtifacts() to get only direct dependencies
      */
@@ -1249,7 +1249,7 @@ public class MavenProject
 
         return pluginMgmt;
     }
-    
+
     private Build getModelBuild()
     {
         Build build = model.getBuild();
@@ -1260,7 +1260,7 @@ public class MavenProject
 
             model.setBuild( build );
         }
-        
+
         return build;
     }
 
@@ -1276,7 +1276,7 @@ public class MavenProject
             build.flushPluginMap();
         }
     }
-    
+
     public void injectPluginManagementInfo( Plugin plugin )
     {
         PluginManagement pm = getModelBuild().getPluginManagement();
@@ -1684,12 +1684,12 @@ public class MavenProject
         }
         return pluginArtifact;
     }
-    
+
     private void addArtifactPath(Artifact a, List list) throws DependencyResolutionRequiredException
     {
         String refId = getProjectReferenceId( a.getGroupId(), a.getArtifactId(), a.getVersion() );
         MavenProject project = (MavenProject) projectReferences.get( refId );
-        
+
         boolean projectDirFound = false;
         if ( project != null )
         {
@@ -1718,7 +1718,7 @@ public class MavenProject
             list.add( file.getPath() );
         }
     }
-    
+
     /**
      * Default toString
      */
@@ -1745,4 +1745,12 @@ public class MavenProject
         return sb.toString();
     }
 
+    public String getOriginalModelVersion()
+    {
+        if ( model.getOriginalModelVersion() == null )
+        {
+            return model.getModelVersion();
+        }
+        return model.getOriginalModelVersion();
+    }
 }
