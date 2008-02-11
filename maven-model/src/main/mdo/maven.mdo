@@ -4826,7 +4826,7 @@
           </description>
           <required>false</required>
         </field>
-        <field xml.attribute="">
+        <field xml.attribute="true">
           <name>maven</name>
           <version>4.1.0+</version>
           <type>String</type>
