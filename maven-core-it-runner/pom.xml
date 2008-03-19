@@ -31,7 +31,7 @@ under the License.
         <dependency>
             <groupId>org.apache.maven</groupId>
             <artifactId>apache-maven</artifactId>
-            <version>2.0.9-SNAPSHOT</version>
+            <version>${project.version}</version>
             <classifier>bin</classifier>
             <type>tar.gz</type>
         </dependency>
@@ -53,8 +53,8 @@ under the License.
                             <artifactItems>
                                 <artifactItem>
                                     <groupId>org.apache.maven</groupId>
-                                    <artifactId>assembly</artifactId>
-                                    <version>${pom.version}</version>
+                                    <artifactId>apache-maven</artifactId>
+                                    <version>${project.version}</version>
                                     <classifier>bin</classifier>
                                     <type>tar.gz</type>
                                 </artifactItem>
@@ -100,7 +100,7 @@ under the License.
                             <systemProperties>
                                 <property>
                                     <name>maven.home</name>
-                                    <value>${basedir}/target/maven-installation/apache-maven-${pom.version}</value>
+                                    <value>${basedir}/target/maven-installation/apache-maven-${project.version}</value>
                                 </property>
                                 <property>
                                     <name>maven.test.tmpdir</name>
@@ -132,7 +132,7 @@ under the License.
                             <systemProperties>
                                 <property>
                                     <name>maven.home</name>
-                                    <value>${basedir}/target/maven-installation/apache-maven-${pom.version}</value>
+                                    <value>${basedir}/target/maven-installation/apache-maven-${project.version}</value>
                                 </property>
                                 <property>
                                     <name>maven.test.tmpdir</name>
