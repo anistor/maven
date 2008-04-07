@@ -20,6 +20,20 @@ package org.apache.maven.plugin;
  * under the License.
  */
 
+import java.io.File;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import org.apache.maven.MavenArtifactFilterManager;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.factory.ArtifactFactory;
@@ -52,7 +66,6 @@ import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.plugin.version.PluginVersionManager;
 import org.apache.maven.plugin.version.PluginVersionNotFoundException;
 import org.apache.maven.plugin.version.PluginVersionResolutionException;
-import org.apache.maven.project.DuplicateArtifactAttachmentException;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.MavenProjectBuilder;
 import org.apache.maven.project.ProjectBuildingException;
@@ -82,19 +95,6 @@ import org.codehaus.plexus.personality.plexus.lifecycle.phase.Contextualizable;
 import org.codehaus.plexus.personality.plexus.lifecycle.phase.Initializable;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
-
-import java.io.File;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 public class DefaultPluginManager
     extends AbstractLogEnabled
@@ -452,12 +452,6 @@ public class DefaultPluginManager
 
             dispatcher.dispatchEnd( event, goalExecId );
         }
-        catch ( DuplicateArtifactAttachmentException e )
-        {
-            session.getEventDispatcher().dispatchError( event, goalExecId, e );
-
-            throw new MojoExecutionException( "Error attaching artifact to project: Duplicate attachment.", e );
-        }
         catch ( MojoExecutionException e )
         {
             session.getEventDispatcher().dispatchError( event, goalExecId, e );
@@ -697,10 +691,60 @@ public class DefaultPluginManager
 
             checkPlexusUtils( resolutionGroup, artifactFactory );
 
-            // [MNG-3426] resolve the plugin dependencies specified in <plugin><dependencies> first
-            // a LinkedHashSet is used to ensure predictable dependency ordering
-            Set dependencies = new LinkedHashSet( pluginDescriptor.getIntroducedDependencyArtifacts() );
-            dependencies.addAll( resolutionGroup.getArtifacts() );
+            // [jdcasey; 20-March-2008]:
+            // This is meant to eliminate the introduction of duplicated artifacts.
+            // Since much of the reasoning for reversing the order of introduction of
+            // plugin dependencies rests on the notion that we need to be able to
+            // introduce upgraded versions of plugin dependencies on a case-by-case
+            // basis, we need to remove the original version prior to artifact
+            // resolution. This is consistent with recent thinking on duplicated
+            // dependency specifications within a POM, where that case should
+            // throw a model validation exception.
+            //
+            // Here, we just want to remove any chance that the ArtifactCollector
+            // could make a bad choice, and use the old version in spite of our
+            // explicit preference otherwise.
+
+            // First, we're going to accumulate plugin dependencies in an ordered map,
+            // keyed by dependencyConflictId (the ordered map is meant to preserve relative
+            // ordering of the dependencies that do make the cut).
+            Map dependencyMap = new LinkedHashMap();
+
+            // Next, we need to accumulate all dependencies in a List, to make it
+            // simpler to iterate through them all and add them to the map.
+            List all = new ArrayList();
+
+            // plugin-level dependencies from the consuming POM override dependencies
+            // from the plugin's own POM.
+            all.addAll( pluginDescriptor.getIntroducedDependencyArtifacts() );
+
+            // add in the deps from the plugin POM now.
+            all.addAll( resolutionGroup.getArtifacts() );
+
+            for ( Iterator it = all.iterator(); it.hasNext(); )
+            {
+                Artifact artifact = (Artifact) it.next();
+                String conflictId = artifact.getDependencyConflictId();
+
+                // if the map already contains this dependencyConflictId, it constitutes an
+                // overridden dependency. Don't use the old one (we know it's old from the
+                // order in which dependencies were added to this list).
+                if ( !dependencyMap.containsKey( conflictId ) )
+                {
+                    dependencyMap.put( conflictId, artifact );
+                }
+            }
+
+            // Create an ordered set of dependencies from the ordered map we used above, to feed into the resolver.
+            Set dependencies = new LinkedHashSet( dependencyMap.values() );
+
+            if ( getLogger().isDebugEnabled() )
+            {
+                // list all dependencies to be used by this plugin (first-level deps, not transitive ones).
+                getLogger().debug( "Plugin dependencies for:\n\n" + pluginDescriptor.getId()
+                                   + "\n\nare:\n\n"
+                                   + StringUtils.join( dependencies.iterator(), "\n" ) + "\n\n" );
+            }
 
             List repositories = new ArrayList();
             repositories.addAll( resolutionGroup.getResolutionRepositories() );
@@ -757,8 +801,27 @@ public class DefaultPluginManager
 
             unresolved.removeAll( resolved );
 
+            if ( getLogger().isDebugEnabled() )
+            {
+                // list all artifacts that were filtered out during the resolution process.
+                // these are already present in the core container.
+                getLogger().debug( " The following artifacts were filtered out for plugin: "
+                                   + pluginDescriptor.getId()
+                                   + " because they're already in the core of Maven:\n\n"
+                                   + StringUtils.join( unresolved.iterator(), "\n" )
+                                   + "\n\nThese will use the artifact files already in the core ClassRealm instead, to allow them to be included in PluginDescriptor.getArtifacts().\n\n" );
+            }
+
+            // Grab a file for all filtered artifacts, even if it means resolving them. This
+            // is necessary in order to present a full complement of a plugin's transitive
+            // dependencies to anyone who calls PluginDescriptor.getArtifacts().
             resolveCoreArtifacts( unresolved, localRepository, resolutionGroup.getResolutionRepositories() );
 
+            // Re-join resolved and filtered-but-now-resolved artifacts.
+            // NOTE: The process of filtering then re-adding some artifacts will
+            // result in different ordering within the PluginDescriptor.getArtifacts()
+            // List than should have happened if none had been filtered. All filtered
+            // artifacts will be listed last...
             List allResolved = new ArrayList( resolved.size() + unresolved.size() );
 
             allResolved.addAll( resolved );
@@ -1345,7 +1408,7 @@ public class DefaultPluginManager
         {
             project.setDependencyArtifacts( project.createArtifacts( artifactFactory, null, null ) );
         }
-
+        
         Set resolvedArtifacts;
         try
         {
@@ -1360,7 +1423,7 @@ public class DefaultPluginManager
         catch (MultipleArtifactsNotFoundException me)
         {
             /*only do this if we are an aggregating plugin: MNG-2277
-            if the dependency doesn't yet exist but is in the reactor, then
+            if the dependency doesn't yet exist but is in the reactor, then 
             all we can do is warn and skip it. A better fix can be inserted into 2.1*/
             if (isAggregator && checkMissingArtifactsInReactor( context.getSortedProjects(), me.getMissingArtifacts() ))
             {
@@ -1403,19 +1466,19 @@ public class DefaultPluginManager
                     //most likely it would be produced by the project we just found in the reactor since all
                     //the other info matches. Assume it's ok.
                     getLogger().warn( "The dependency: "+ p.getId()+" can't be resolved but has been found in the reactor.\nThis dependency has been excluded from the plugin execution. You should rerun this mojo after executing mvn install.\n" );
-
+                    
                     //found it, move on.
                     foundInReactor.add( p );
                     break;
-                }
+                }   
             }
         }
-
+        
         //if all of them have been found, we can continue.
         return foundInReactor.size() == missing.size();
     }
-
-
+    
+    
     // ----------------------------------------------------------------------
     // Artifact downloading
     // ----------------------------------------------------------------------

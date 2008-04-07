@@ -95,6 +95,7 @@ import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.TreeMap;
 
@@ -190,12 +191,28 @@ public class DefaultMavenProjectBuilder
     // MavenProjectBuilder Implementation
     // ----------------------------------------------------------------------
 
+    public MavenProject build( File pom,
+                               ProjectBuilderConfiguration config )
+        throws ProjectBuildingException
+    {
+        return buildFromSourceFileInternal( pom, config, true );
+    }
+
+    public MavenProject build( File pom,
+                               ProjectBuilderConfiguration config,
+                               boolean checkDistributionManagementStatus )
+        throws ProjectBuildingException
+    {
+        return buildFromSourceFileInternal( pom, config, checkDistributionManagementStatus );
+    }
+
     public MavenProject build( File projectDescriptor,
                                ArtifactRepository localRepository,
                                ProfileManager profileManager )
         throws ProjectBuildingException
     {
-        return buildFromSourceFileInternal( projectDescriptor, localRepository, profileManager, true );
+        ProjectBuilderConfiguration config = new DefaultProjectBuilderConfiguration().setLocalRepository( localRepository ).setGlobalProfileManager( profileManager );
+        return buildFromSourceFileInternal( projectDescriptor, config, true );
     }
 
     public MavenProject build( File projectDescriptor,
@@ -204,8 +221,8 @@ public class DefaultMavenProjectBuilder
                                boolean checkDistributionManagementStatus )
         throws ProjectBuildingException
     {
-        return buildFromSourceFileInternal( projectDescriptor, localRepository, profileManager,
-                                            checkDistributionManagementStatus );
+        ProjectBuilderConfiguration config = new DefaultProjectBuilderConfiguration().setLocalRepository( localRepository ).setGlobalProfileManager( profileManager );
+        return buildFromSourceFileInternal( projectDescriptor, config, checkDistributionManagementStatus );
     }
 
     // jvz:note
@@ -231,7 +248,9 @@ public class DefaultMavenProjectBuilder
 
         Model model = findModelFromRepository( artifact, remoteArtifactRepositories, localRepository, allowStubModel );
 
-        return buildInternal( "Artifact [" + artifact + "]", model, localRepository, remoteArtifactRepositories, null,
+        ProjectBuilderConfiguration config = new DefaultProjectBuilderConfiguration().setLocalRepository( localRepository );
+
+        return buildInternal( "Artifact [" + artifact + "]", model, config, remoteArtifactRepositories,
                               null, false );
     }
 
@@ -249,11 +268,20 @@ public class DefaultMavenProjectBuilder
     {
         //TODO mkleint - use the (Container, Properties) constructor to make system properties embeddable
         ProfileManager profileManager = new DefaultProfileManager( container );
-        return buildStandaloneSuperProject( localRepository, profileManager );
+
+        return buildStandaloneSuperProject( new DefaultProjectBuilderConfiguration().setLocalRepository( localRepository )
+                                                                                    .setGlobalProfileManager( profileManager ) );
     }
 
     public MavenProject buildStandaloneSuperProject( ArtifactRepository localRepository,
                                                      ProfileManager profileManager )
+        throws ProjectBuildingException
+    {
+        return buildStandaloneSuperProject( new DefaultProjectBuilderConfiguration().setLocalRepository( localRepository )
+                                                                                    .setGlobalProfileManager( profileManager ) );
+    }
+
+    public MavenProject buildStandaloneSuperProject( ProjectBuilderConfiguration config )
         throws ProjectBuildingException
     {
         Model superModel = getSuperModel();
@@ -266,6 +294,8 @@ public class DefaultMavenProjectBuilder
 
 
         List activeProfiles;
+
+        ProfileManager profileManager = config.getGlobalProfileManager();
 
         if ( profileManager == null )
         {
@@ -289,7 +319,7 @@ public class DefaultMavenProjectBuilder
 
         try
         {
-            project = processProjectLogic( "<Super-POM>", project, null, null, true );
+            project = processProjectLogic( "<Super-POM>", project, config, null, null, true, true );
 
             project.setExecutionRoot( true );
 
@@ -467,16 +497,15 @@ public class DefaultMavenProjectBuilder
     }
 
     private MavenProject buildFromSourceFileInternal( File projectDescriptor,
-                                                      ArtifactRepository localRepository,
-                                                      ProfileManager profileManager,
+                                                      ProjectBuilderConfiguration config,
                                                       boolean checkDistributionManagementStatus )
         throws ProjectBuildingException
     {
         Model model = readModel( "unknown", projectDescriptor, true );
 
-        MavenProject project = buildInternal( projectDescriptor.getAbsolutePath(), model, localRepository,
+        MavenProject project = buildInternal( projectDescriptor.getAbsolutePath(), model, config,
                                               buildArtifactRepositories( getSuperModel() ), projectDescriptor,
-                                              profileManager, true );
+                                              true );
 
         if ( checkDistributionManagementStatus )
         {
@@ -697,10 +726,9 @@ public class DefaultMavenProjectBuilder
     // is a real file and sometimes null which makes things confusing.
     private MavenProject buildInternal( String pomLocation,
                                         Model model,
-                                        ArtifactRepository localRepository,
+                                        ProjectBuilderConfiguration config,
                                         List parentSearchRepositories,
                                         File projectDescriptor,
-                                        ProfileManager externalProfileManager,
                                         boolean strict )
         throws ProjectBuildingException
     {
@@ -713,14 +741,13 @@ public class DefaultMavenProjectBuilder
 
         Model superModel = getSuperModel();
 
-        //TODO mkleint - use the (Container, Properties) constructor to make system properties embeddable
-        // shall the ProfileManager intefrace expose the properties?
-
+        ProfileManager externalProfileManager = config.getGlobalProfileManager();
         ProfileManager superProjectProfileManager;
-        if ( externalProfileManager instanceof DefaultProfileManager )
+        if ( externalProfileManager != null )
         {
-            superProjectProfileManager = new DefaultProfileManager( container,
-                                                                    ( (DefaultProfileManager) externalProfileManager ).getSystemProperties() );
+            superProjectProfileManager = new DefaultProfileManager(
+                                                                    container,
+                                                                    externalProfileManager.getRequestProperties() );
         }
         else
         {
@@ -791,8 +818,8 @@ public class DefaultMavenProjectBuilder
         MavenProject project = null;
         try
         {
-            project = assembleLineage( model, lineage, localRepository, projectDir, parentSearchRepositories,
-                                       aggregatedRemoteWagonRepositories, externalProfileManager, strict );
+            project = assembleLineage( model, lineage, config, projectDir, parentSearchRepositories,
+                                       aggregatedRemoteWagonRepositories, strict );
         }
         catch ( InvalidRepositoryException e )
         {
@@ -846,11 +873,9 @@ public class DefaultMavenProjectBuilder
         // merge any duplicated plugin definitions together, using the first appearance as the dominant one.
         ModelUtils.mergeDuplicatePluginDefinitions( project.getModel().getBuild() );
 
-        mergeManagedDependencies(project.getModel(), localRepository, repositories);
-
         try
         {
-            project = processProjectLogic( pomLocation, project, externalProfileManager, projectDir, strict );
+            project = processProjectLogic( pomLocation, project, config, projectDir, repositories, strict, false );
         }
         catch ( ModelInterpolationException e )
         {
@@ -936,9 +961,11 @@ public class DefaultMavenProjectBuilder
      */
     private MavenProject processProjectLogic( String pomLocation,
                                               MavenProject project,
-                                              ProfileManager profileMgr,
+                                              ProjectBuilderConfiguration config,
                                               File projectDir,
-                                              boolean strict )
+                                              List remoteRepositories,
+                                              boolean strict,
+                                              boolean isSuperPom )
         throws ProjectBuildingException, ModelInterpolationException, InvalidRepositoryException
     {
         Model model = project.getModel();
@@ -949,6 +976,8 @@ public class DefaultMavenProjectBuilder
         {
             activeProfiles = new ArrayList();
         }
+
+        ProfileManager profileMgr = config == null ? null : config.getGlobalProfileManager();
 
         List injectedProfiles = injectActiveProfiles( profileMgr, model );
 
@@ -975,11 +1004,31 @@ public class DefaultMavenProjectBuilder
             context.put( "build.testSourceDirectory", pathTranslator.alignToBaseDirectory( build.getTestSourceDirectory(), projectDir ) );
         }
 
+        if ( !isSuperPom )
+        {
+            Properties userProps = config.getUserProperties();
+            if ( userProps != null )
+            {
+                context.putAll( userProps );
+            }
+        }
+
         model = modelInterpolator.interpolate( model, context, strict );
 
+        // second pass allows ${user.home} to work, if it needs to.
         // [MNG-2339] ensure the system properties are still interpolated for backwards compat, but the model values must win
-        context.putAll( System.getProperties() );
+        if ( config.getExecutionProperties() != null && !config.getExecutionProperties().isEmpty() )
+        {
+            context.putAll( config.getExecutionProperties() );
+        }
+
         model = modelInterpolator.interpolate( model, context, strict );
+
+        // MNG-3482: Make sure depMgmt is interpolated before merging.
+        if ( !isSuperPom )
+        {
+            mergeManagedDependencies( model, config.getLocalRepository(), remoteRepositories );
+        }
 
         // interpolation is before injection, because interpolation is off-limits in the injected variables
         modelDefaultsInjector.injectDefaults( model );
@@ -1080,11 +1129,10 @@ public class DefaultMavenProjectBuilder
      */
     private MavenProject assembleLineage( Model model,
                                           LinkedList lineage,
-                                          ArtifactRepository localRepository,
+                                          ProjectBuilderConfiguration config,
                                           File projectDir,
                                           List parentSearchRepositories,
                                           Set aggregatedRemoteWagonRepositories,
-                                          ProfileManager externalProfileManager,
                                           boolean strict )
         throws ProjectBuildingException, InvalidRepositoryException
     {
@@ -1106,15 +1154,15 @@ public class DefaultMavenProjectBuilder
             }
         }
 
-        //TODO mkleint - use the (Container, Properties constructor to make system properties embeddable
+        ProfileManager externalProfileManager = config.getGlobalProfileManager();
         ProfileManager profileManager;
-        if ( ( externalProfileManager != null ) && ( externalProfileManager instanceof DefaultProfileManager ) )
+        if ( externalProfileManager != null )
         {
-            profileManager = new DefaultProfileManager( container,
-                                                        ( (DefaultProfileManager) externalProfileManager ).getSystemProperties() );
+            profileManager = new DefaultProfileManager( container, externalProfileManager.getRequestProperties() );
         }
         else
         {
+            //TODO mkleint - use the (Container, Properties constructor to make system properties embeddable
             profileManager = new DefaultProfileManager( container );
         }
 
@@ -1315,7 +1363,7 @@ public class DefaultMavenProjectBuilder
 
                 try
                 {
-                    model = findModelFromRepository( parentArtifact, remoteRepositories, localRepository, false );
+                    model = findModelFromRepository( parentArtifact, remoteRepositories, config.getLocalRepository(), false );
                 }
                 catch ( ProjectBuildingException e )
                 {
@@ -1336,9 +1384,13 @@ public class DefaultMavenProjectBuilder
                 parentProjectDir = parentDescriptor.getParentFile();
             }
 
-            MavenProject parent = assembleLineage( model, lineage, localRepository, parentProjectDir,
-                                                   parentSearchRepositories, aggregatedRemoteWagonRepositories,
-                                                   externalProfileManager, strict );
+            MavenProject parent = assembleLineage( model,
+                                                   lineage,
+                                                   config,
+                                                   parentProjectDir,
+                                                   parentSearchRepositories,
+                                                   aggregatedRemoteWagonRepositories,
+                                                   strict );
 
             parent.setFile( parentDescriptor );
 
@@ -1366,7 +1418,7 @@ public class DefaultMavenProjectBuilder
             {
                 Dependency dep = (Dependency) iter.next();
                 depsMap.put( dep.getManagementKey(), dep );
-                if (dep.getType().equals("pom") && Artifact.SCOPE_IMPORT.equals(dep.getScope()))
+                if ( dep.getType().equals( "pom" ) && Artifact.SCOPE_IMPORT.equals( dep.getScope() ) )
                 {
                     doInclude = true;
                 }
@@ -1378,7 +1430,8 @@ public class DefaultMavenProjectBuilder
                 while (iter.hasNext())
                 {
                     Dependency dep = (Dependency)iter.next();
-                    if (dep.getType().equals("pom") && Artifact.SCOPE_IMPORT.equals(dep.getScope()))
+                    if ( dep.getType().equals( "pom" )
+                         && Artifact.SCOPE_IMPORT.equals( dep.getScope() ) )
                     {
                         Artifact artifact = artifactFactory.createProjectArtifact( dep.getGroupId(), dep.getArtifactId(),
                                                                                   dep.getVersion(), dep.getScope() );
@@ -1724,4 +1777,5 @@ public class DefaultMavenProjectBuilder
     {
         container = (PlexusContainer) context.get( PlexusConstants.PLEXUS_KEY );
     }
+
 }

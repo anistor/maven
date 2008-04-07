@@ -180,6 +180,7 @@ under the License.
           <version>2.0-beta-7</version>
           <configuration>
             <tagBase>https://svn.apache.org/repos/asf/maven/components/tags</tagBase>
+            <autoVersionSubmodules>true</autoVersionSubmodules>
           </configuration>
         </plugin>
         <plugin>
@@ -373,7 +374,7 @@ under the License.
       <dependency>
         <groupId>org.apache.maven.wagon</groupId>
         <artifactId>wagon-webdav</artifactId>
-        <version>1.0-beta-1</version>
+        <version>1.0-beta-2</version>
       </dependency>
       <dependency>
         <groupId>org.apache.maven.wagon</groupId>

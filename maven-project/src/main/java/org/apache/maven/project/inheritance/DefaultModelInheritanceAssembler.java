@@ -248,7 +248,7 @@ public class DefaultModelInheritanceAssembler
     {
         Map depsMap = new LinkedHashMap();
 
-        List deps = parent.getDependencies();
+        List deps = child.getDependencies();
 
         if ( deps != null )
         {
@@ -259,14 +259,17 @@ public class DefaultModelInheritanceAssembler
             }
         }
 
-        deps = child.getDependencies();
+        deps = parent.getDependencies();
 
         if ( deps != null )
         {
             for ( Iterator it = deps.iterator(); it.hasNext(); )
             {
                 Dependency dependency = (Dependency) it.next();
-                depsMap.put( dependency.getManagementKey(), dependency );
+                if ( !depsMap.containsKey( dependency.getManagementKey() ) )
+                {
+                    depsMap.put( dependency.getManagementKey(), dependency );
+                }
             }
         }
 
