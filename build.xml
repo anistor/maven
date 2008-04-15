@@ -39,15 +39,12 @@ under the License.
     <typedef resource="org/apache/maven/artifact/ant/antlib.xml" uri="urn:maven-artifact-ant" classpathref="maven-ant-tasks.classpath"/>
   </target>
 
-  <property file="build.properties"/>
-
   <target name="isMavenHomeSet" depends="initTaskDefs">
     <property environment="env"/>
     <condition property="maven.home" value="${env.M2_HOME}">
       <isset property="env.M2_HOME"/>
     </condition>
-    <fail unless="maven.home"
-          message="You must set the M2_HOME environment variable or specify a maven.home property to this Ant script"/>
+    <fail unless="maven.home" message="You must set the M2_HOME environment variable or specify a maven.home property to this Ant script"/>
   </target>
 
   <target name="checkMavenHome" depends="isMavenHomeSet">
@@ -78,20 +75,21 @@ under the License.
 
   <target name="pull" depends="init" unless="skip.pull">    
     <property name="verbose" value="false"/>
+    <property name="bootstrap.repository" value="${basedir}/bootstrap/repository"/>
     <!-- Pull the dependencies that Maven needs to build -->
     <copy file="pom.xml" tofile="dependencies.xml"/>
     <replace file="${basedir}/dependencies.xml" token="&lt;!--start--&gt;" value="&lt;!--"/>
     <replace file="${basedir}/dependencies.xml" token="&lt;!--end--&gt;" value="--&gt;"/>
     <artifact:pom file="${basedir}/dependencies.xml" id="pom"/>                                                                                                     
     <artifact:dependencies pathId="pom.pathid" filesetId="pom.fileset" verbose="${verbose}">      
-       <localRepository path="${basedir}/repo"/>
+       <localRepository path="${bootstrap.repository}"/>
        <pom refid="pom"/>                                                                                                                                       
     </artifact:dependencies>      
     <delete file="${basedir}/dependencies.xml"/>
     
     <!-- Pull the dependencies for Modello -->
     <artifact:dependencies pathId="modello.pathid" filesetId="modello.fileset" verbose="${verbose}">      
-       <localRepository path="${basedir}/repo"/>
+       <localRepository path="${bootstrap.repository}"/>
        <dependency groupId="org.codehaus.modello" artifactId="modello-maven-plugin" version="1.0-alpha-17"/>                                                                                                                                      
     </artifact:dependencies>          
   </target>
