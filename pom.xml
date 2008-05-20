@@ -230,7 +230,7 @@ under the License.
 
   <properties>
     <mavenVersion>2.0.10-SNAPSHOT</mavenVersion>
-    <wagonVersion>1.0-beta-2</wagonVersion>
+    <wagonVersion>1.0-rc1-SNAPSHOT</wagonVersion>
   </properties>
 
   <!--start-->

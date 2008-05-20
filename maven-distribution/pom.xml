@@ -63,16 +63,19 @@
               </artifactSet>
               <relocations>
                 <relocation>
-                  <pattern>org.jdom</pattern>
+                  <pattern>org.slf4j</pattern>
                 </relocation>
                 <relocation>
-                  <pattern>de.zeigermann.xml</pattern>
+                  <pattern>com.jcraft</pattern>
                 </relocation>
                 <relocation>
-                  <pattern>org.apache.webdav</pattern>
+                  <pattern>org.apache.jackrabbit</pattern>
                 </relocation>
                 <relocation>
                   <pattern>org.apache.commons.httpclient</pattern>
+                </relocation>
+                <relocation>
+                  <pattern>org.apache.commons.codec</pattern>
                 </relocation>
                 <relocation>
                   <pattern>org.apache.commons.logging</pattern>
