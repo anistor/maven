@@ -26,7 +26,7 @@
     <version>2.0.10-SNAPSHOT</version>
   </parent>
 
-  <artifactId>maven-distribution</artifactId>
+  <artifactId>apache-maven</artifactId>
   <name>Maven Distribution</name>
 
   <build>
@@ -63,19 +63,16 @@
               </artifactSet>
               <relocations>
                 <relocation>
-                  <pattern>org.slf4j</pattern>
+                  <pattern>org.jdom</pattern>
                 </relocation>
                 <relocation>
-                  <pattern>com.jcraft</pattern>
+                  <pattern>de.zeigermann.xml</pattern>
                 </relocation>
                 <relocation>
-                  <pattern>org.apache.jackrabbit</pattern>
+                  <pattern>org.apache.webdav</pattern>
                 </relocation>
                 <relocation>
                   <pattern>org.apache.commons.httpclient</pattern>
-                </relocation>
-                <relocation>
-                  <pattern>org.apache.commons.codec</pattern>
                 </relocation>
                 <relocation>
                   <pattern>org.apache.commons.logging</pattern>
