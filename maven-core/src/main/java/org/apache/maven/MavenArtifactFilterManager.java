@@ -65,7 +65,6 @@ public class MavenArtifactFilterManager
         artifacts.add( "classworlds" );
         artifacts.add( "commons-cli" );
         artifacts.add( "doxia-sink-api" );
-        artifacts.add( "jsch" );
         artifacts.add( "maven-artifact" );
         artifacts.add( "maven-artifact-manager" );
         artifacts.add( "maven-core" );
@@ -86,7 +85,6 @@ public class MavenArtifactFilterManager
         //adding shared/maven-toolchain project here, even though not part of the default 
         //distro yet.
         artifacts.add( "maven-toolchain" );
-        //artifacts.add( "plexus-utils" );
         artifacts.add( "wagon-provider-api" );
         return artifacts;
     }
