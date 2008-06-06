@@ -57,13 +57,22 @@ public class MavenSession
 
     private final Properties executionProperties;
 
+    private Properties userProperties;
+
     private final Date startTime;
-    
+
     private MavenProject currentProject;
 
     public MavenSession( PlexusContainer container, Settings settings, ArtifactRepository localRepository,
                          EventDispatcher eventDispatcher, ReactorManager reactorManager, List goals,
                          String executionRootDir, Properties executionProperties, Date startTime )
+    {
+        this( container, settings, localRepository, eventDispatcher, reactorManager, goals, executionRootDir, executionProperties, null, startTime );
+    }
+
+    public MavenSession( PlexusContainer container, Settings settings, ArtifactRepository localRepository,
+                         EventDispatcher eventDispatcher, ReactorManager reactorManager, List goals,
+                         String executionRootDir, Properties executionProperties, Properties userProperties, Date startTime )
     {
         this.container = container;
 
@@ -171,7 +180,7 @@ public class MavenSession
     {
         return startTime;
     }
-    
+
     public void setCurrentProject( MavenProject currentProject )
     {
         this.currentProject = currentProject;
@@ -184,5 +193,16 @@ public class MavenSession
     {
         return currentProject;
     }
-    
+
+
+    public Properties getUserProperties()
+    {
+        return userProperties;
+    }
+
+    public void setUserProperties( Properties userProperties )
+    {
+        this.userProperties = userProperties;
+    }
+
 }

@@ -20,20 +20,6 @@ package org.apache.maven.plugin;
  * under the License.
  */
 
-import java.io.File;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import org.apache.maven.MavenArtifactFilterManager;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.factory.ArtifactFactory;
@@ -66,11 +52,14 @@ import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.plugin.version.PluginVersionManager;
 import org.apache.maven.plugin.version.PluginVersionNotFoundException;
 import org.apache.maven.plugin.version.PluginVersionResolutionException;
+import org.apache.maven.project.DefaultProjectBuilderConfiguration;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.MavenProjectBuilder;
+import org.apache.maven.project.ProjectBuilderConfiguration;
 import org.apache.maven.project.ProjectBuildingException;
 import org.apache.maven.project.artifact.InvalidDependencyVersionException;
 import org.apache.maven.project.artifact.MavenMetadataSource;
+import org.apache.maven.project.interpolation.ModelInterpolationException;
 import org.apache.maven.project.path.PathTranslator;
 import org.apache.maven.reporting.MavenReport;
 import org.apache.maven.settings.Settings;
@@ -95,6 +84,20 @@ import org.codehaus.plexus.personality.plexus.lifecycle.phase.Contextualizable;
 import org.codehaus.plexus.personality.plexus.lifecycle.phase.Initializable;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
+
+import java.io.File;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public class DefaultPluginManager
     extends AbstractLogEnabled
@@ -426,6 +429,20 @@ public class DefaultPluginManager
             dom = Xpp3Dom.mergeXpp3Dom( dom, mojoExecution.getConfiguration() );
         }
 
+        ProjectBuilderConfiguration config = new DefaultProjectBuilderConfiguration();
+        config.setExecutionProperties( session.getExecutionProperties() );
+        config.setLocalRepository( session.getLocalRepository() );
+        config.setUserProperties( session.getUserProperties() );
+
+        try
+        {
+            mavenProjectBuilder.calculateConcreteState( project, config );
+        }
+        catch ( ModelInterpolationException e )
+        {
+            throw new PluginManagerException( "Failed to calculate concrete state for project: " + project, e );
+        }
+
         plugin = getConfiguredMojo( session, dom, project, false, mojoExecution );
 
         // Event monitoring.
@@ -521,6 +538,15 @@ public class DefaultPluginManager
                     getLogger().error( "Error releasing plugin - ignoring.", e );
                 }
             }
+        }
+
+        try
+        {
+            mavenProjectBuilder.restoreDynamicState( project, config );
+        }
+        catch ( ModelInterpolationException e )
+        {
+            throw new PluginManagerException( "Failed to restore dynamic state for project: " + project, e );
         }
     }
 
@@ -1408,7 +1434,7 @@ public class DefaultPluginManager
         {
             project.setDependencyArtifacts( project.createArtifacts( artifactFactory, null, null ) );
         }
-        
+
         Set resolvedArtifacts;
         try
         {
@@ -1423,7 +1449,7 @@ public class DefaultPluginManager
         catch (MultipleArtifactsNotFoundException me)
         {
             /*only do this if we are an aggregating plugin: MNG-2277
-            if the dependency doesn't yet exist but is in the reactor, then 
+            if the dependency doesn't yet exist but is in the reactor, then
             all we can do is warn and skip it. A better fix can be inserted into 2.1*/
             if (isAggregator && checkMissingArtifactsInReactor( context.getSortedProjects(), me.getMissingArtifacts() ))
             {
@@ -1466,19 +1492,19 @@ public class DefaultPluginManager
                     //most likely it would be produced by the project we just found in the reactor since all
                     //the other info matches. Assume it's ok.
                     getLogger().warn( "The dependency: "+ p.getId()+" can't be resolved but has been found in the reactor.\nThis dependency has been excluded from the plugin execution. You should rerun this mojo after executing mvn install.\n" );
-                    
+
                     //found it, move on.
                     foundInReactor.add( p );
                     break;
-                }   
+                }
             }
         }
-        
+
         //if all of them have been found, we can continue.
         return foundInReactor.size() == missing.size();
     }
-    
-    
+
+
     // ----------------------------------------------------------------------
     // Artifact downloading
     // ----------------------------------------------------------------------
