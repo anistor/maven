@@ -19,25 +19,13 @@ package org.apache.maven.project;
  * under the License.
  */
 
-import java.io.File;
-import java.io.IOException;
-import java.io.Writer;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
-
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.ArtifactUtils;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
-import org.apache.maven.artifact.versioning.ManagedVersionMap;
 import org.apache.maven.artifact.factory.ArtifactFactory;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.artifact.resolver.filter.ArtifactFilter;
+import org.apache.maven.artifact.versioning.ManagedVersionMap;
 import org.apache.maven.model.Build;
 import org.apache.maven.model.CiManagement;
 import org.apache.maven.model.Contributor;
@@ -63,8 +51,19 @@ import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
 import org.apache.maven.project.artifact.ActiveProjectArtifact;
 import org.apache.maven.project.artifact.InvalidDependencyVersionException;
 import org.apache.maven.project.artifact.MavenMetadataSource;
-import org.apache.maven.project.overlay.BuildOverlay;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.Writer;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
 
 /**
  * The concern of the project is provide runtime values based on the model. <p/>
@@ -83,11 +82,11 @@ public class MavenProject
     implements Cloneable
 {
     public static final String EMPTY_PROJECT_GROUP_ID = "unknown";
-    
+
     public static final String EMPTY_PROJECT_ARTIFACT_ID = "empty-project";
-    
+
     public static final String EMPTY_PROJECT_VERSION = "0";
-    
+
     private Model model;
 
     private MavenProject parent;
@@ -145,26 +144,24 @@ public class MavenProject
 
     private Map projectReferences = new HashMap();
 
-    private Build buildOverlay;
-
     private boolean executionRoot;
-    
+
     private Map moduleAdjustments;
 
     public MavenProject()
     {
         Model model = new Model();
-        
+
         model.setGroupId( EMPTY_PROJECT_GROUP_ID );
         model.setArtifactId( EMPTY_PROJECT_ARTIFACT_ID );
         model.setVersion( EMPTY_PROJECT_VERSION );
-        
-        this.setModel( model );
+
+        setModel( model );
     }
 
     public MavenProject( Model model )
     {
-        this.setModel( model );
+        setModel( model );
     }
 
     /**
@@ -270,42 +267,42 @@ public class MavenProject
         {
             setManagedVersionMap( new ManagedVersionMap( project.getManagedVersionMap() ) );
         }
-        
+
         if ( project.getReleaseArtifactRepository() != null )
         {
             setReleaseArtifactRepository( project.getReleaseArtifactRepository() );
         }
-        
+
         if ( project.getSnapshotArtifactRepository() != null )
         {
             setSnapshotArtifactRepository( project.getSnapshotArtifactRepository() );
         }
     }
-    
+
     public String getModulePathAdjustment( MavenProject moduleProject ) throws IOException
     {
         // FIXME: This is hacky. What if module directory doesn't match artifactid, and parent
         // is coming from the repository??
-        
-        // FIXME: If there is a hierarchy of three projects, with the url specified at the top, 
+
+        // FIXME: If there is a hierarchy of three projects, with the url specified at the top,
         // and the top two projects are referenced from copies that are in the repository, the
         // middle-level POM doesn't have a File associated with it (or the file's directory is
         // of an unexpected name), and module path adjustments fail.
         String module = moduleProject.getArtifactId();
-        
+
         File moduleFile = moduleProject.getFile();
-        
+
         if ( moduleFile != null )
         {
             File moduleDir = moduleFile.getCanonicalFile().getParentFile();
-            
+
             module = moduleDir.getName();
         }
-        
+
         if ( moduleAdjustments == null )
         {
             moduleAdjustments = new HashMap();
-            
+
             List modules = getModules();
             if ( modules != null )
             {
@@ -313,21 +310,21 @@ public class MavenProject
                 {
                     String modulePath = (String) it.next();
                     String moduleName = modulePath;
-                    
+
                     if ( moduleName.endsWith( "/" ) || moduleName.endsWith( "\\" ) )
                     {
                         moduleName = moduleName.substring( 0, moduleName.length() - 1 );
                     }
-                    
+
                     int lastSlash = moduleName.lastIndexOf( '/' );
-                    
+
                     if ( lastSlash < 0 )
                     {
                         lastSlash = moduleName.lastIndexOf( '\\' );
                     }
-                    
+
                     String adjustment = null;
-                    
+
                     if ( lastSlash > -1 )
                     {
                         moduleName = moduleName.substring( lastSlash + 1 );
@@ -338,7 +335,7 @@ public class MavenProject
                 }
             }
         }
-        
+
         return (String) moduleAdjustments.get( module );
     }
 
@@ -577,7 +574,7 @@ public class MavenProject
         list.add( getBuild().getTestOutputDirectory() );
 
         list.add( getBuild().getOutputDirectory() );
-        
+
         for ( Iterator i = getArtifacts().iterator(); i.hasNext(); )
         {
             Artifact a = (Artifact) i.next();
@@ -856,7 +853,7 @@ public class MavenProject
         {
             groupId = getModel().getParent().getGroupId();
         }
-        
+
         return groupId;
     }
 
@@ -901,7 +898,7 @@ public class MavenProject
         {
             version = getModel().getParent().getVersion();
         }
-        
+
         return version;
     }
 
@@ -1047,19 +1044,12 @@ public class MavenProject
 
     public void setBuild( Build build )
     {
-        this.buildOverlay = new BuildOverlay( build );
-
         getModel().setBuild( build );
     }
 
     public Build getBuild()
     {
-        if ( buildOverlay == null )
-        {
-            buildOverlay = new BuildOverlay( getModelBuild() );
-        }
-
-        return buildOverlay;
+        return model.getBuild();
     }
 
     public List getResources()
@@ -1112,13 +1102,13 @@ public class MavenProject
         this.artifacts = artifacts;
 
         // flush the calculated artifactMap
-        this.artifactMap = null;
+        artifactMap = null;
     }
 
     /**
      * All dependencies that this project has, including transitive ones.
      * Contents are lazily populated, so depending on what phases have run dependencies in some scopes won't be included.
-     * eg. if only compile phase has run, dependencies with scope test won't be included. 
+     * eg. if only compile phase has run, dependencies with scope test won't be included.
      * @return {@link Set} &lt; {@link Artifact} >
      * @see #getDependencyArtifacts() to get only direct dependencies
      */
@@ -1141,7 +1131,7 @@ public class MavenProject
     {
         this.pluginArtifacts = pluginArtifacts;
 
-        this.pluginArtifactMap = null;
+        pluginArtifactMap = null;
     }
 
     public Set getPluginArtifacts()
@@ -1163,7 +1153,7 @@ public class MavenProject
     {
         this.reportArtifacts = reportArtifacts;
 
-        this.reportArtifactMap = null;
+        reportArtifactMap = null;
     }
 
     public Set getReportArtifacts()
@@ -1185,12 +1175,12 @@ public class MavenProject
     {
         this.extensionArtifacts = extensionArtifacts;
 
-        this.extensionArtifactMap = null;
+        extensionArtifactMap = null;
     }
 
     public Set getExtensionArtifacts()
     {
-        return this.extensionArtifacts;
+        return extensionArtifacts;
     }
 
     public Map getExtensionArtifactMap()
@@ -1258,7 +1248,7 @@ public class MavenProject
 
         return pluginMgmt;
     }
-    
+
     private Build getModelBuild()
     {
         Build build = getModel().getBuild();
@@ -1269,7 +1259,7 @@ public class MavenProject
 
             getModel().setBuild( build );
         }
-        
+
         return build;
     }
 
@@ -1285,7 +1275,7 @@ public class MavenProject
             build.flushPluginMap();
         }
     }
-    
+
     public void injectPluginManagementInfo( Plugin plugin )
     {
         PluginManagement pm = getModelBuild().getPluginManagement();
@@ -1522,12 +1512,12 @@ public class MavenProject
 
     public void setManagedVersionMap( Map map )
     {
-        this.managedVersionMap = map;
+        managedVersionMap = map;
     }
 
     public Map getManagedVersionMap()
     {
-        return this.managedVersionMap;
+        return managedVersionMap;
     }
 
     public boolean equals( Object other )
@@ -1722,12 +1712,12 @@ public class MavenProject
         }
         return pluginArtifact;
     }
-    
+
     private void addArtifactPath(Artifact a, List list) throws DependencyResolutionRequiredException
     {
         String refId = getProjectReferenceId( a.getGroupId(), a.getArtifactId(), a.getVersion() );
         MavenProject project = (MavenProject) projectReferences.get( refId );
-        
+
         boolean projectDirFound = false;
         if ( project != null )
         {
@@ -1756,7 +1746,7 @@ public class MavenProject
             list.add( file.getPath() );
         }
     }
-    
+
     /**
      * Default toString
      */
@@ -1764,25 +1754,25 @@ public class MavenProject
     {
         StringBuffer sb = new StringBuffer(30);
         sb.append( "MavenProject: " );
-        sb.append( this.getGroupId() );
+        sb.append( getGroupId() );
         sb.append( ":" );
-        sb.append( this.getArtifactId() );
+        sb.append( getArtifactId() );
         sb.append( ":" );
-        sb.append( this.getVersion() );
+        sb.append( getVersion() );
         sb.append( " @ " );
-        
-        try 
+
+        try
         {
-            sb.append( this.getFile().getPath() );
+            sb.append( getFile().getPath() );
         }
         catch (NullPointerException e)
         {
             //don't log it.
         }
-        
-        return sb.toString();        
+
+        return sb.toString();
     }
-    
+
     /**
      * @throws CloneNotSupportedException
      * @since 2.0.9
