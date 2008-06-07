@@ -34,8 +34,10 @@ public class MavenProjectDynamismTest
     {
         MavenProject project = buildProject( "pom.xml" );
 
-        File basedir = project.getBasedir();
-        File buildDir = new File( basedir, "target" );
+        File baseDir = project.getBasedir();
+        System.out.println( "Project basedir is: " + project.getBasedir() );
+
+        File buildDir = new File( baseDir, "target" );
 
         String basedirExpr = "${pom.basedir}";
         String buildDirExpr = "${pom.build.directory}";
@@ -142,15 +144,15 @@ public class MavenProjectDynamismTest
         build = project.getBuild();
 
         assertEquals( "Concrete source directory should be absolute.",
-                      new File( basedir, "/src/main/java" ).getAbsolutePath(),
+                      new File( baseDir, "/src/main/java" ).getAbsolutePath(),
                       build.getSourceDirectory() );
 
         assertEquals( "Concrete test-source directory should be absolute.",
-                      new File( basedir, "/src/test/java" ).getAbsolutePath(),
+                      new File( baseDir, "/src/test/java" ).getAbsolutePath(),
                       build.getTestSourceDirectory() );
 
         assertEquals( "Concrete script-source directory should be absolute.",
-                      new File( basedir, "/src/main/scripts" ).getAbsolutePath(),
+                      new File( baseDir, "/src/main/scripts" ).getAbsolutePath(),
                       build.getScriptSourceDirectory() );
 
         compileSourceRoots = project.getCompileSourceRoots();
@@ -162,7 +164,7 @@ public class MavenProjectDynamismTest
                       compileSourceRoots.size() );
 
         assertEquals( "Concrete compile-source roots should contain interpolated source-directory value.",
-                      new File( basedir, "/src/main/java" ).getAbsolutePath(),
+                      new File( baseDir, "/src/main/java" ).getAbsolutePath(),
                       compileSourceRoots.get( 0 ) );
 
         testCompileSourceRoots = project.getTestCompileSourceRoots();
@@ -175,7 +177,7 @@ public class MavenProjectDynamismTest
                       testCompileSourceRoots.size() );
 
         assertEquals( "Concrete test-compile-source roots should contain interpolated test-source-directory value.",
-                      new File( basedir, "/src/test/java" ).getAbsolutePath(),
+                      new File( baseDir, "/src/test/java" ).getAbsolutePath(),
                       testCompileSourceRoots.get( 0 ) );
 
         scriptSourceRoots = project.getScriptSourceRoots();
@@ -187,7 +189,7 @@ public class MavenProjectDynamismTest
                       scriptSourceRoots.size() );
 
         assertEquals( "Concrete script-source roots should contain interpolated script-source-directory value.",
-                      new File( basedir, "/src/main/scripts" ).getAbsolutePath(),
+                      new File( baseDir, "/src/main/scripts" ).getAbsolutePath(),
                       scriptSourceRoots.get( 0 ) );
 
         resources = build.getResources();
@@ -219,7 +221,7 @@ public class MavenProjectDynamismTest
                       build.getTestOutputDirectory() );
 
         assertEquals( "Concrete build directory should be absolute.",
-                      new File( basedir, "target" ).getAbsolutePath(),
+                      new File( baseDir, "target" ).getAbsolutePath(),
                       build.getDirectory() );
 
         // --------------------------------------------------------------------
@@ -586,10 +588,14 @@ public class MavenProjectDynamismTest
             fail( "Cannot find classpath resource for POM: " + path );
         }
 
-        File pomFile = new File( resource.toURI().normalize().getPath() );
+        File pomFile = new File( resource.getPath() );
         pomFile = pomFile.getAbsoluteFile();
 
-        return projectBuilder.build( pomFile, new DefaultProjectBuilderConfiguration() );
+        MavenProject project = projectBuilder.build( pomFile, new DefaultProjectBuilderConfiguration() );
+
+        assertEquals( pomFile, project.getFile() );
+
+        return project;
     }
 
 }

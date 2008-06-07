@@ -1794,14 +1794,14 @@ public class DefaultMavenProjectBuilder
         Map context = new HashMap();
 
         populateBuildPaths( model.getBuild(), context, project.getBasedir() );
-//        if ( !isSuperPom )
-//        {
-//            Properties userProps = session.getUserProperties();
-//            if ( userProps != null )
-//            {
-//                context.putAll( userProps );
-//            }
-//        }
+        if ( project.getFile() != null )
+        {
+            Properties userProps = config.getUserProperties();
+            if ( userProps != null )
+            {
+                context.putAll( userProps );
+            }
+        }
 
         model = modelInterpolator.interpolate( model, context, true );
 
@@ -1838,7 +1838,6 @@ public class DefaultMavenProjectBuilder
 
         Model model2 = ModelUtils.cloneModel( model );
 
-        // Only translate the base directory for files in the source tree
         pathTranslator.alignToBaseDirectory( model, basedir );
 
         project.preserveBuild( model2.getBuild() );
@@ -1881,8 +1880,9 @@ public class DefaultMavenProjectBuilder
         {
             String path = (String) it.next();
 
-            // Only translate the base directory for files in the source tree
-            result.add( pathTranslator.alignToBaseDirectory( path, basedir ) );
+            String aligned = pathTranslator.alignToBaseDirectory( path, basedir );
+
+            result.add( aligned );
         }
 
         return result;
@@ -2034,7 +2034,9 @@ public class DefaultMavenProjectBuilder
         for ( Iterator it = originalStrings.iterator(); it.hasNext(); )
         {
             String original = (String) it.next();
-            result.add( modelInterpolator.interpolate( original, model, context ) );
+            String interpolated = modelInterpolator.interpolate( original, model, context );
+
+            result.add( interpolated );
         }
 
         return result;
@@ -2202,7 +2204,20 @@ public class DefaultMavenProjectBuilder
         if ( config.getExecutionProperties() != null
              && !config.getExecutionProperties().isEmpty() )
         {
-            context.putAll( config.getExecutionProperties() );
+            for ( Iterator it = config.getExecutionProperties().entrySet().iterator(); it.hasNext(); )
+            {
+                Map.Entry entry = (Map.Entry) it.next();
+
+                String key = (String) entry.getKey();
+                if ( "basedir".equals( key ) )
+                {
+                    continue;
+                }
+                else
+                {
+                    context.put( key, entry.getValue() );
+                }
+            }
         }
     }
 
@@ -2219,20 +2234,20 @@ public class DefaultMavenProjectBuilder
             // sure interpolation of the directories below uses translated paths.
             // Afterward, we'll double back and translate any paths that weren't covered during interpolation via the
             // code below...
-            context.put( "build.directory",
-                         pathTranslator.alignToBaseDirectory( build.getDirectory(), projectDir ) );
-            context.put( "build.outputDirectory",
-                         pathTranslator.alignToBaseDirectory( build.getOutputDirectory(),
-                                                              projectDir ) );
-            context.put( "build.testOutputDirectory",
-                         pathTranslator.alignToBaseDirectory( build.getTestOutputDirectory(),
-                                                              projectDir ) );
-            context.put( "build.sourceDirectory",
-                         pathTranslator.alignToBaseDirectory( build.getSourceDirectory(),
-                                                              projectDir ) );
-            context.put( "build.testSourceDirectory",
-                         pathTranslator.alignToBaseDirectory( build.getTestSourceDirectory(),
-                                                              projectDir ) );
+//            context.put( "build.directory",
+//                         pathTranslator.alignToBaseDirectory( build.getDirectory(), projectDir ) );
+//            context.put( "build.outputDirectory",
+//                         pathTranslator.alignToBaseDirectory( build.getOutputDirectory(),
+//                                                              projectDir ) );
+//            context.put( "build.testOutputDirectory",
+//                         pathTranslator.alignToBaseDirectory( build.getTestOutputDirectory(),
+//                                                              projectDir ) );
+//            context.put( "build.sourceDirectory",
+//                         pathTranslator.alignToBaseDirectory( build.getSourceDirectory(),
+//                                                              projectDir ) );
+//            context.put( "build.testSourceDirectory",
+//                         pathTranslator.alignToBaseDirectory( build.getTestSourceDirectory(),
+//                                                              projectDir ) );
         }
     }
 }
