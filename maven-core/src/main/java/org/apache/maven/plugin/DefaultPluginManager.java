@@ -52,10 +52,8 @@ import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.plugin.version.PluginVersionManager;
 import org.apache.maven.plugin.version.PluginVersionNotFoundException;
 import org.apache.maven.plugin.version.PluginVersionResolutionException;
-import org.apache.maven.project.DefaultProjectBuilderConfiguration;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.MavenProjectBuilder;
-import org.apache.maven.project.ProjectBuilderConfiguration;
 import org.apache.maven.project.ProjectBuildingException;
 import org.apache.maven.project.artifact.InvalidDependencyVersionException;
 import org.apache.maven.project.artifact.MavenMetadataSource;
@@ -417,30 +415,30 @@ public class DefaultPluginManager
         Mojo plugin;
 
         PluginDescriptor pluginDescriptor = mojoDescriptor.getPluginDescriptor();
+
         String goalId = mojoDescriptor.getGoal();
         String groupId = pluginDescriptor.getGroupId();
         String artifactId = pluginDescriptor.getArtifactId();
         String executionId = mojoExecution.getExecutionId();
+
+        if ( !project.isConcrete() )
+        {
+            try
+            {
+                mavenProjectBuilder.calculateConcreteState( project, session.getProjectBuilderConfiguration() );
+            }
+            catch ( ModelInterpolationException e )
+            {
+                throw new PluginManagerException( "Failed to calculate concrete state for project: " + project, e );
+            }
+        }
+
         Xpp3Dom dom = project.getGoalConfiguration( groupId, artifactId, executionId, goalId );
         Xpp3Dom reportDom = project.getReportConfiguration( groupId, artifactId, executionId );
         dom = Xpp3Dom.mergeXpp3Dom( dom, reportDom );
         if ( mojoExecution.getConfiguration() != null )
         {
             dom = Xpp3Dom.mergeXpp3Dom( dom, mojoExecution.getConfiguration() );
-        }
-
-        ProjectBuilderConfiguration config = new DefaultProjectBuilderConfiguration();
-        config.setExecutionProperties( session.getExecutionProperties() );
-        config.setLocalRepository( session.getLocalRepository() );
-        config.setUserProperties( session.getUserProperties() );
-
-        try
-        {
-            mavenProjectBuilder.calculateConcreteState( project, config );
-        }
-        catch ( ModelInterpolationException e )
-        {
-            throw new PluginManagerException( "Failed to calculate concrete state for project: " + project, e );
         }
 
         plugin = getConfiguredMojo( session, dom, project, false, mojoExecution );
@@ -542,7 +540,7 @@ public class DefaultPluginManager
 
         try
         {
-            mavenProjectBuilder.restoreDynamicState( project, config );
+            mavenProjectBuilder.restoreDynamicState( project, session.getProjectBuilderConfiguration() );
         }
         catch ( ModelInterpolationException e )
         {
@@ -715,7 +713,9 @@ public class DefaultPluginManager
                     pluginArtifact.getId() + "': " + e.getMessage(), pluginArtifact, e );
             }
 
-            checkPlexusUtils( resolutionGroup, artifactFactory );
+            Set rgArtifacts = resolutionGroup.getArtifacts();
+
+            rgArtifacts = checkPlexusUtils( rgArtifacts, artifactFactory );
 
             // [jdcasey; 20-March-2008]:
             // This is meant to eliminate the introduction of duplicated artifacts.
@@ -745,7 +745,7 @@ public class DefaultPluginManager
             all.addAll( pluginDescriptor.getIntroducedDependencyArtifacts() );
 
             // add in the deps from the plugin POM now.
-            all.addAll( resolutionGroup.getArtifacts() );
+            all.addAll( rgArtifacts );
 
             for ( Iterator it = all.iterator(); it.hasNext(); )
             {
@@ -857,7 +857,7 @@ public class DefaultPluginManager
         }
     }
 
-    public static void checkPlexusUtils( ResolutionGroup resolutionGroup, ArtifactFactory artifactFactory )
+    public static Set checkPlexusUtils( Set dependencyArtifacts, ArtifactFactory artifactFactory )
     {
         // ----------------------------------------------------------------------------
         // If the plugin already declares a dependency on plexus-utils then we're all
@@ -882,7 +882,7 @@ public class DefaultPluginManager
 
         boolean plexusUtilsPresent = false;
 
-        for ( Iterator i = resolutionGroup.getArtifacts().iterator(); i.hasNext(); )
+        for ( Iterator i = dependencyArtifacts.iterator(); i.hasNext(); )
         {
             Artifact a = (Artifact) i.next();
 
@@ -901,9 +901,19 @@ public class DefaultPluginManager
             // version to the latest version we know that works as of the 2.0.6 release. We set the scope to runtime
             // as this is what's implicitly happening in 2.0.6.
 
-            resolutionGroup.getArtifacts().add( artifactFactory.createArtifact( "org.codehaus.plexus",
-                                                                                "plexus-utils", "1.1",
-                                                                                Artifact.SCOPE_RUNTIME, "jar" ) );
+            Set result = new LinkedHashSet();
+            if ( !dependencyArtifacts.isEmpty() )
+            {
+                result.addAll( dependencyArtifacts );
+            }
+
+            result.add( artifactFactory.createArtifact( "org.codehaus.plexus", "plexus-utils", "1.1", Artifact.SCOPE_RUNTIME, "jar" ) );
+
+            return result;
+        }
+        else
+        {
+            return dependencyArtifacts;
         }
     }
 

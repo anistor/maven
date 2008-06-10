@@ -1,9 +1,11 @@
 package org.apache.maven.project;
 
 import org.apache.maven.model.Build;
+import org.apache.maven.model.Plugin;
 import org.apache.maven.model.Resource;
 import org.apache.maven.project.interpolation.ModelInterpolationException;
 import org.codehaus.plexus.PlexusTestCase;
+import org.codehaus.plexus.util.xml.Xpp3Dom;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
 import java.io.File;
@@ -12,7 +14,6 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Properties;
 
 public class MavenProjectDynamismTest
     extends PlexusTestCase
@@ -28,120 +29,96 @@ public class MavenProjectDynamismTest
         projectBuilder = (MavenProjectBuilder) lookup( MavenProjectBuilder.class.getName() );
     }
 
+    public void testBuildSectionGroupIdInterpolation()
+        throws IOException, XmlPullParserException, URISyntaxException, ProjectBuildingException,
+        ModelInterpolationException
+    {
+        MavenProject project = buildProject( "pom-interp.xml" );
+
+        projectBuilder.calculateConcreteState( project, new DefaultProjectBuilderConfiguration() );
+
+        String basepath = "/" + project.getGroupId();
+
+        Build build = project.getBuild();
+
+        assertTrue( build.getSourceDirectory().startsWith( basepath ) );
+        assertTrue( build.getTestSourceDirectory().startsWith( basepath ) );
+        assertTrue( build.getScriptSourceDirectory().startsWith( basepath ) );
+
+        List plugins = build.getPlugins();
+        assertNotNull( plugins );
+        assertEquals( 1, plugins.size() );
+
+        Plugin plugin = (Plugin) plugins.get( 0 );
+        assertEquals( "my-plugin", plugin.getArtifactId() );
+
+        Xpp3Dom conf = (Xpp3Dom) plugin.getConfiguration();
+        assertNotNull( conf );
+
+        Xpp3Dom[] children = conf.getChildren();
+        assertEquals( 3, children.length );
+
+        for ( int i = 0; i < children.length; i++ )
+        {
+            assertEquals( "Configuration parameter: "
+                                          + children[i].getName()
+                                          + " should have a an interpolated POM groupId as its value.",
+                          children[i].getValue(),
+                          project.getGroupId() );
+        }
+
+        projectBuilder.restoreDynamicState( project, new DefaultProjectBuilderConfiguration() );
+
+        String projectGidExpr = "${project.groupId}";
+        String pomGidExpr = "${pom.groupId}";
+        String nakedGidExpr = "${groupId}";
+
+        build = project.getBuild();
+
+        assertTrue( build.getSourceDirectory().startsWith( "/" + projectGidExpr ) );
+        assertTrue( build.getTestSourceDirectory().startsWith( "/" + pomGidExpr ) );
+        assertTrue( build.getScriptSourceDirectory().startsWith( "/" + nakedGidExpr ) );
+
+        plugins = build.getPlugins();
+        assertNotNull( plugins );
+        assertEquals( 1, plugins.size() );
+
+        plugin = (Plugin) plugins.get( 0 );
+        assertEquals( "my-plugin", plugin.getArtifactId() );
+
+        conf = (Xpp3Dom) plugin.getConfiguration();
+        assertNotNull( conf );
+
+        children = conf.getChildren();
+        assertEquals( 3, children.length );
+
+        assertEquals( "Configuration parameter: " + children[0].getName() + " should have "
+                      + projectGidExpr + " as its value.", children[0].getValue(), projectGidExpr );
+
+        assertEquals( "Configuration parameter: " + children[1].getName() + " should have "
+                      + pomGidExpr + " as its value.", children[1].getValue(), pomGidExpr );
+
+        assertEquals( "Configuration parameter: " + children[2].getName() + " should have "
+                      + nakedGidExpr + " as its value.", children[2].getValue(), nakedGidExpr );
+    }
+
     public void testRoundTrip()
         throws IOException, XmlPullParserException, URISyntaxException,
         ModelInterpolationException, ProjectBuildingException
     {
         MavenProject project = buildProject( "pom.xml" );
+        ProjectBuilderConfiguration config = new DefaultProjectBuilderConfiguration();
+        projectBuilder.calculateConcreteState( project, config );
 
         File baseDir = project.getBasedir();
-        System.out.println( "Project basedir is: " + project.getBasedir() );
-
         File buildDir = new File( baseDir, "target" );
 
         String basedirExpr = "${pom.basedir}";
         String buildDirExpr = "${pom.build.directory}";
 
-        // --------------------------------------------------------------------
-        // FIRST, VERIFY THE INITIAL STATE FOR THE BUILD SECTION AND
-        // ASSOCIATED DIRECTORIES ATTACHED TO THE PROJECT INSTANCE.
-        // --------------------------------------------------------------------
-
-        Build build = project.getBuild();
-
-        assertEquals( "Original source directory should be expressed in terms of the basedir.",
-                      basedirExpr + "/src/main/java",
-                      build.getSourceDirectory() );
-
-        assertEquals( "Original test-source directory should be expressed in terms of the basedir.",
-                      basedirExpr + "/src/test/java",
-                      build.getTestSourceDirectory() );
-
-        assertEquals( "Original script-source directory should be expressed in terms of the basedir.",
-                      basedirExpr + "/src/main/scripts",
-                      build.getScriptSourceDirectory() );
-
-        List compileSourceRoots = project.getCompileSourceRoots();
-
-        assertNotNull( "Original compile-source roots should not be null.", compileSourceRoots );
-
-        assertEquals( "Original compile-source roots should contain one entry.",
-                      1,
-                      compileSourceRoots.size() );
-
-        assertEquals( "Original compile-source roots should contain uninterpolated source-directory value.",
-                      basedirExpr + "/src/main/java",
-                      compileSourceRoots.get( 0 ) );
-
-        List testCompileSourceRoots = project.getTestCompileSourceRoots();
-
-        assertNotNull( "Original test-compile-source roots should not be null.",
-                       testCompileSourceRoots );
-
-        assertEquals( "Original test-compile-source roots should contain one entry.",
-                      1,
-                      testCompileSourceRoots.size() );
-
-        assertEquals( "Original test-compile-source roots should contain uninterpolated test-source-directory value.",
-                      basedirExpr + "/src/test/java",
-                      testCompileSourceRoots.get( 0 ) );
-
-        List scriptSourceRoots = project.getScriptSourceRoots();
-
-        assertNotNull( "Original script-source roots should not be null.", scriptSourceRoots );
-
-        assertEquals( "Original script-source roots should contain one entry.",
-                      1,
-                      scriptSourceRoots.size() );
-
-        assertEquals( "Original script-source roots should contain uninterpolated script-source-directory value.",
-                      basedirExpr + "/src/main/scripts",
-                      scriptSourceRoots.get( 0 ) );
-
-        List resources = build.getResources();
-
-        assertNotNull( "Original resources should not be null.", resources );
-
-        assertEquals( "Original resources should contain one entry.", 1, resources.size() );
-
-        assertEquals( "Original resource should contain uninterpolated reference to build directory.",
-                      buildDirExpr + "/generated-resources/plexus",
-                      ( (Resource) resources.get( 0 ) ).getDirectory() );
-
-        List filters = build.getFilters();
-
-        assertNotNull( "Original filters should not be null.", filters );
-
-        assertEquals( "Original filters should contain one entry.", 1, filters.size() );
-
-        assertEquals( "Original filter entry should contain uninterpolated reference to build directory.",
-                      buildDirExpr + "/generated-filters.properties",
-                      filters.get( 0 ) );
-
-        assertEquals( "Original output-directory should be expressed in terms of the build-directory.",
-                      buildDirExpr + "/classes",
-                      build.getOutputDirectory() );
-
-        assertEquals( "Original test-output-directory should be expressed in terms of the build-directory.",
-                      buildDirExpr + "/test-classes",
-                      build.getTestOutputDirectory() );
-
-        assertEquals( "Original build directory should be relative.",
-                      "target",
-                      build.getDirectory() );
-
-        // --------------------------------------------------------------------
-        // NOW, CALCULATE THE CONCRETE STATE FOR THE BUILD SECTION AND
-        // ASSOCIATED DIRECTORIES ATTACHED TO THE PROJECT INSTANCE.
-        // --------------------------------------------------------------------
-
-        ProjectBuilderConfiguration config = new DefaultProjectBuilderConfiguration();
-
-        projectBuilder.calculateConcreteState( project, config );
-
         assertTrue( project.isConcrete() );
 
-        build = project.getBuild();
+        Build build = project.getBuild();
 
         assertEquals( "Concrete source directory should be absolute.",
                       new File( baseDir, "/src/main/java" ).getAbsolutePath(),
@@ -155,7 +132,7 @@ public class MavenProjectDynamismTest
                       new File( baseDir, "/src/main/scripts" ).getAbsolutePath(),
                       build.getScriptSourceDirectory() );
 
-        compileSourceRoots = project.getCompileSourceRoots();
+        List compileSourceRoots = project.getCompileSourceRoots();
 
         assertNotNull( "Concrete compile-source roots should not be null.", compileSourceRoots );
 
@@ -167,7 +144,7 @@ public class MavenProjectDynamismTest
                       new File( baseDir, "/src/main/java" ).getAbsolutePath(),
                       compileSourceRoots.get( 0 ) );
 
-        testCompileSourceRoots = project.getTestCompileSourceRoots();
+        List testCompileSourceRoots = project.getTestCompileSourceRoots();
 
         assertNotNull( "Concrete test-compile-source roots should not be null.",
                        testCompileSourceRoots );
@@ -180,7 +157,7 @@ public class MavenProjectDynamismTest
                       new File( baseDir, "/src/test/java" ).getAbsolutePath(),
                       testCompileSourceRoots.get( 0 ) );
 
-        scriptSourceRoots = project.getScriptSourceRoots();
+        List scriptSourceRoots = project.getScriptSourceRoots();
 
         assertNotNull( "Concrete script-source roots should not be null.", scriptSourceRoots );
 
@@ -192,7 +169,7 @@ public class MavenProjectDynamismTest
                       new File( baseDir, "/src/main/scripts" ).getAbsolutePath(),
                       scriptSourceRoots.get( 0 ) );
 
-        resources = build.getResources();
+        List resources = build.getResources();
 
         assertNotNull( "Concrete resources should not be null.", resources );
 
@@ -202,7 +179,7 @@ public class MavenProjectDynamismTest
                       new File( buildDir, "generated-resources/plexus" ).getAbsolutePath(),
                       ( (Resource) resources.get( 0 ) ).getDirectory() );
 
-        filters = build.getFilters();
+        List filters = build.getFilters();
 
         assertNotNull( "Concrete filters should not be null.", filters );
 
@@ -256,7 +233,7 @@ public class MavenProjectDynamismTest
                       compileSourceRoots.size() );
 
         assertEquals( "Restored compile-source roots should contain uninterpolated source-directory value.",
-                      basedirExpr + "/src/main/java",
+                      "src/main/java",
                       compileSourceRoots.get( 0 ) );
 
         testCompileSourceRoots = project.getTestCompileSourceRoots();
@@ -269,7 +246,7 @@ public class MavenProjectDynamismTest
                       testCompileSourceRoots.size() );
 
         assertEquals( "Restored test-compile-source roots should contain uninterpolated test-source-directory value.",
-                      basedirExpr + "/src/test/java",
+                      "src/test/java",
                       testCompileSourceRoots.get( 0 ) );
 
         scriptSourceRoots = project.getScriptSourceRoots();
@@ -281,7 +258,7 @@ public class MavenProjectDynamismTest
                       scriptSourceRoots.size() );
 
         assertEquals( "Restored script-source roots should contain uninterpolated script-source-directory value.",
-                      basedirExpr + "/src/main/scripts",
+                      "src/main/scripts",
                       scriptSourceRoots.get( 0 ) );
 
         resources = build.getResources();
@@ -323,27 +300,18 @@ public class MavenProjectDynamismTest
     {
         MavenProject project = buildProject( "pom.xml" );
 
-        Build build = project.getBuild();
-
-        List resources = build.getResources();
-        assertNotNull( "Original resources should not be null.", resources );
-        assertEquals( "Original resources should contain only one entry.", 1, resources.size() );
-        assertResourcePresent( "original resources",
-                               "${pom.build.directory}/generated-resources/plexus",
-                               resources );
-
         ProjectBuilderConfiguration config = new DefaultProjectBuilderConfiguration();
 
         projectBuilder.calculateConcreteState( project, config );
 
-        build = project.getBuild();
+        Build build = project.getBuild();
 
         Resource r = new Resource();
         r.setDirectory( "myDir" );
 
         build.addResource( r );
 
-        resources = build.getResources();
+        List resources = build.getResources();
         assertNotNull( "Concrete resources should not be null.", resources );
         assertEquals( "Concrete resources should contain two entries.", 2, resources.size() );
         assertResourcePresent( "concrete resources",
@@ -370,24 +338,14 @@ public class MavenProjectDynamismTest
     {
         MavenProject project = buildProject( "pom.xml" );
 
-        Build build = project.getBuild();
-
-        List filters = build.getFilters();
-        assertNotNull( "Original filters should not be null.", filters );
-        assertEquals( "Original filters should contain only one entry.", 1, filters.size() );
-        assertFilterPresent( "original filters",
-                             "${pom.build.directory}/generated-filters.properties",
-                             filters );
-
         ProjectBuilderConfiguration config = new DefaultProjectBuilderConfiguration();
-
         projectBuilder.calculateConcreteState( project, config );
 
-        build = project.getBuild();
+        Build build = project.getBuild();
 
         build.addFilter( "myDir/filters.properties" );
 
-        filters = build.getFilters();
+        List filters = build.getFilters();
         assertNotNull( "Concrete filters should not be null.", filters );
         assertEquals( "Concrete filters should contain two entries.", 2, filters.size() );
         assertFilterPresent( "concrete filters",
@@ -416,7 +374,6 @@ public class MavenProjectDynamismTest
         MavenProject project = buildProject( "pom.xml" );
 
         ProjectBuilderConfiguration config = new DefaultProjectBuilderConfiguration();
-
         projectBuilder.calculateConcreteState( project, config );
 
         Build build = project.getBuild();
@@ -456,25 +413,20 @@ public class MavenProjectDynamismTest
     {
         MavenProject project = buildProject( "pom.xml" );
 
-        String buildDir = new File( project.getBasedir(), project.getBuild().getDirectory() ).getAbsolutePath();
-        Properties props = project.getProperties();
-
-        assertEquals( "Original property value for 'myProperty' should be the absolute initial build directory.",
-                      buildDir,
-                      props.getProperty( "myProperty" ) );
-
         ProjectBuilderConfiguration config = new DefaultProjectBuilderConfiguration();
         projectBuilder.calculateConcreteState( project, config );
 
         project.getBuild().setDirectory( "target2" );
+
+        String originalValue = project.getProperties().getProperty( "myProperty" );
 
         projectBuilder.restoreDynamicState( project, config );
         projectBuilder.calculateConcreteState( project, config );
 
         assertEquals( "After resetting build-directory and going through a recalculation phase for the project, "
                                       + "property value for 'myProperty' should STILL be the absolute initial build directory.",
-                      buildDir,
-                      props.getProperty( "myProperty" ) );
+                      originalValue,
+                      project.getProperties().getProperty( "myProperty" ) );
     }
 
     public void testShouldAlignCompileSourceRootsInConcreteState()
@@ -483,38 +435,53 @@ public class MavenProjectDynamismTest
     {
         MavenProject project = buildProject( "pom-relative.xml" );
 
-        List compileSourceRoots = project.getCompileSourceRoots();
-        assertNotNull( "Original dynamic state compile-source roots should not be null.", compileSourceRoots );
-        assertEquals( "Original dynamic state should contain one compile-source root.", 1, compileSourceRoots.size() );
-        assertEquals( "Original dynamic state should have a relative path for compile-source root.", "src/main/java", compileSourceRoots.get( 0 ) );
-
         ProjectBuilderConfiguration config = new DefaultProjectBuilderConfiguration();
         projectBuilder.calculateConcreteState( project, config );
 
-        compileSourceRoots = project.getCompileSourceRoots();
-        assertNotNull( "First concrete state compile-source roots should not be null.", compileSourceRoots );
-        assertEquals( "First concrete state should contain one compile-source root.", 1, compileSourceRoots.size() );
-        assertEquals( "First concrete state should have an absolute path for compile-source root.", new File( project.getBasedir(), "src/main/java" ).getAbsolutePath(), compileSourceRoots.get( 0 ) );
+        List compileSourceRoots = project.getCompileSourceRoots();
+        assertNotNull( "First concrete state compile-source roots should not be null.",
+                       compileSourceRoots );
+        assertEquals( "First concrete state should contain one compile-source root.",
+                      1,
+                      compileSourceRoots.size() );
+        assertEquals( "First concrete state should have an absolute path for compile-source root.",
+                      new File( project.getBasedir(), "src/main/java" ).getAbsolutePath(),
+                      compileSourceRoots.get( 0 ) );
 
-        String newSourceRoot = new File( project.getBuild().getDirectory(), "generated-sources/modello" ).getAbsolutePath();
+        String newSourceRoot = new File( project.getBuild().getDirectory(),
+                                         "generated-sources/modello" ).getAbsolutePath();
 
         project.addCompileSourceRoot( newSourceRoot );
 
         projectBuilder.restoreDynamicState( project, config );
 
         compileSourceRoots = project.getCompileSourceRoots();
-        assertNotNull( "Restored dynamic state compile-source roots should not be null.", compileSourceRoots );
-        assertEquals( "Restored dynamic state should contain two compile-source roots.", 2, compileSourceRoots.size() );
-        assertEquals( "Restored dynamic state should have a relative path for original compile-source root.", "src/main/java", compileSourceRoots.get( 0 ) );
-        assertEquals( "Restored dynamic state should have a relative path for new compile-source root.", "target/generated-sources/modello", compileSourceRoots.get( 1 ) );
+        assertNotNull( "Restored dynamic state compile-source roots should not be null.",
+                       compileSourceRoots );
+        assertEquals( "Restored dynamic state should contain two compile-source roots.",
+                      2,
+                      compileSourceRoots.size() );
+        assertEquals( "Restored dynamic state should have a relative path for original compile-source root.",
+                      "src/main/java",
+                      compileSourceRoots.get( 0 ) );
+        assertEquals( "Restored dynamic state should have a relative path for new compile-source root.",
+                      "target/generated-sources/modello",
+                      compileSourceRoots.get( 1 ) );
 
         projectBuilder.calculateConcreteState( project, config );
 
         compileSourceRoots = project.getCompileSourceRoots();
-        assertNotNull( "Second concrete state compile-source roots should not be null.", compileSourceRoots );
-        assertEquals( "Second concrete state should contain two compile-source roots.", 2, compileSourceRoots.size() );
-        assertEquals( "Second concrete state should have an absolute path for original compile-source root.", new File( project.getBasedir(), "src/main/java" ).getAbsolutePath(), compileSourceRoots.get( 0 ) );
-        assertEquals( "Second concrete state should have an absolute path for new compile-source root.", newSourceRoot, compileSourceRoots.get( 1 ) );
+        assertNotNull( "Second concrete state compile-source roots should not be null.",
+                       compileSourceRoots );
+        assertEquals( "Second concrete state should contain two compile-source roots.",
+                      2,
+                      compileSourceRoots.size() );
+        assertEquals( "Second concrete state should have an absolute path for original compile-source root.",
+                      new File( project.getBasedir(), "src/main/java" ).getAbsolutePath(),
+                      compileSourceRoots.get( 0 ) );
+        assertEquals( "Second concrete state should have an absolute path for new compile-source root.",
+                      newSourceRoot,
+                      compileSourceRoots.get( 1 ) );
     }
 
     // Useful for diagnostics.
@@ -591,7 +558,8 @@ public class MavenProjectDynamismTest
         File pomFile = new File( resource.getPath() );
         pomFile = pomFile.getAbsoluteFile();
 
-        MavenProject project = projectBuilder.build( pomFile, new DefaultProjectBuilderConfiguration() );
+        MavenProject project = projectBuilder.build( pomFile,
+                                                     new DefaultProjectBuilderConfiguration() );
 
         assertEquals( pomFile, project.getFile() );
 

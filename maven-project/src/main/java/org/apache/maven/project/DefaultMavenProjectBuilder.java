@@ -46,6 +46,7 @@ import org.apache.maven.model.Extension;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.Parent;
 import org.apache.maven.model.Plugin;
+import org.apache.maven.model.PluginManagement;
 import org.apache.maven.model.Profile;
 import org.apache.maven.model.ReportPlugin;
 import org.apache.maven.model.Repository;
@@ -906,6 +907,15 @@ public class DefaultMavenProjectBuilder
             project.setFile( projectDescriptor );
         }
 
+//        try
+//        {
+//            calculateConcreteState( project, config );
+//        }
+//        catch ( ModelInterpolationException e )
+//        {
+//            throw new InvalidProjectModelException( projectId, pomLocation, e.getMessage(), e );
+//        }
+
         project.setManagedVersionMap( createManagedVersionMap( projectId,
                                                                project.getDependencyManagement(),
                                                                project.getParent() ) );
@@ -980,49 +990,13 @@ public class DefaultMavenProjectBuilder
 
         activeProfiles.addAll( injectedProfiles );
 
-        // We don't need all the project methods that are added over those in the model, but we do need basedir
-        Map context = new HashMap();
-
-        Build build = model.getBuild();
-
-        if ( projectDir != null )
-        {
-            context.put( "basedir", projectDir.getAbsolutePath() );
-
-            // MNG-1927, MNG-2124, MNG-3355:
-            // If the build section is present and the project directory is non-null, we should make
-            // sure interpolation of the directories below uses translated paths.
-            // Afterward, we'll double back and translate any paths that weren't covered during interpolation via the
-            // code below...
-            context.put( "build.directory", pathTranslator.alignToBaseDirectory( build.getDirectory(), projectDir ) );
-            context.put( "build.outputDirectory", pathTranslator.alignToBaseDirectory( build.getOutputDirectory(), projectDir ) );
-            context.put( "build.testOutputDirectory", pathTranslator.alignToBaseDirectory( build.getTestOutputDirectory(), projectDir ) );
-            context.put( "build.sourceDirectory", pathTranslator.alignToBaseDirectory( build.getSourceDirectory(), projectDir ) );
-            context.put( "build.testSourceDirectory", pathTranslator.alignToBaseDirectory( build.getTestSourceDirectory(), projectDir ) );
-        }
-
-        if ( !isSuperPom )
-        {
-            Properties userProps = config.getUserProperties();
-            if ( userProps != null )
-            {
-                context.putAll( userProps );
-            }
-        }
-
         Build dynamicBuild = model.getBuild();
-        model.setBuild( new Build() );
 
-        model = modelInterpolator.interpolate( model, context, strict );
+        model.setBuild( ModelUtils.cloneBuild( dynamicBuild ) );
 
-        // second pass allows ${user.home} to work, if it needs to.
-        // [MNG-2339] ensure the system properties are still interpolated for backwards compat, but the model values must win
-        if ( config.getExecutionProperties() != null && !config.getExecutionProperties().isEmpty() )
-        {
-            context.putAll( config.getExecutionProperties() );
-        }
+        model = interpolate( model, projectDir, isSuperPom, config, strict );
 
-        model = modelInterpolator.interpolate( model, context, strict );
+        mergeDeterministicBuildElements( model.getBuild(), dynamicBuild );
 
         model.setBuild( dynamicBuild );
 
@@ -1122,6 +1096,106 @@ public class DefaultMavenProjectBuilder
         project.setExtensionArtifacts( createExtensionArtifacts( projectId, project.getBuildExtensions() ) );
 
         return project;
+    }
+
+    private Model interpolate( Model model,
+                              File projectDir,
+                              boolean isSuperPom,
+                              ProjectBuilderConfiguration config,
+                              boolean strict )
+        throws ModelInterpolationException
+    {
+        // We don't need all the project methods that are added over those in the model, but we do need basedir
+        Map context = new HashMap();
+
+        Build build = model.getBuild();
+
+        if ( projectDir != null )
+        {
+            context.put( "basedir", projectDir.getAbsolutePath() );
+
+            // MNG-1927, MNG-2124, MNG-3355:
+            // If the build section is present and the project directory is non-null, we should make
+            // sure interpolation of the directories below uses translated paths.
+            // Afterward, we'll double back and translate any paths that weren't covered during interpolation via the
+            // code below...
+            context.put( "build.directory", pathTranslator.alignToBaseDirectory( build.getDirectory(), projectDir ) );
+            context.put( "build.outputDirectory", pathTranslator.alignToBaseDirectory( build.getOutputDirectory(), projectDir ) );
+            context.put( "build.testOutputDirectory", pathTranslator.alignToBaseDirectory( build.getTestOutputDirectory(), projectDir ) );
+            context.put( "build.sourceDirectory", pathTranslator.alignToBaseDirectory( build.getSourceDirectory(), projectDir ) );
+            context.put( "build.testSourceDirectory", pathTranslator.alignToBaseDirectory( build.getTestSourceDirectory(), projectDir ) );
+        }
+
+        if ( !isSuperPom )
+        {
+            Properties userProps = config.getUserProperties();
+            if ( userProps != null )
+            {
+                getLogger().debug( "Using user-defined properties for interpolation:\n" + String.valueOf( userProps ).replace( ',', '\n' ) );
+                context.putAll( userProps );
+            }
+        }
+
+        model = modelInterpolator.interpolate( model, context, strict );
+
+        // second pass allows ${user.home} to work, if it needs to.
+        // [MNG-2339] ensure the system properties are still interpolated for backwards compat, but the model values must win
+        if ( config.getExecutionProperties() != null && !config.getExecutionProperties().isEmpty() )
+        {
+            context.putAll( config.getExecutionProperties() );
+        }
+
+        model = modelInterpolator.interpolate( model, context, strict );
+
+        return model;
+    }
+
+    private void mergeDeterministicBuildElements( Build interpolatedBuild,
+                                                  Build dynamicBuild )
+    {
+        List dPlugins = dynamicBuild.getPlugins();
+
+        if ( dPlugins != null )
+        {
+            List iPlugins = interpolatedBuild.getPlugins();
+
+            for ( int i = 0; i < dPlugins.size(); i++ )
+            {
+                Plugin dPlugin = (Plugin) dPlugins.get( i );
+                Plugin iPlugin = (Plugin) iPlugins.get( i );
+
+                dPlugin.setGroupId( iPlugin.getGroupId() );
+                dPlugin.setArtifactId( iPlugin.getArtifactId() );
+                dPlugin.setVersion( iPlugin.getVersion() );
+            }
+        }
+
+        PluginManagement dPluginMgmt = dynamicBuild.getPluginManagement();
+
+        if ( dPluginMgmt != null )
+        {
+            PluginManagement iPluginMgmt = interpolatedBuild.getPluginManagement();
+            dPlugins = dPluginMgmt.getPlugins();
+            if ( dPlugins != null )
+            {
+                List iPlugins = iPluginMgmt.getPlugins();
+
+                for ( int i = 0; i < dPlugins.size(); i++ )
+                {
+                    Plugin dPlugin = (Plugin) dPlugins.get( i );
+                    Plugin iPlugin = (Plugin) iPlugins.get( i );
+
+                    dPlugin.setGroupId( iPlugin.getGroupId() );
+                    dPlugin.setArtifactId( iPlugin.getArtifactId() );
+                    dPlugin.setVersion( iPlugin.getVersion() );
+                }
+            }
+        }
+
+        if ( dynamicBuild.getExtensions() != null )
+        {
+            dynamicBuild.setExtensions( interpolatedBuild.getExtensions() );
+        }
     }
 
     /**
@@ -1793,23 +1867,13 @@ public class DefaultMavenProjectBuilder
         // We don't need all the project methods that are added over those in the model, but we do need basedir
         Map context = new HashMap();
 
-        populateBuildPaths( model.getBuild(), context, project.getBasedir() );
-        if ( project.getFile() != null )
-        {
-            Properties userProps = config.getUserProperties();
-            if ( userProps != null )
-            {
-                context.putAll( userProps );
-            }
-        }
-
-        model = modelInterpolator.interpolate( model, context, true );
-
-        populateExecutionProperties( config, context );
-
-        model = modelInterpolator.interpolate( model, context, true );
+        boolean isSuperPom = project.getGroupId().equals( STANDALONE_SUPERPOM_GROUPID )
+                             && project.getArtifactId().equals( STANDALONE_SUPERPOM_ARTIFACTID )
+                             && project.getVersion().equals( STANDALONE_SUPERPOM_VERSION );
 
         File basedir = project.getBasedir();
+
+        model = interpolate( model, basedir, isSuperPom, config, true );
 
         List originalInterpolatedCompileSourceRoots = interpolateListOfStrings( project.getCompileSourceRoots(),
                                                                            model,
@@ -1844,6 +1908,11 @@ public class DefaultMavenProjectBuilder
         project.setBuild( model.getBuild() );
 
         calculateConcreteProjectReferences( project, config );
+
+        if ( project.getExecutionProject() != null )
+        {
+            calculateConcreteState( project.getExecutionProject(), config );
+        }
 
         project.setConcrete( true );
     }
@@ -1906,6 +1975,10 @@ public class DefaultMavenProjectBuilder
         restoreModelBuildSection( project, config, context );
 
         restoreDynamicProjectReferences( project, config );
+        if ( project.getExecutionProject() != null )
+        {
+            restoreDynamicState( project.getExecutionProject(), config );
+        }
 
         project.setConcrete( false );
     }
@@ -1977,6 +2050,18 @@ public class DefaultMavenProjectBuilder
                                                            changedBuild.getFilters(),
                                                            project,
                                                            context ) );
+
+        dynamicBuild.setFinalName( restoreString( dynamicBuild.getFinalName(),
+                                                  originalInterpolatedBuild.getFinalName(),
+                                                  changedBuild.getFinalName(),
+                                                  project,
+                                                  context ) );
+
+        dynamicBuild.setDefaultGoal( restoreString( dynamicBuild.getDefaultGoal(),
+                                                  originalInterpolatedBuild.getDefaultGoal(),
+                                                  changedBuild.getDefaultGoal(),
+                                                  project,
+                                                  context ) );
 
         dynamicBuild.setSourceDirectory( restoreString( dynamicBuild.getSourceDirectory(),
                                                             originalInterpolatedBuild.getSourceDirectory(),
@@ -2060,7 +2145,15 @@ public class DefaultMavenProjectBuilder
 
         Model model = project.getModel();
 
-        String relativeChangedString = pathTranslator.unalignFromBaseDirectory( changedString, project.getBasedir() );
+        String relativeChangedString;
+        if ( project.getBasedir() != null )
+        {
+            relativeChangedString = pathTranslator.unalignFromBaseDirectory( changedString, project.getBasedir() );
+        }
+        else
+        {
+            relativeChangedString = changedString;
+        }
 
         String interpolatedOriginal = modelInterpolator.interpolate( originalString, model, context );
         String interpolatedOriginal2 = modelInterpolator.interpolate( originalInterpolatedString,
@@ -2116,7 +2209,15 @@ public class DefaultMavenProjectBuilder
         for ( Iterator it = changedStrings.iterator(); it.hasNext(); )
         {
             String changedString = (String) it.next();
-            String relativeChangedString = pathTranslator.unalignFromBaseDirectory( changedString, project.getBasedir() );
+            String relativeChangedString;
+            if ( project.getBasedir() != null )
+            {
+                relativeChangedString = pathTranslator.unalignFromBaseDirectory( changedString, project.getBasedir() );
+            }
+            else
+            {
+                relativeChangedString = changedString;
+            }
 
             String interpolated = modelInterpolator.interpolate( changedString, project.getModel(), orig );
             String relativeInterpolated = modelInterpolator.interpolate( relativeChangedString, project.getModel(), orig );
@@ -2170,7 +2271,17 @@ public class DefaultMavenProjectBuilder
             Resource resource = (Resource) it.next();
             String rDir = modelInterpolator.interpolate( resource.getDirectory(), project.getModel(), orig );
 
-            String relativeDir = pathTranslator.unalignFromBaseDirectory( resource.getDirectory(), project.getBasedir() );
+            String relativeDir;
+            if ( project.getBasedir() != null )
+            {
+                relativeDir = pathTranslator.unalignFromBaseDirectory( resource.getDirectory(),
+                                                                       project.getBasedir() );
+            }
+            else
+            {
+                relativeDir = resource.getDirectory();
+            }
+
             String relativeRDir = modelInterpolator.interpolate( relativeDir, project.getModel(), context );
 
             Resource[] original = (Resource[]) orig.get( rDir );
