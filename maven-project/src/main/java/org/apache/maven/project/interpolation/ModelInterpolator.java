@@ -32,6 +32,10 @@ import java.util.Map;
  */
 public interface ModelInterpolator
 {
+    String DEFAULT_BUILD_TIMESTAMP_FORMAT = "yyyyMMdd-hhmm";
+
+    String BUILD_TIMESTAMP_FORMAT_PROPERTY = "maven.build.timestamp.format";
+
     String ROLE = ModelInterpolator.class.getName();
 
     /**

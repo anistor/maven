@@ -229,6 +229,14 @@ public class RegexBasedModelInterpolator
     {
         Logger logger = getLogger();
 
+        String timestampFormat = DEFAULT_BUILD_TIMESTAMP_FORMAT;
+
+        Properties modelProperties = model.getProperties();
+        if ( modelProperties != null )
+        {
+            timestampFormat = modelProperties.getProperty( BUILD_TIMESTAMP_FORMAT_PROPERTY, timestampFormat );
+        }
+
         ValueSource baseModelValueSource1 = new PrefixedObjectValueSource( PROJECT_PREFIXES, model, false );
         ValueSource modelValueSource1 = new PathTranslatingValueSource( baseModelValueSource1,
                                                                        TRANSLATED_PATH_EXPRESSIONS,
@@ -256,9 +264,10 @@ public class RegexBasedModelInterpolator
 
         // NOTE: Order counts here!
         interpolator.addValueSource( basedirValueSource );
+        interpolator.addValueSource( new BuildTimestampValueSource( config.getBuildStartTime(), timestampFormat ) );
         interpolator.addValueSource( new MapBasedValueSource( config.getExecutionProperties() ) );
         interpolator.addValueSource( modelValueSource1 );
-        interpolator.addValueSource( new PrefixedValueSourceWrapper( new MapBasedValueSource( model.getProperties() ), PROJECT_PREFIXES, true ) );
+        interpolator.addValueSource( new PrefixedValueSourceWrapper( new MapBasedValueSource( modelProperties ), PROJECT_PREFIXES, true ) );
         interpolator.addValueSource( modelValueSource2 );
         interpolator.addValueSource( new MapBasedValueSource( config.getUserProperties() ) );
 

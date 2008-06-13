@@ -26,8 +26,11 @@ import org.apache.maven.model.Organization;
 import org.apache.maven.model.Repository;
 import org.apache.maven.model.Resource;
 import org.apache.maven.model.Scm;
+import org.apache.maven.project.DefaultProjectBuilderConfiguration;
+import org.apache.maven.project.ProjectBuilderConfiguration;
 
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -205,7 +208,8 @@ public class RegexBasedModelInterpolatorTest
 
         Model out = new RegexBasedModelInterpolator().interpolate( model, context );
 
-        assertEquals( "file://localhost/myBasedir/temp-repo", ( (Repository) out.getRepositories().get( 0 ) ).getUrl() );
+        assertEquals( "file://localhost/myBasedir/temp-repo",
+                      ( (Repository) out.getRepositories().get( 0 ) ).getUrl() );
     }
 
     public void testEnvars()
@@ -294,6 +298,59 @@ public class RegexBasedModelInterpolatorTest
         assertEquals( build.getSourceDirectory(), ( (Resource) resIt.next() ).getDirectory() );
         assertEquals( build.getSourceDirectory(), ( (Resource) resIt.next() ).getDirectory() );
         assertEquals( build.getSourceDirectory(), ( (Resource) resIt.next() ).getDirectory() );
+    }
+
+    public void testShouldInterpolateBuildTimestamp()
+        throws ModelInterpolationException, IOException
+    {
+        Model model = new Model();
+
+        Properties properties = new Properties();
+        properties.setProperty( "key", "${build.timestamp}" );
+        properties.setProperty( "key2", "${maven.build.timestamp}" );
+
+        model.setProperties( properties );
+
+        ProjectBuilderConfiguration config = new DefaultProjectBuilderConfiguration();
+
+        Model result = new RegexBasedModelInterpolator().interpolate( model, null, config, true );
+
+        Properties rProps = result.getProperties();
+
+        assertEquals( new SimpleDateFormat( ModelInterpolator.DEFAULT_BUILD_TIMESTAMP_FORMAT ).format( config.getBuildStartTime() ),
+                      rProps.getProperty( "key" ) );
+
+        assertEquals( new SimpleDateFormat( ModelInterpolator.DEFAULT_BUILD_TIMESTAMP_FORMAT ).format( config.getBuildStartTime() ),
+                      rProps.getProperty( "key2" ) );
+
+    }
+
+    public void testShouldInterpolateBuildTimestampWithCustomFormat()
+        throws ModelInterpolationException, IOException
+    {
+        Model model = new Model();
+
+        Properties properties = new Properties();
+        properties.setProperty( "key", "${build.timestamp}" );
+        properties.setProperty( "key2", "${maven.build.timestamp}" );
+
+        String format = "yyyyMMdd";
+        properties.setProperty( ModelInterpolator.BUILD_TIMESTAMP_FORMAT_PROPERTY, format );
+
+        model.setProperties( properties );
+
+        ProjectBuilderConfiguration config = new DefaultProjectBuilderConfiguration();
+
+        Model result = new RegexBasedModelInterpolator().interpolate( model, null, config, true );
+
+        Properties rProps = result.getProperties();
+
+        assertEquals( new SimpleDateFormat( format ).format( config.getBuildStartTime() ),
+                      rProps.getProperty( "key" ) );
+
+        assertEquals( new SimpleDateFormat( format ).format( config.getBuildStartTime() ),
+                      rProps.getProperty( "key2" ) );
+
     }
 
 //    public void testPOMExpressionDoesNotUseSystemProperty()

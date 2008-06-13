@@ -578,7 +578,8 @@ public class DefaultMaven
         ProjectBuilderConfiguration config = new DefaultProjectBuilderConfiguration();
         config.setLocalRepository( request.getLocalRepository() )
               .setGlobalProfileManager( request.getGlobalProfileManager() )
-              .setUserProperties( request.getUserProperties() );
+              .setUserProperties( request.getUserProperties() )
+              .setBuildStartTime( request.getStartTime() );
 
         return projectBuilder.build( pom, config );
     }
