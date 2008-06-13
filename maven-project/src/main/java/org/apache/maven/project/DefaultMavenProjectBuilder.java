@@ -95,7 +95,6 @@ import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Set;
 import java.util.TreeMap;
 
@@ -983,46 +982,7 @@ public class DefaultMavenProjectBuilder
 
         activeProfiles.addAll( injectedProfiles );
 
-        // We don't need all the project methods that are added over those in the model, but we do need basedir
-        Map context = new HashMap();
-
-        Build build = model.getBuild();
-
-        if ( projectDir != null )
-        {
-            context.put( "basedir", projectDir.getAbsolutePath() );
-
-            // MNG-1927, MNG-2124, MNG-3355:
-            // If the build section is present and the project directory is non-null, we should make
-            // sure interpolation of the directories below uses translated paths.
-            // Afterward, we'll double back and translate any paths that weren't covered during interpolation via the
-            // code below...
-            context.put( "build.directory", pathTranslator.alignToBaseDirectory( build.getDirectory(), projectDir ) );
-            context.put( "build.outputDirectory", pathTranslator.alignToBaseDirectory( build.getOutputDirectory(), projectDir ) );
-            context.put( "build.testOutputDirectory", pathTranslator.alignToBaseDirectory( build.getTestOutputDirectory(), projectDir ) );
-            context.put( "build.sourceDirectory", pathTranslator.alignToBaseDirectory( build.getSourceDirectory(), projectDir ) );
-            context.put( "build.testSourceDirectory", pathTranslator.alignToBaseDirectory( build.getTestSourceDirectory(), projectDir ) );
-        }
-
-        if ( !isSuperPom )
-        {
-            Properties userProps = config.getUserProperties();
-            if ( userProps != null )
-            {
-                context.putAll( userProps );
-            }
-        }
-
-        model = modelInterpolator.interpolate( model, context, strict );
-
-        // second pass allows ${user.home} to work, if it needs to.
-        // [MNG-2339] ensure the system properties are still interpolated for backwards compat, but the model values must win
-        if ( config.getExecutionProperties() != null && !config.getExecutionProperties().isEmpty() )
-        {
-            context.putAll( config.getExecutionProperties() );
-        }
-
-        model = modelInterpolator.interpolate( model, context, strict );
+        model = modelInterpolator.interpolate( model, projectDir, config, getLogger().isDebugEnabled() );
 
         // MNG-3482: Make sure depMgmt is interpolated before merging.
         if ( !isSuperPom )
