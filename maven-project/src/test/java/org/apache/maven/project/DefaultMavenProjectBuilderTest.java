@@ -197,6 +197,11 @@ public class DefaultMavenProjectBuilderTest
          System.out.println( "Interpolated, translated resource directory is: " + res.getDirectory() );
      }
 
+     public void testShouldTranslateSourceDirPathCorrectlyWithBasedirExpression()
+     {
+
+     }
+
     protected ArtifactRepository getLocalRepository()
         throws Exception
     {

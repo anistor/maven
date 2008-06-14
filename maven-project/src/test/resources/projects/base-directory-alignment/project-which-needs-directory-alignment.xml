@@ -99,6 +99,10 @@ under the License.
       </dependency>
     </dependencies>
   </dependencyManagement>
+  
+  <properties>
+    <myFile>${project.basedir}/my-file.xml</myFile>
+  </properties>
 
   <build>
     <sourceDirectory>sourceDirectory</sourceDirectory>

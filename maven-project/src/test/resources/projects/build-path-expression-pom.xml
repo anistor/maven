@@ -3,6 +3,10 @@
   <groupId>org.apache.maven.project.tests</groupId>
   <artifactId>build-path-expression</artifactId>
   <version>1</version>
+  
+  <properties>
+  </properties>
+  
   <build>
     <sourceDirectory>sources</sourceDirectory>
     <resources>

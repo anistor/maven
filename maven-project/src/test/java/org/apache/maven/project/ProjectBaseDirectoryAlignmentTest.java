@@ -38,13 +38,25 @@ public class ProjectBaseDirectoryAlignmentTest
 
         assertNotNull( "Test project can't be null!", project );
 
-        File basedirFile = new File( getBasedir() );
-        File sourceDirectoryFile = new File( project.getBuild().getSourceDirectory() );
-        File testSourceDirectoryFile = new File( project.getBuild().getTestSourceDirectory() );
+        String basedir = new File( getBasedir() ).getAbsolutePath();
 
-        assertEquals( basedirFile.getCanonicalPath(), sourceDirectoryFile.getCanonicalPath().substring( 0, getBasedir().length() ) );
+        String sourceDirectory = project.getBuild().getSourceDirectory();
+        String testSourceDirectory = project.getBuild().getTestSourceDirectory();
+        String scriptSourceDirectory = project.getBuild().getScriptSourceDirectory();
+        String buildDirectory = project.getBuild().getDirectory();
+        String outputDirectory = project.getBuild().getOutputDirectory();
+        String testOutputDirectory = project.getBuild().getTestOutputDirectory();
+        String reportingOutputDirectory = project.getReporting().getOutputDirectory();
 
-        assertEquals( basedirFile.getCanonicalPath(), testSourceDirectoryFile.getCanonicalPath().substring( 0, getBasedir().length() ) );
+        assertEquals( new File( project.getBasedir(), "my-file.xml").getAbsolutePath(), project.getProperties().getProperty( "myFile" ) );
+
+        assertTrue( sourceDirectory.startsWith( basedir ) );
+        assertTrue( testSourceDirectory.startsWith( basedir ) );
+        assertTrue( scriptSourceDirectory.startsWith( basedir ) );
+        assertTrue( buildDirectory.startsWith( basedir ) );
+        assertTrue( outputDirectory.startsWith( basedir ) );
+        assertTrue( testOutputDirectory.startsWith( basedir ) );
+        assertTrue( reportingOutputDirectory.startsWith( basedir ) );
 
         Build build = project.getBuild();
 

@@ -21,6 +21,7 @@ package org.apache.maven.project.path;
 
 import org.apache.maven.model.Build;
 import org.apache.maven.model.Model;
+import org.apache.maven.model.Reporting;
 import org.apache.maven.model.Resource;
 
 import java.io.File;
@@ -28,13 +29,30 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+/**
+ * Default implementation of {@link PathTranslator}.
+ */
 public class DefaultPathTranslator
     implements PathTranslator
 {
+    private static final String[] BASEDIR_EXPRESSIONS = {
+        "${basedir}",
+        "${pom.basedir}",
+        "${project.basedir}"
+    };
+
     private String FILE_SEPARATOR = "/";
 
+    /**
+     * {@inheritDoc}
+     */
     public void alignToBaseDirectory( Model model, File basedir )
     {
+        if ( basedir == null )
+        {
+            throw new IllegalArgumentException( "Cannot align model to null basedir." );
+        }
+
         Build build = model.getBuild();
 
         if ( build != null )
@@ -44,6 +62,8 @@ public class DefaultPathTranslator
             build.setSourceDirectory( alignToBaseDirectory( build.getSourceDirectory(), basedir ) );
 
             build.setTestSourceDirectory( alignToBaseDirectory( build.getTestSourceDirectory(), basedir ) );
+
+            build.setScriptSourceDirectory( alignToBaseDirectory( build.getScriptSourceDirectory(), basedir ) );
 
             for ( Iterator i = build.getResources().iterator(); i.hasNext(); )
             {
@@ -74,11 +94,30 @@ public class DefaultPathTranslator
             build.setOutputDirectory( alignToBaseDirectory( build.getOutputDirectory(), basedir ) );
 
             build.setTestOutputDirectory( alignToBaseDirectory( build.getTestOutputDirectory(), basedir ) );
+
+            Reporting reporting = model.getReporting();
+            if ( reporting != null )
+            {
+                reporting.setOutputDirectory( alignToBaseDirectory( reporting.getOutputDirectory(), basedir ) );
+            }
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public String alignToBaseDirectory( String path, File basedir )
     {
+        if ( basedir == null )
+        {
+            throw new IllegalArgumentException( "Cannot align path to null basedir." );
+        }
+
+        if ( path == null )
+        {
+            return null;
+        }
+
         String s = stripBasedirToken( path );
 
         if ( requiresBaseDirectoryAlignment( s ) )
@@ -91,27 +130,49 @@ public class DefaultPathTranslator
 
     private String stripBasedirToken( String s )
     {
-        String basedirExpr = "${basedir}";
-
-        if ( s != null )
+        for ( int i = 0; i < BASEDIR_EXPRESSIONS.length; i++ )
         {
-            s = s.trim();
+            String basedirExpr = BASEDIR_EXPRESSIONS[i];
 
-            if ( s.startsWith( basedirExpr ) )
+            if ( s != null )
             {
-                if ( s.length() > basedirExpr.length() )
+                s = s.trim();
+
+                if ( s.startsWith( basedirExpr ) )
                 {
-                    // Take out ${basedir} and the leading slash
-                    s = s.substring( basedirExpr.length() + 1 );
-                }
-                else
-                {
-                    s = ".";
+                    if ( s.length() > basedirExpr.length() )
+                    {
+                        // Take out basedir expression and the leading slash
+                        s = chopLeadingFileSeparator( s.substring( basedirExpr.length() ) );
+                    }
+                    else
+                    {
+                        s = ".";
+                    }
                 }
             }
         }
 
         return s;
+    }
+
+    /**
+     * Removes the leading directory separator from the specified filesystem path (if any). For platform-independent
+     * behavior, this method accepts both the forward slash and the backward slash as separator.
+     *
+     * @param path The filesystem path, may be <code>null</code>.
+     * @return The altered filesystem path or <code>null</code> if the input path was <code>null</code>.
+     */
+    private String chopLeadingFileSeparator( String path )
+    {
+        if ( path != null )
+        {
+            if ( path.startsWith( "/" ) || path.startsWith( "\\" ) )
+            {
+                path = path.substring( 1 );
+            }
+        }
+        return path;
     }
 
     private boolean requiresBaseDirectoryAlignment( String s )
@@ -133,8 +194,16 @@ public class DefaultPathTranslator
         return false;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public void unalignFromBaseDirectory( Model model, File basedir )
     {
+        if ( basedir == null )
+        {
+            throw new IllegalArgumentException( "Cannot relativize model from null basedir." );
+        }
+
         Build build = model.getBuild();
 
         if ( build != null )
@@ -144,6 +213,8 @@ public class DefaultPathTranslator
             build.setSourceDirectory( unalignFromBaseDirectory( build.getSourceDirectory(), basedir ) );
 
             build.setTestSourceDirectory( unalignFromBaseDirectory( build.getTestSourceDirectory(), basedir ) );
+
+            build.setScriptSourceDirectory( unalignFromBaseDirectory( build.getScriptSourceDirectory(), basedir ) );
 
             for ( Iterator i = build.getResources().iterator(); i.hasNext(); )
             {
@@ -174,17 +245,44 @@ public class DefaultPathTranslator
             build.setOutputDirectory( unalignFromBaseDirectory( build.getOutputDirectory(), basedir ) );
 
             build.setTestOutputDirectory( unalignFromBaseDirectory( build.getTestOutputDirectory(), basedir ) );
+
+            Reporting reporting = model.getReporting();
+            if ( reporting != null )
+            {
+                reporting.setOutputDirectory( unalignFromBaseDirectory( reporting.getOutputDirectory(), basedir ) );
+            }
         }
     }
 
-    public String unalignFromBaseDirectory( String directory, File basedir )
+    /**
+     * {@inheritDoc}
+     */
+    public String unalignFromBaseDirectory( String path, File basedir )
     {
-        String path = basedir.getPath();
-        if ( directory.startsWith( path ) )
+        if ( basedir == null )
         {
-            directory = directory.substring( path.length() + 1 ).replace( '\\', '/' );
+            throw new IllegalArgumentException( "Cannot relativize path from null basedir." );
         }
-        return directory;
+
+        if ( path == null )
+        {
+            return null;
+        }
+
+        path = path.trim();
+
+        String base = basedir.getAbsolutePath();
+        if ( path.startsWith( base ) )
+        {
+            path = chopLeadingFileSeparator( path.substring( base.length() ) );
+        }
+
+        if ( !new File( path ).isAbsolute() )
+        {
+            path = path.replace( '\\', '/' );
+        }
+
+        return path;
     }
 
 }
