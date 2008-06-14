@@ -101,12 +101,13 @@ under the License.
   </dependencyManagement>
   
   <properties>
-    <myFile>${project.basedir}/my-file.xml</myFile>
+    <myFile>${project.build.scriptSourceDirectory}/my-file.xml</myFile>
   </properties>
 
   <build>
     <sourceDirectory>sourceDirectory</sourceDirectory>
     <testSourceDirectory>unitTestSourceDirectory</testSourceDirectory>
+    <scriptSourceDirectory>${project.basedir}/scripts</scriptSourceDirectory>
     <resources>
       <resource>
         <directory>src/test</directory>

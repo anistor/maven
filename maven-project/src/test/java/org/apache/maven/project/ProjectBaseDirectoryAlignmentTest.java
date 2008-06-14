@@ -48,7 +48,7 @@ public class ProjectBaseDirectoryAlignmentTest
         String testOutputDirectory = project.getBuild().getTestOutputDirectory();
         String reportingOutputDirectory = project.getReporting().getOutputDirectory();
 
-        assertEquals( new File( project.getBasedir(), "my-file.xml").getAbsolutePath(), project.getProperties().getProperty( "myFile" ) );
+        assertEquals( new File( scriptSourceDirectory, "my-file.xml").getAbsolutePath(), project.getProperties().getProperty( "myFile" ) );
 
         assertTrue( sourceDirectory.startsWith( basedir ) );
         assertTrue( testSourceDirectory.startsWith( basedir ) );
