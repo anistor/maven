@@ -299,9 +299,6 @@ public class DefaultPathTranslatorTest
 
         expectedPath = "src/main/java";
         assertEquals( expectedPath, unalign( align( expectedPath ) ) );
-
-        expectedPath = ".";
-        assertEquals( expectedPath, unalign( align( expectedPath ) ) );
     }
 
     public void testUnalignAlign()
@@ -315,9 +312,6 @@ public class DefaultPathTranslatorTest
         assertEquals( expectedPath, align( unalign( expectedPath ) ) );
 
         expectedPath = new File( baseDir, "src/main/java" ).getAbsolutePath();
-        assertEquals( expectedPath, align( unalign( expectedPath ) ) );
-
-        expectedPath = new File( baseDir, "." ).getAbsolutePath();
         assertEquals( expectedPath, align( unalign( expectedPath ) ) );
     }
 
