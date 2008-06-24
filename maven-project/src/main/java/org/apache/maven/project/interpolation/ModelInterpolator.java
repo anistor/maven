@@ -50,10 +50,16 @@ public interface ModelInterpolator
     Model interpolate( Model model, Map context, boolean strict )
         throws ModelInterpolationException;
 
-
     Model interpolate( Model model,
                        File projectDir,
                        ProjectBuilderConfiguration config,
                        boolean debugEnabled )
+        throws ModelInterpolationException;
+
+    String interpolate( String src,
+                        Model model,
+                        File projectDir,
+                        ProjectBuilderConfiguration config,
+                        boolean debugEnabled )
         throws ModelInterpolationException;
 }

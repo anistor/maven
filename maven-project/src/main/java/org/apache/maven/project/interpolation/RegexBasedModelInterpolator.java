@@ -137,7 +137,7 @@ public class RegexBasedModelInterpolator
         Properties props = new Properties();
         props.putAll( context );
 
-        serializedModel = interpolateInternal( serializedModel,
+        serializedModel = interpolate( serializedModel,
                                                model,
                                                null,
                                                new DefaultProjectBuilderConfiguration().setExecutionProperties( props ),
@@ -183,7 +183,7 @@ public class RegexBasedModelInterpolator
         }
 
         String serializedModel = sWriter.toString();
-        serializedModel = interpolateInternal( serializedModel, model, projectDir, config, debugEnabled );
+        serializedModel = interpolate( serializedModel, model, projectDir, config, debugEnabled );
 
         StringReader sReader = new StringReader( serializedModel );
 
@@ -220,11 +220,11 @@ public class RegexBasedModelInterpolator
      * @param overrideContext
      * @param outputDebugMessages
      */
-    private String interpolateInternal( String src,
-                                        Model model,
-                                        final File projectDir,
-                                        ProjectBuilderConfiguration config,
-                                        boolean debug )
+    public String interpolate( String src,
+                               Model model,
+                               final File projectDir,
+                               ProjectBuilderConfiguration config,
+                               boolean debug )
         throws ModelInterpolationException
     {
         Logger logger = getLogger();

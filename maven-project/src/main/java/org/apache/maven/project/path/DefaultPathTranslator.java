@@ -41,11 +41,8 @@ public class DefaultPathTranslator
         "${project.basedir}"
     };
 
-    private String FILE_SEPARATOR = "/";
+    private static final String FILE_SEPARATOR = "/";
 
-    /**
-     * {@inheritDoc}
-     */
     public void alignToBaseDirectory( Model model, File basedir )
     {
         if ( basedir == null )
@@ -130,15 +127,25 @@ public class DefaultPathTranslator
 
     private String stripBasedirToken( String s )
     {
-        for ( int i = 0; i < BASEDIR_EXPRESSIONS.length; i++ )
+        if ( s != null )
         {
-            String basedirExpr = BASEDIR_EXPRESSIONS[i];
-
-            if ( s != null )
+            String basedirExpr = null;
+            for ( int i = 0; i < BASEDIR_EXPRESSIONS.length; i++ )
             {
-                s = s.trim();
-
+                basedirExpr = BASEDIR_EXPRESSIONS[i];
                 if ( s.startsWith( basedirExpr ) )
+                {
+                    break;
+                }
+                else
+                {
+                    basedirExpr = null;
+                }
+            }
+
+            if ( basedirExpr != null )
+            {
+                if ( s.length() > basedirExpr.length() )
                 {
                     if ( s.length() > basedirExpr.length() )
                     {
