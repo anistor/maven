@@ -24,13 +24,19 @@ import org.apache.maven.model.Plugin;
 import org.apache.maven.model.Resource;
 import org.apache.maven.project.interpolation.ModelInterpolationException;
 import org.codehaus.plexus.PlexusTestCase;
+import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.util.Iterator;
 import java.util.List;
 
@@ -568,15 +574,18 @@ public class MavenProjectDynamismTest
     {
         ClassLoader cloader = Thread.currentThread().getContextClassLoader();
         URL resource = cloader.getResource( "project-dynamism/" + path );
-
+        
         if ( resource == null )
         {
             fail( "Cannot find classpath resource for POM: " + path );
         }
 
-        File pomFile = new File( resource.getPath() );
+        String resourcePath = StringUtils.replace( resource.getPath(), "%20", " " );
+        URI uri = new File( resourcePath ).toURI().normalize();
+        
+        File pomFile = new File( uri );
         pomFile = pomFile.getAbsoluteFile();
-
+        
         MavenProject project = projectBuilder.build( pomFile,
                                                      new DefaultProjectBuilderConfiguration() );
 
