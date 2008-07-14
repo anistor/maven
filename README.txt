@@ -1,7 +1,7 @@
 -------------------------------------------------------------------------------
 Bootstrapping Maven
 -------------------------------------------------------------------------------
-
+ 
 Set the environment variable M2_HOME pointing to the dir where you want Maven2 installed.
 
 NOTE: presently, the directory {M2_HOME}/bin must be in your path:
