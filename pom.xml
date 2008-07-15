@@ -383,7 +383,10 @@ under the License.
       <dependency>
         <groupId>org.apache.maven.doxia</groupId>
         <artifactId>doxia-sink-api</artifactId>
+        <version>1.0-alpha-10</version>
+        <!-- Not ready yet.
         <version>1.0-beta-1-SNAPSHOT</version>
+        -->
       </dependency>
             <!-- Plexus -->
       <dependency>
@@ -399,7 +402,7 @@ under the License.
       <dependency>
         <groupId>org.codehaus.plexus</groupId>
         <artifactId>plexus-utils</artifactId>
-        <version>1.5.1</version>
+        <version>1.5.5</version>
       </dependency>
       <dependency>
         <groupId>org.apache.maven.wagon</groupId>
