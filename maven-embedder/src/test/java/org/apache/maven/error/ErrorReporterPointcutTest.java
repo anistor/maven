@@ -19,6 +19,17 @@ package org.apache.maven.error;
  * under the License.
  */
 
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+
+import junit.framework.TestCase;
+
+import org.apache.maven.artifact.manager.WagonManager;
 import org.apache.maven.artifact.resolver.MultipleArtifactsNotFoundException;
 import org.apache.maven.embedder.Configuration;
 import org.apache.maven.embedder.DefaultConfiguration;
@@ -33,16 +44,6 @@ import org.apache.maven.settings.Settings;
 import org.codehaus.plexus.util.FileUtils;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 import org.easymock.MockControl;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-
-import junit.framework.TestCase;
 
 public class ErrorReporterPointcutTest
     extends TestCase
@@ -81,6 +82,9 @@ public class ErrorReporterPointcutTest
         configuration.setUserSettingsFile( MavenEmbedder.DEFAULT_USER_SETTINGS_FILE );       
         
         maven = new MavenEmbedder( configuration );
+        
+        WagonManager wagonManager = (WagonManager) maven.getPlexusContainer().lookup( WagonManager.ROLE );
+        wagonManager.registerPublicKeyRing( getClass().getResourceAsStream( "/gpg/pubring.gpg" ) );
     }
 
     @Override

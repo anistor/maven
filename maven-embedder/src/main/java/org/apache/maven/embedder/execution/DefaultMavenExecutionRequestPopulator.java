@@ -19,6 +19,15 @@ package org.apache.maven.embedder.execution;
  * under the License.
  */
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Properties;
+
 import org.apache.maven.Maven;
 import org.apache.maven.artifact.manager.WagonManager;
 import org.apache.maven.artifact.repository.ArtifactRepository;
@@ -51,6 +60,7 @@ import org.apache.maven.settings.SettingsConfigurationException;
 import org.apache.maven.settings.SettingsUtils;
 import org.apache.maven.wagon.repository.RepositoryPermissions;
 import org.apache.maven.workspace.MavenWorkspaceStore;
+import org.bouncycastle.openpgp.PGPException;
 import org.codehaus.plexus.PlexusConstants;
 import org.codehaus.plexus.PlexusContainer;
 import org.codehaus.plexus.component.repository.exception.ComponentLifecycleException;
@@ -60,14 +70,9 @@ import org.codehaus.plexus.context.ContextException;
 import org.codehaus.plexus.logging.AbstractLogEnabled;
 import org.codehaus.plexus.logging.Logger;
 import org.codehaus.plexus.personality.plexus.lifecycle.phase.Contextualizable;
+import org.codehaus.plexus.util.IOUtil;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Properties;
 
 /**
  * Things that we deal with in this populator to ensure that we have a valid {@MavenExecutionRequest}
@@ -279,12 +284,16 @@ public class DefaultMavenExecutionRequestPopulator
                         releases.setChecksumPolicy( r.getReleases().getChecksumPolicy() );
 
                         releases.setUpdatePolicy( r.getReleases().getUpdatePolicy() );
+                        
+                        releases.setSignaturePolicy( r.getReleases().getSignaturePolicy() );
                     }
                     else
                     {
                         releases.setChecksumPolicy( ArtifactRepositoryPolicy.UPDATE_POLICY_DAILY );
 
                         releases.setUpdatePolicy( ArtifactRepositoryPolicy.CHECKSUM_POLICY_WARN );
+                        
+                        releases.setSignaturePolicy( ArtifactRepositoryPolicy.SIGNATURE_POLICY_FAIL );
                     }
 
                     ArtifactRepositoryPolicy snapshots = new ArtifactRepositoryPolicy();
@@ -294,12 +303,16 @@ public class DefaultMavenExecutionRequestPopulator
                         snapshots.setChecksumPolicy( r.getSnapshots().getChecksumPolicy() );
 
                         snapshots.setUpdatePolicy( r.getSnapshots().getUpdatePolicy() );
+                        
+                        snapshots.setSignaturePolicy( r.getSnapshots().getSignaturePolicy() );
                     }
                     else
                     {
                         snapshots.setChecksumPolicy( ArtifactRepositoryPolicy.UPDATE_POLICY_DAILY );
 
                         snapshots.setUpdatePolicy( ArtifactRepositoryPolicy.CHECKSUM_POLICY_WARN );
+                        
+                        snapshots.setSignaturePolicy( ArtifactRepositoryPolicy.SIGNATURE_POLICY_FAIL );
                     }
 
                     ArtifactRepository ar = artifactRepositoryFactory.createArtifactRepository( r.getId(), r.getUrl(),
@@ -618,6 +631,7 @@ public class DefaultMavenExecutionRequestPopulator
         }
     }
 
+    @SuppressWarnings("unchecked")
     private void resolveParameters( Settings settings )
         throws ComponentLookupException, ComponentLifecycleException, SettingsConfigurationException
     {
@@ -643,10 +657,8 @@ public class DefaultMavenExecutionRequestPopulator
                     proxy.getNonProxyHosts() );
             }
 
-            for ( Iterator i = settings.getServers().iterator(); i.hasNext(); )
+            for ( Server server : (Collection<Server>) settings.getServers() )
             {
-                Server server = (Server) i.next();
-
                 wagonManager.addAuthenticationInfo(
                     server.getId(),
                     server.getUsername(),
@@ -675,14 +687,41 @@ public class DefaultMavenExecutionRequestPopulator
 
             wagonManager.setDefaultRepositoryPermissions( defaultPermissions );
 
-            for ( Iterator i = settings.getMirrors().iterator(); i.hasNext(); )
+            for ( Mirror mirror : (Collection<Mirror>) settings.getMirrors() )
             {
-                Mirror mirror = (Mirror) i.next();
-
                 wagonManager.addMirror(
                     mirror.getId(),
                     mirror.getMirrorOf(),
                     mirror.getUrl() );
+            }
+            
+            if ( settings.getSecurity() != null )
+            {
+                for ( String publicKeyRing : (Collection<String>) settings.getSecurity().getPublicKeyRings() )
+                {
+                    InputStream is = null;
+                    try            
+                    {
+                        is = new FileInputStream( new File( publicKeyRing ) );
+                        wagonManager.registerPublicKeyRing( is );
+                    }
+                    catch ( IOException e )
+                    {
+                        throw new SettingsConfigurationException( "Unable to read the configured public key ring '"
+                            + publicKeyRing + "': " + e.getMessage(), e );
+                    }
+                    catch ( PGPException e )
+                    {
+                        String msg =
+                            "Error with the format of the configured public key ring '" + publicKeyRing + "': "
+                                + e.getMessage();
+                        throw new SettingsConfigurationException( msg, e );
+                    }
+                    finally
+                    {
+                        IOUtil.close( is );
+                    }
+                }
             }
         }
         finally

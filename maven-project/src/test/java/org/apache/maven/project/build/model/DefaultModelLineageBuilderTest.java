@@ -20,6 +20,7 @@ package org.apache.maven.project.build.model;
  */
 
 import org.apache.maven.artifact.repository.ArtifactRepository;
+import org.apache.maven.artifact.repository.ArtifactRepositoryPolicy;
 import org.apache.maven.artifact.repository.DefaultArtifactRepository;
 import org.apache.maven.artifact.repository.layout.ArtifactRepositoryLayout;
 import org.apache.maven.artifact.resolver.ArtifactNotFoundException;
@@ -312,11 +313,16 @@ public class DefaultModelLineageBuilderTest
                                                                                               .toExternalForm(),
                                                                             defaultLayout );
 
+        ArtifactRepositoryPolicy policy =
+            new ArtifactRepositoryPolicy( true, ArtifactRepositoryPolicy.UPDATE_POLICY_ALWAYS,
+                                          ArtifactRepositoryPolicy.CHECKSUM_POLICY_IGNORE,
+                                          ArtifactRepositoryPolicy.SIGNATURE_POLICY_IGNORE );
+
         ArtifactRepository remoteRepository = new DefaultArtifactRepository(
                                                                              "test",
                                                                              remoteRepoDirectory.toURL()
                                                                                                 .toExternalForm(),
-                                                                             defaultLayout );
+                                                                             defaultLayout, policy, policy );
 
         ModelLineage lineage = modelLineageBuilder.buildModelLineage( currentPOM,
                                                                       new DefaultProjectBuilderConfiguration().setLocalRepository( localRepository ),

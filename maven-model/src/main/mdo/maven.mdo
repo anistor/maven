@@ -2470,6 +2470,22 @@
           </description>
           <type>String</type>
         </field>
+        <field>
+          <name>signaturePolicy</name>
+          <version>4.0.0</version>
+          <description>
+            <![CDATA[
+            What to do when verification of an artifact signature fails. Valid values are
+            <code>ignore</code> (the default for snapshots)
+            ,
+            <code>fail</code> (the default for releases)
+            or
+            <code>warn</code>
+            .
+            ]]>
+          </description>
+          <type>String</type>
+        </field>
       </fields>
     </class>
 

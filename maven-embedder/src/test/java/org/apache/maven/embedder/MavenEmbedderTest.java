@@ -20,6 +20,7 @@ package org.apache.maven.embedder;
  */
 
 import org.apache.maven.artifact.Artifact;
+import org.apache.maven.artifact.manager.WagonManager;
 import org.apache.maven.execution.DefaultMavenExecutionRequest;
 import org.apache.maven.execution.MavenExecutionRequest;
 import org.apache.maven.execution.MavenExecutionResult;
@@ -77,6 +78,9 @@ public class MavenEmbedderTest
         configuration.setUserSettingsFile( MavenEmbedder.DEFAULT_USER_SETTINGS_FILE );
 
         maven = new MavenEmbedder( configuration );
+        
+        WagonManager wagonManager = (WagonManager) maven.getPlexusContainer().lookup( WagonManager.ROLE );
+        wagonManager.registerPublicKeyRing( getClass().getResourceAsStream( "/gpg/pubring.gpg" ) );
     }
 
     protected void tearDown()

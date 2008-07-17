@@ -116,6 +116,7 @@ public final class ProjectUtils
         boolean enabled = true;
         String updatePolicy = null;
         String checksumPolicy = null;
+        String signaturePolicy = null;
 
         if ( policy != null )
         {
@@ -128,9 +129,13 @@ public final class ProjectUtils
             {
                 checksumPolicy = policy.getChecksumPolicy();
             }
+            if ( policy.getSignaturePolicy() != null )
+            {
+                signaturePolicy = policy.getSignaturePolicy();
+            }
         }
 
-        return new ArtifactRepositoryPolicy( enabled, updatePolicy, checksumPolicy );
+        return new ArtifactRepositoryPolicy( enabled, updatePolicy, checksumPolicy, signaturePolicy );
     }
 
 }

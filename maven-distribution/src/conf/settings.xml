@@ -41,10 +41,10 @@ under the License.
  | values (values used when the setting is not specified) are provided.
  |
  |-->
-<settings xmlns="http://maven.apache.org/settings/1.0.0" 
+<settings xmlns="http://maven.apache.org/settings/2.1.0" 
           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
-          xsi:schemaLocation="http://maven.apache.org/setrings/1.0.0 
-          http://maven.apache.org/xsd/settings-1.0.0.xsd">
+          xsi:schemaLocation="http://maven.apache.org/settings/2.1.0 
+          http://maven.apache.org/xsd/settings-2.1.0.xsd">
   <!-- localRepository
    | The path to the local repository maven will use to store artifacts.
    |
@@ -144,6 +144,15 @@ under the License.
     </mirror>
      -->
   </mirrors>
+  
+  <!-- security
+   | Specifies the location of configuration for installation-wide Maven security.
+   -->
+  <security>
+    <publicKeyRings>
+      <publicKeyRing>${maven.home}/conf/pubring.gpg</publicKeyRing>
+    </publicKeyRings>
+  </security>
   
   <!-- profiles
    | This is a list of profiles which can be activated in a variety of ways, and which can modify
