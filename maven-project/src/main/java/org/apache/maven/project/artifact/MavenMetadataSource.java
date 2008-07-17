@@ -92,7 +92,7 @@ public class MavenMetadataSource
         
         if ( rel == null )
         {
-            return null;
+            return artifact;
         }
         
         MavenProject project = rel.project;
