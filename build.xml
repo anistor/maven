@@ -140,6 +140,9 @@ under the License.
     <java fork="true" classname="org.apache.maven.cli.MavenCli" failonerror="true">
       <classpath refid="maven.classpath"/>
       <arg value="-B"/>
+      <arg value="-Dmaven.home=maven-distribution/src"/>
+      <arg value="-s" />
+      <arg value="maven-distribution/src/conf/settings.xml"/>
       <arg value="clean"/>
       <arg value="install"/>
     </java>
