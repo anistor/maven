@@ -20,6 +20,7 @@ package org.apache.maven.embedder;
  */
 
 import org.apache.maven.artifact.handler.ArtifactHandler;
+import org.apache.maven.artifact.manager.WagonManager;
 import org.apache.maven.execution.DefaultMavenExecutionRequest;
 import org.apache.maven.execution.MavenExecutionRequest;
 import org.apache.maven.execution.MavenExecutionResult;
@@ -48,7 +49,10 @@ public class MavenEmbedderProjectWithExtensionReadingTest
         ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
 
         MavenEmbedder embedder = new ExtendableMavenEmbedder( classLoader );
-
+        
+        WagonManager wagonManager = (WagonManager) embedder.getPlexusContainer().lookup( WagonManager.ROLE );
+        wagonManager.registerPublicKeyRing( getClass().getResourceAsStream( "/gpg/pubring.gpg" ) );
+        
         // Here we take the artifact handler and programmatically place it into the container
 
         ComponentDescriptor cd = new ComponentDescriptor();

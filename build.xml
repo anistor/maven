@@ -104,7 +104,7 @@ under the License.
     <modello file="maven-lifecycle/src/main/mdo/maven-lifecycle.mdo"/>
     <modello file="maven-plugin-api/src/main/mdo/lifecycle.mdo"/>
     <modello file="maven-profile/src/main/mdo/profiles.mdo"/>
-    <modello file="maven-core/src/main/mdo/settings.mdo"/>
+    <modello file="maven-core/src/main/mdo/settings.mdo" version="2.1.0"/>
     <modello file="maven-toolchain/src/main/mdo/toolchains.xml"/>
   </target>
 

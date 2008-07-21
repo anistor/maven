@@ -1,16 +1,5 @@
 package org.apache.maven.project;
 
-import org.apache.maven.artifact.repository.ArtifactRepository;
-import org.apache.maven.model.Profile;
-import org.apache.maven.model.Repository;
-import org.apache.maven.profiles.DefaultProfileManager;
-import org.apache.maven.profiles.ProfileManager;
-import org.apache.maven.profiles.activation.DefaultProfileActivationContext;
-
-import java.util.Iterator;
-import java.util.List;
-import java.util.Properties;
-
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -29,6 +18,17 @@ import java.util.Properties;
  * specific language governing permissions and limitations
  * under the License.
  */
+
+import org.apache.maven.artifact.repository.ArtifactRepository;
+import org.apache.maven.model.Profile;
+import org.apache.maven.model.Repository;
+import org.apache.maven.profiles.DefaultProfileManager;
+import org.apache.maven.profiles.ProfileManager;
+import org.apache.maven.profiles.activation.DefaultProfileActivationContext;
+
+import java.util.Iterator;
+import java.util.List;
+import java.util.Properties;
 
 public class SuperPomProjectBuilderTest
     extends AbstractMavenProjectTestCase
@@ -71,10 +71,10 @@ public class SuperPomProjectBuilderTest
     {
         MavenProject project = projectBuilder.buildStandaloneSuperProject();
 
-        assertRepository( "central", project.getRepositories() );
-        assertRepository( "central", project.getPluginRepositories() );
-        assertArtifactRepository( "central", project.getRemoteArtifactRepositories() );
-        assertArtifactRepository( "central", project.getPluginArtifactRepositories() );
+        assertRepository( "central-signed", project.getRepositories() );
+        assertRepository( "central-signed", project.getPluginRepositories() );
+        assertArtifactRepository( "central-signed", project.getRemoteArtifactRepositories() );
+        assertArtifactRepository( "central-signed", project.getPluginArtifactRepositories() );
     }
 
     private void assertArtifactRepository( String id,

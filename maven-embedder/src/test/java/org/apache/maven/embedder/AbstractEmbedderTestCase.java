@@ -19,8 +19,7 @@ package org.apache.maven.embedder;
  * under the License.
  */
 
-import java.io.File;
-
+import org.apache.maven.artifact.manager.WagonManager;
 import org.codehaus.plexus.PlexusTestCase;
 
 public abstract class AbstractEmbedderTestCase
@@ -41,6 +40,9 @@ public abstract class AbstractEmbedderTestCase
         configuration.setUserSettingsFile( MavenEmbedder.DEFAULT_USER_SETTINGS_FILE );
 
         maven = new MavenEmbedder( configuration );
+        
+        WagonManager wagonManager = (WagonManager) maven.getPlexusContainer().lookup( WagonManager.ROLE );
+        wagonManager.registerPublicKeyRing( getClass().getResourceAsStream( "/gpg/pubring.gpg" ) );
     }
 
     protected void tearDown()

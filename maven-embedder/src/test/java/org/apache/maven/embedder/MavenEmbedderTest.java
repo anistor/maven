@@ -252,8 +252,8 @@ public class MavenEmbedderTest
         Artifact p = (Artifact) project.getPluginArtifactMap().get( plugin.getKey() );
         assertEquals( "2.2", p.getVersion() );
 
-        /* Add the surefire plugin 2.3 to the pom */
-        plugin.setVersion( "2.3" );
+        /* Add the surefire plugin 2.4.2 to the pom */
+        plugin.setVersion( "2.4.2" );
         writer = WriterFactory.newXmlWriter( pom );
         maven.writeModel( writer, model );
         writer.close();
@@ -268,7 +268,7 @@ public class MavenEmbedderTest
         project = result.getProject();
 
         p = (Artifact) project.getPluginArtifactMap().get( plugin.getKey() );
-        assertEquals( "2.3", p.getVersion() );
+        assertEquals( "2.4.2", p.getVersion() );
     }
 
     // ----------------------------------------------------------------------
