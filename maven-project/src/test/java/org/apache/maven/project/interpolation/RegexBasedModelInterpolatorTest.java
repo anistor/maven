@@ -337,8 +337,12 @@ public class RegexBasedModelInterpolatorTest
         File basedir = new File( System.getProperty( "java.io.tmpdir" ), "base" );
         
         String value = interpolator.interpolate( "${project.build.outputDirectory}/foo", model, basedir, new DefaultProjectBuilderConfiguration(), true );
+        value = value.replace( '/', File.separatorChar ).replace( '\\', File.separatorChar );
         
-        assertEquals( value, new File( basedir, "target/classes/foo" ).getAbsolutePath().replace( '/', File.separatorChar ).replace( '\\', File.separatorChar ) );
+        String check = new File( basedir, "target/classes/foo" ).getAbsolutePath();
+        check = check.replace( '/', File.separatorChar ).replace( '\\', File.separatorChar );
+        
+        assertEquals( check, value );
     }
 
 //    public void testPOMExpressionDoesNotUseSystemProperty()
