@@ -338,7 +338,7 @@ public class RegexBasedModelInterpolatorTest
         
         String value = interpolator.interpolate( "${project.build.outputDirectory}/foo", model, basedir, new DefaultProjectBuilderConfiguration(), true );
         
-        assertEquals( value, new File( basedir, "target/classes/foo" ).getAbsolutePath() );
+        assertEquals( value, new File( basedir, "target/classes/foo" ).getAbsolutePath().replace( '/', File.separatorChar ).replace( '\\', File.separatorChar ) );
     }
 
 //    public void testPOMExpressionDoesNotUseSystemProperty()
