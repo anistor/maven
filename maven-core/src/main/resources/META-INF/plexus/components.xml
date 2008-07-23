@@ -586,6 +586,7 @@ under the License.
     
     <!--  TODO: Re-enable this once maven-shade-plugin 1.2 is release and can be 
           used to merge this configuration with that of the wagon artifacts.
+          We also need a way not to filter in the os.name, etc during the build, just the project version
     <component>
       <role>org.apache.maven.wagon.Wagon</role>
       <role-hint>http</role-hint>
@@ -597,7 +598,7 @@ under the License.
         <httpHeaders>
           <property>
             <name>User-Agent</name>
-            <value>Apache Maven/${project.version}</value>
+            <value>Apache-Maven/${project.version} maven-artifact/${project.version} (Java @java.version@; @os.name@ @os.version@)</value>
           </property>
         </httpHeaders>
       </configuration>
@@ -613,7 +614,7 @@ under the License.
         <httpHeaders>
           <property>
             <name>User-Agent</name>
-            <value>Apache Maven/${project.version}</value>
+            <value>Apache-Maven/${project.version} maven-artifact/${project.version} (Java @java.version@; @os.name@ @os.version@)</value>
           </property>
         </httpHeaders>
       </configuration>

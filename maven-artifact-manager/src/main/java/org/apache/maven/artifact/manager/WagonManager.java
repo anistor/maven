@@ -126,45 +126,4 @@ public interface WagonManager
     void setDefaultRepositoryPermissions( RepositoryPermissions permissions );
 
     ArtifactRepository getMirrorRepository( ArtifactRepository repository );
-
-    /**
-     * Allow configuration of the User-Agent HTTP header used for http wagons.
-     * 
-     * @since 2.0.10
-     */
-    void setHttpUserAgent( String userAgent );
-
-    /**
-     * Retrieve the User-Agent HTTP header used for http wagons.
-     * 
-     * @since 2.0.10
-     */
-    String getHttpUserAgent();
-
-    /**
-     * Allow configuration of the details of the User-Agent HTTP header (beyond 
-     * the initial value) used for http wagons. By default, this value will 
-     * contain specific information about the tool using maven-artifact, along 
-     * with the operating system and JDK version.
-     * 
-     * @since 2.0.10
-     */
-    void setHttpUserAgentDetails( String userAgentDetails );
-
-    /**
-     * Retrieve the details of the User-Agent HTTP header (beyond 
-     * the initial value) used for http wagons. By default, this value will 
-     * contain specific information about the tool using maven-artifact, along 
-     * with the operating system and JDK version.
-     * 
-     * @since 2.0.10
-     */
-    String getUserAgentDetails();
-
-    /**
-     * Retrieve the full User-Agent HTTP header value for use in http wagons.
-     * 
-     * @since 2.0.10
-     */
-    String getHttpUserAgentString();
 }

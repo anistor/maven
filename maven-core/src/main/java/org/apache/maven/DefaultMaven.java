@@ -21,6 +21,7 @@ package org.apache.maven;
 
 
 import org.apache.maven.artifact.manager.WagonManager;
+import org.apache.maven.artifact.manager.DefaultWagonManager;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.artifact.resolver.ArtifactResolutionException;
 import org.apache.maven.artifact.versioning.DefaultArtifactVersion;
@@ -602,6 +603,18 @@ public class DefaultMaven
     private void resolveParameters( Settings settings )
         throws ComponentLookupException, ComponentLifecycleException, SettingsConfigurationException
     {
+        // TODO: remove when components.xml can be used to configure this instead
+        try
+        {
+            DefaultWagonManager wagonManager = (DefaultWagonManager) container.lookup( WagonManager.ROLE );
+            wagonManager.setHttpUserAgent( "Apache-Maven/" + runtimeInformation.getApplicationVersion() + " " +
+                wagonManager.getHttpUserAgent() );
+        }
+        catch ( ClassCastException e )
+        {
+            // ignore
+        }
+
         WagonManager wagonManager = (WagonManager) container.lookup( WagonManager.ROLE );
 
         try

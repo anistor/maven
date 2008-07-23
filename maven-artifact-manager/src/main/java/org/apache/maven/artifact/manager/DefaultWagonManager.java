@@ -79,7 +79,7 @@ public class DefaultWagonManager
 
     private static final String EXTERNAL_WILDCARD = "external:*";
 
-    private static final String MAVEN_CORE_PROPERTIES = "META-INF/maven/org.apache.maven/maven-core/pom.properties";
+    private static final String MAVEN_ARTIFACT_PROPERTIES = "META-INF/maven/org.apache.maven/maven-artifact/pom.properties";
 
     private PlexusContainer container;
 
@@ -111,8 +111,6 @@ public class DefaultWagonManager
 
     private String httpUserAgent;
     
-    private String httpUserAgentDetails;
-
     // TODO: this leaks the component in the public api - it is never released back to the container
     public Wagon getWagon( Repository repository )
         throws UnsupportedProtocolException, WagonConfigurationException
@@ -1008,7 +1006,7 @@ public class DefaultWagonManager
         throws WagonConfigurationException
     {
         PlexusConfiguration config = (PlexusConfiguration) serverConfigurationMap.get( repositoryId ); 
-        if ( protocol.startsWith( "http" ) )
+        if ( protocol.startsWith( "http" ) || protocol.startsWith( "dav" ) )
         {
             config = updateUserAgentForHttp( wagon, config );
         }
@@ -1057,16 +1055,25 @@ public class DefaultWagonManager
             config = new XmlPlexusConfiguration( "configuration" );
         }
         
-        String userAgent = getHttpUserAgentString();
-        
-        if ( userAgent != null )
+        if ( httpUserAgent != null )
         {
             try
             {
                 wagon.getClass().getMethod( "setHttpHeaders", new Class[]{ Properties.class } );
                 
                 PlexusConfiguration headerConfig = config.getChild( "httpHeaders", true );
-                if ( headerConfig.getChild( "User-Agent", false ) == null )
+                PlexusConfiguration[] children = headerConfig.getChildren( "property" );
+                boolean found = false;
+                for ( int i = 0; i < children.length; i++ )
+                {
+                    PlexusConfiguration c = children[i].getChild( "name", false );
+                    if ( c != null && "User-Agent".equals( c.getValue( null ) ) )
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+                if ( !found )
                 {
                     XmlPlexusConfiguration propertyConfig = new XmlPlexusConfiguration( "property" );
                     headerConfig.addChild( propertyConfig );
@@ -1076,7 +1083,7 @@ public class DefaultWagonManager
                     propertyConfig.addChild( nameConfig );
                     
                     XmlPlexusConfiguration versionConfig = new XmlPlexusConfiguration( "value" );
-                    versionConfig.setValue( userAgent );
+                    versionConfig.setValue( httpUserAgent );
                     propertyConfig.addChild( versionConfig );
                 }
             }
@@ -1117,16 +1124,11 @@ public class DefaultWagonManager
     {
         if ( httpUserAgent == null )
         {
-            httpUserAgent = "ApacheMavenArtifact/2.0";
-        }
-        
-        if ( httpUserAgentDetails == null )
-        {
             InputStream resourceAsStream = null;
             try
             {
                 Properties properties = new Properties();
-                resourceAsStream = getClass().getClassLoader().getResourceAsStream( MAVEN_CORE_PROPERTIES );
+                resourceAsStream = getClass().getClassLoader().getResourceAsStream( MAVEN_ARTIFACT_PROPERTIES );
 
                 if ( resourceAsStream != null )
                 {
@@ -1134,15 +1136,15 @@ public class DefaultWagonManager
                     {
                         properties.load( resourceAsStream );
 
-                        httpUserAgentDetails =
-                            "Apache Maven " + properties.getProperty( "version" ) + "; JDK "
+                        httpUserAgent =
+                            "maven-artifact/" + properties.getProperty( "version" ) + " (Java "
                                 + System.getProperty( "java.version" ) + "; " + System.getProperty( "os.name" ) + " "
-                                + System.getProperty( "os.version" );
+                                + System.getProperty( "os.version" ) + ")";
                     }
                     catch ( IOException e )
                     {
                         getLogger().warn(
-                                          "Failed to load Maven core properties from:\n" + MAVEN_CORE_PROPERTIES
+                                          "Failed to load Maven artifact properties from:\n" + MAVEN_ARTIFACT_PROPERTIES
                                               + "\n\nUser-Agent HTTP header may be incorrect for artifact resolution." );
                     }
                 }
@@ -1168,29 +1170,5 @@ public class DefaultWagonManager
     public String getHttpUserAgent()
     {
         return httpUserAgent;
-    }
-    
-    /**
-     * {@inheritDoc}
-     */
-    public void setHttpUserAgentDetails( String userAgentDetails )
-    {
-        this.httpUserAgentDetails = userAgentDetails;
-    }
-    
-    /**
-     * {@inheritDoc}
-     */
-    public String getUserAgentDetails()
-    {
-        return httpUserAgentDetails;
-    }
-    
-    /**
-     * {@inheritDoc}
-     */
-    public String getHttpUserAgentString()
-    {
-        return httpUserAgent == null ? null : String.valueOf( httpUserAgent ) + " (" + String.valueOf( httpUserAgentDetails ) + ")";
     }
 }
