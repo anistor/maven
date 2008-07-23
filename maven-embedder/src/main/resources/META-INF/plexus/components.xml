@@ -43,38 +43,16 @@ under the License.
       </requirements>
     </component>
 
+     <!-- TODO: waiting until we can filter versions without filtering system properties, and also when Plexus uses an expression evaluator
+          that can evaluate the system properties at runtime
     <component>
-      <role>org.apache.maven.wagon.Wagon</role>
-      <role-hint>http</role-hint>
-      <implementation>org.apache.maven.wagon.providers.http.LightweightHttpWagon</implementation>
-      <instantiation-strategy>per-lookup</instantiation-strategy>
-      <description>LightweightHttpWagon</description>
-      <isolated-realm>false</isolated-realm>
+      <role>org.apache.maven.artifact.manager.WagonManager</role>
+      <role-hint>default</role-hint>
+      <implementation>org.apache.maven.artifact.manager.DefaultWagonManager</implementation>
       <configuration>
-        <httpHeaders>
-          <property>
-            <name>User-Agent</name>
-            <value>Apache Maven/${project.version}</value>
-          </property>
-        </httpHeaders>
+        <httpUserAgent>Apache-Maven/${project.version} maven-artifact/${project.version} (Java @java.version@; @os.name@ @os.version@)</httpUserAgent>
       </configuration>
     </component>
-    <component>
-      <role>org.apache.maven.wagon.Wagon</role>
-      <role-hint>https</role-hint>
-      <implementation>org.apache.maven.wagon.providers.http.LightweightHttpsWagon</implementation>
-      <instantiation-strategy>per-lookup</instantiation-strategy>
-      <description>LIghtweightHttpsWagon</description>
-      <isolated-realm>false</isolated-realm>
-      <configuration>
-        <httpHeaders>
-          <property>
-            <name>User-Agent</name>
-            <value>Apache Maven/${project.version}</value>
-          </property>
-        </httpHeaders>
-      </configuration>
-    </component>
-
+     -->
   </components>
 </component-set>

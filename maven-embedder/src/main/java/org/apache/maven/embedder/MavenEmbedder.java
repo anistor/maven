@@ -24,6 +24,8 @@ import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.factory.ArtifactFactory;
 import org.apache.maven.artifact.handler.ArtifactHandler;
 import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
+import org.apache.maven.artifact.manager.WagonManager;
+import org.apache.maven.artifact.manager.DefaultWagonManager;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.artifact.repository.ArtifactRepositoryFactory;
 import org.apache.maven.artifact.repository.layout.ArtifactRepositoryLayout;
@@ -39,6 +41,7 @@ import org.apache.maven.execution.MavenExecutionRequest;
 import org.apache.maven.execution.MavenExecutionResult;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.execution.ReactorManager;
+import org.apache.maven.execution.RuntimeInformation;
 import org.apache.maven.extension.BuildExtensionScanner;
 import org.apache.maven.extension.ExtensionScanningException;
 import org.apache.maven.lifecycle.LifecycleException;
@@ -86,6 +89,7 @@ import org.codehaus.plexus.classworlds.realm.ClassRealm;
 import org.codehaus.plexus.classworlds.realm.DuplicateRealmException;
 import org.codehaus.plexus.classworlds.realm.NoSuchRealmException;
 import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
+import org.codehaus.plexus.component.repository.exception.ComponentLifecycleException;
 import org.codehaus.plexus.component.repository.exception.ComponentRepositoryException;
 import org.codehaus.plexus.configuration.PlexusConfigurationException;
 import org.codehaus.plexus.logging.LoggerManager;
@@ -696,6 +700,26 @@ public class MavenEmbedder
             // Artifact related components
             // ----------------------------------------------------------------------
 
+            // TODO: remove when components.xml can be used to configure this instead
+            WagonManager wagonManager = (WagonManager) container.lookup( WagonManager.ROLE );
+            try
+            {
+                DefaultWagonManager defaultWagonManger = (DefaultWagonManager) wagonManager;
+    
+                RuntimeInformation runtimeInformation = (RuntimeInformation) container.lookup( RuntimeInformation.class.getName() );
+                defaultWagonManger.setHttpUserAgent( "Apache-Maven/" + 
+                    runtimeInformation.getApplicationVersion() + " " + defaultWagonManger.getHttpUserAgent() );
+                container.release( runtimeInformation );
+            }
+            catch ( ClassCastException e )
+            {   
+                // ignore
+            }
+            finally
+            {
+                container.release( wagonManager );
+            }
+
             artifactRepositoryFactory = (ArtifactRepositoryFactory) container.lookup( ArtifactRepositoryFactory.ROLE );
 
             artifactFactory = (ArtifactFactory) container.lookup( ArtifactFactory.ROLE );
@@ -725,6 +749,10 @@ public class MavenEmbedder
         catch ( ComponentLookupException e )
         {
             throw new MavenEmbedderException( "Cannot lookup required component.", e );
+        }
+        catch ( ComponentLifecycleException e )
+        {
+            throw new MavenEmbedderException( "Cannot release temporary component.", e );
         }
     }
 
