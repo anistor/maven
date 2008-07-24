@@ -533,4 +533,14 @@
       </reporting>
     </profile>
   </profiles>
+  <!-- TODO: remove when modello is released -->
+  <pluginRepositories>
+    <pluginRepository>
+      <id>codehaus.snapshots</id>
+      <url>http://snapshots.repository.codehaus.org</url>
+      <releases>
+        <enabled>false</enabled>
+      </releases>
+    </pluginRepository>
+  </pluginRepositories>
 </project>
