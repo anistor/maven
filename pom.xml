@@ -175,7 +175,7 @@
         <plugin>
           <groupId>org.codehaus.modello</groupId>
           <artifactId>modello-maven-plugin</artifactId>
-          <version>1.0-alpha-20-SNAPSHOT</version>
+          <version>1.0-alpha-20</version>
           <executions>
             <execution>
               <id>site-docs</id>
@@ -533,14 +533,4 @@
       </reporting>
     </profile>
   </profiles>
-  <!-- TODO: remove when modello is released -->
-  <pluginRepositories>
-    <pluginRepository>
-      <id>codehaus.snapshots</id>
-      <url>http://snapshots.repository.codehaus.org</url>
-      <releases>
-        <enabled>false</enabled>
-      </releases>
-    </pluginRepository>
-  </pluginRepositories>
 </project>
