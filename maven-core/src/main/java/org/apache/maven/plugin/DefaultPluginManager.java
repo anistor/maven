@@ -556,14 +556,39 @@ public class DefaultPluginManager
     {
         MojoDescriptor mojoDescriptor = mojoExecution.getMojoDescriptor();
         PluginDescriptor descriptor = mojoDescriptor.getPluginDescriptor();
+        
+        if ( !project.isConcrete() )
+        {
+            try
+            {
+                mavenProjectBuilder.calculateConcreteState( project, session.getProjectBuilderConfiguration() );
+            }
+            catch ( ModelInterpolationException e )
+            {
+                throw new PluginManagerException( "Failed to calculate concrete state for project: " + project, e );
+            }
+        }
+        
         Xpp3Dom dom = project.getReportConfiguration( descriptor.getGroupId(), descriptor.getArtifactId(),
                                                       mojoExecution.getExecutionId() );
+        
         if ( mojoExecution.getConfiguration() != null )
         {
             dom = Xpp3Dom.mergeXpp3Dom( dom, mojoExecution.getConfiguration() );
         }
 
-        return (MavenReport) getConfiguredMojo( session, dom, project, true, mojoExecution );
+        MavenReport report = (MavenReport) getConfiguredMojo( session, dom, project, true, mojoExecution );
+        
+        try
+        {
+            mavenProjectBuilder.restoreDynamicState( project, session.getProjectBuilderConfiguration() );
+        }
+        catch ( ModelInterpolationException e )
+        {
+            throw new PluginManagerException( "Failed to restore dynamic state for project: " + project, e );
+        }
+        
+        return report;
     }
 
     public PluginDescriptor verifyReportPlugin( ReportPlugin reportPlugin,
