@@ -21,12 +21,14 @@ package org.apache.maven.settings;
 
 import junit.framework.TestCase;
 
+import java.util.Arrays;
 import java.util.List;
 
 public class SettingsUtilsTest
     extends TestCase
 {
 
+    @SuppressWarnings("unchecked")
     public void testShouldAppendRecessivePluginGroupIds()
     {
         Settings dominant = new Settings();
@@ -46,5 +48,63 @@ public class SettingsUtilsTest
         assertEquals( "org.codehaus.modello", pluginGroups.get( 1 ) );
         assertEquals( "org.codehaus.plexus", pluginGroups.get( 2 ) );
     }
-
+    
+    public void testMergeKeyrings()
+    {
+        Settings dominant = new Settings();
+        Security security = new Security();
+        dominant.setSecurity( security );
+        security.addPublicKeyRing( "key-ring-user" );
+        
+        Settings recessive = new Settings();
+        security = new Security();
+        recessive.setSecurity( security );
+        security.addPublicKeyRing( "key-ring-global" );
+        
+        SettingsUtils.merge( dominant, recessive, Settings.GLOBAL_LEVEL );
+        
+        assertNotNull( dominant.getSecurity() );
+        assertEquals( Arrays.asList( "key-ring-user", "key-ring-global" ), dominant.getSecurity().getPublicKeyRings() );
+    }
+    
+    public void testMergeKeyringsUserEmpty()
+    {
+        Settings dominant = new Settings();
+        
+        Settings recessive = new Settings();
+        Security security = new Security();
+        recessive.setSecurity( security );
+        security.addPublicKeyRing( "key-ring-global" );
+        
+        SettingsUtils.merge( dominant, recessive, Settings.GLOBAL_LEVEL );
+        
+        assertNotNull( dominant.getSecurity() );
+        assertEquals( Arrays.asList( "key-ring-global" ), dominant.getSecurity().getPublicKeyRings() );
+    }
+    
+    public void testMergeKeyringsGlobalEmpty()
+    {
+        Settings dominant = new Settings();
+        Security security = new Security();
+        dominant.setSecurity( security );
+        security.addPublicKeyRing( "key-ring-user" );
+        
+        Settings recessive = new Settings();
+        
+        SettingsUtils.merge( dominant, recessive, Settings.GLOBAL_LEVEL );
+        
+        assertNotNull( dominant.getSecurity() );
+        assertEquals( Arrays.asList( "key-ring-user" ), dominant.getSecurity().getPublicKeyRings() );
+    }
+    
+    public void testMergeKeyringsBothEmpty()
+    {
+        Settings dominant = new Settings();
+        
+        Settings recessive = new Settings();
+        
+        SettingsUtils.merge( dominant, recessive, Settings.GLOBAL_LEVEL );
+        
+        assertNull( dominant.getSecurity() );
+    }
 }

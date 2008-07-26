@@ -110,6 +110,34 @@ public final class SettingsUtils
         shallowMergeById( dominant.getProxies(), recessive.getProxies(), recessiveSourceLevel );
         shallowMergeById( dominant.getProfiles(), recessive.getProfiles(), recessiveSourceLevel );
 
+        if (recessive.getSecurity() != null )
+        {
+            if ( dominant.getSecurity() == null ) 
+            {
+                dominant.setSecurity( new Security() );
+            }
+            
+            List<String> dominantPublicKeyRings = dominant.getSecurity().getPublicKeyRings();
+
+            List<String> recessivePublicKeyRings = recessive.getSecurity().getPublicKeyRings();
+
+            if ( recessivePublicKeyRings != null )
+            {
+                if ( dominantPublicKeyRings == null )
+                {
+                    dominantPublicKeyRings = new ArrayList<String>();
+                    dominant.getSecurity().setPublicKeyRings( dominantPublicKeyRings );
+                }
+
+                for ( String publicKeyRing : recessivePublicKeyRings )
+                {
+                    if ( !dominantPublicKeyRings.contains( publicKeyRing ) )
+                    {
+                        dominantPublicKeyRings.add( publicKeyRing );
+                    }
+                }
+            }
+        }
     }
 
     /**
