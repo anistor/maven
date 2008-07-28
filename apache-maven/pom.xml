@@ -46,6 +46,8 @@
                     org.codehaus.plexus:plexus-component-api
                   </exclude>
                   <exclude>classworlds:classworlds</exclude>
+                  <exclude>junit:junit</exclude>
+                  <exclude>jmock:jmock</exclude>
                   <exclude>xml-apis:xml-apis</exclude>
                 </excludes>
               </artifactSet>
@@ -67,20 +69,6 @@
                 <relocation>
                   <pattern>org.apache.commons.logging</pattern>
                 </relocation>
-
-                                <!-- For jsch wagon -->
-                <relocation>
-                  <pattern>com.jcraft</pattern>
-                </relocation>
-
-                                <!-- For wagon API -->
-                <relocation>
-                  <pattern>org.cyberneko</pattern>
-                </relocation>
-                <relocation>
-                  <pattern>org.apache.xerces</pattern>
-                </relocation>
-
                 <relocation>
                   <pattern>org.codehaus.plexus.util</pattern>
                   <excludes>
