@@ -418,6 +418,8 @@ public class DefaultWagonManager
 
         try
         {
+            getLogger().debug( "Connecting to repository: \'" + repository.getId() + "\' with url: \'" + repository.getUrl() + "\'." );
+            
             wagon.connect( new Repository( repository.getId(), repository.getUrl() ),
                            getAuthenticationInfo( repository.getId() ), getProxy( protocol ) );
 
