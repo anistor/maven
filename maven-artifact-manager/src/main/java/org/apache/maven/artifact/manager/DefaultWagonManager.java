@@ -36,6 +36,7 @@ import org.apache.maven.wagon.authorization.AuthorizationException;
 import org.apache.maven.wagon.events.TransferListener;
 import org.apache.maven.wagon.observers.ChecksumObserver;
 import org.apache.maven.wagon.proxy.ProxyInfo;
+import org.apache.maven.wagon.proxy.ProxyInfoProvider;
 import org.apache.maven.wagon.repository.Repository;
 import org.apache.maven.wagon.repository.RepositoryPermissions;
 import org.codehaus.plexus.PlexusConstants;
@@ -50,11 +51,15 @@ import org.codehaus.plexus.context.Context;
 import org.codehaus.plexus.context.ContextException;
 import org.codehaus.plexus.logging.AbstractLogEnabled;
 import org.codehaus.plexus.personality.plexus.lifecycle.phase.Contextualizable;
+import org.codehaus.plexus.personality.plexus.lifecycle.phase.Initializable;
+import org.codehaus.plexus.personality.plexus.lifecycle.phase.InitializationException;
 import org.codehaus.plexus.util.FileUtils;
+import org.codehaus.plexus.util.IOUtil;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.security.NoSuchAlgorithmException;
@@ -64,15 +69,18 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 
 public class DefaultWagonManager
     extends AbstractLogEnabled
-    implements WagonManager, Contextualizable
+    implements WagonManager, Contextualizable, Initializable
 {
     private static final String WILDCARD = "*";
 
     private static final String EXTERNAL_WILDCARD = "external:*";
+
+    private static final String MAVEN_ARTIFACT_PROPERTIES = "META-INF/maven/org.apache.maven/maven-artifact/pom.properties";
 
     private static int anonymousMirrorIdSeed = 0;
     
@@ -104,6 +112,8 @@ public class DefaultWagonManager
 
     private RepositoryPermissions defaultRepositoryPermissions;
 
+    private String httpUserAgent;
+
     // TODO: this leaks the component in the public api - it is never released back to the container
     public Wagon getWagon( Repository repository )
         throws UnsupportedProtocolException, WagonConfigurationException
@@ -117,7 +127,7 @@ public class DefaultWagonManager
 
         Wagon wagon = getWagon( protocol );
 
-        configureWagon( wagon, repository.getId() );
+        configureWagon( wagon, repository.getId(), protocol );
 
         return wagon;
     }
@@ -241,7 +251,14 @@ public class DefaultWagonManager
                 }
             }
 
-            wagon.connect( artifactRepository, getAuthenticationInfo( repository.getId() ), getProxy( protocol ) );
+//            wagon.connect( artifactRepository, getAuthenticationInfo( repository.getId() ), getProxy( protocol ) );
+            wagon.connect( artifactRepository, getAuthenticationInfo( repository.getId() ), new ProxyInfoProvider()
+            {
+                public ProxyInfo getProxyInfo( String protocol )
+                {
+                    return getProxy( protocol );
+                }
+            });
 
             wagon.put( source, remotePath );
 
@@ -421,7 +438,13 @@ public class DefaultWagonManager
             getLogger().debug( "Connecting to repository: \'" + repository.getId() + "\' with url: \'" + repository.getUrl() + "\'." );
             
             wagon.connect( new Repository( repository.getId(), repository.getUrl() ),
-                           getAuthenticationInfo( repository.getId() ), getProxy( protocol ) );
+                           getAuthenticationInfo( repository.getId() ), new ProxyInfoProvider()
+            {
+                public ProxyInfo getProxyInfo( String protocol )
+                {
+                    return getProxy( protocol );
+                }
+            });
 
             boolean firstRun = true;
             boolean retry = true;
@@ -1007,21 +1030,27 @@ public class DefaultWagonManager
                                  ArtifactRepository repository )
         throws WagonConfigurationException
     {
-        configureWagon( wagon, repository.getId() );
+        configureWagon( wagon, repository.getId(), repository.getProtocol() );
     }
 
     private void configureWagon( Wagon wagon,
-                                 String repositoryId )
+                                 String repositoryId,
+                                 String protocol )
         throws WagonConfigurationException
     {
-        if ( serverConfigurationMap.containsKey( repositoryId ) )
+        PlexusConfiguration config = (PlexusConfiguration) serverConfigurationMap.get( repositoryId ); 
+        if ( protocol.startsWith( "http" ) || protocol.startsWith( "dav" ) )
+        {
+            config = updateUserAgentForHttp( wagon, config );
+        }
+        
+        if ( config != null )
         {
             ComponentConfigurator componentConfigurator = null;
             try
             {
                 componentConfigurator = (ComponentConfigurator) container.lookup( ComponentConfigurator.ROLE );
-                componentConfigurator.configureComponent( wagon, (PlexusConfiguration) serverConfigurationMap
-                    .get( repositoryId ), container.getContainerRealm() );
+                componentConfigurator.configureComponent( wagon, config, container.getContainerRealm() );
             }
             catch ( final ComponentLookupException e )
             {
@@ -1051,6 +1080,69 @@ public class DefaultWagonManager
         }
     }
 
+    // TODO: Remove this, once the maven-shade-plugin 1.2 release is out, allowing configuration of httpHeaders in the components.xml
+    private PlexusConfiguration updateUserAgentForHttp( Wagon wagon, PlexusConfiguration config )
+    {
+        if ( config == null )
+        {
+            config = new XmlPlexusConfiguration( "configuration" );
+        }
+        
+        if ( httpUserAgent != null )
+        {
+            try
+            {
+                wagon.getClass().getMethod( "setHttpHeaders", new Class[]{ Properties.class } );
+                
+                PlexusConfiguration headerConfig = config.getChild( "httpHeaders", true );
+                PlexusConfiguration[] children = headerConfig.getChildren( "property" );
+                boolean found = false;
+                
+                getLogger().debug( "Checking for pre-existing User-Agent configuration." );
+                for ( int i = 0; i < children.length; i++ )
+                {
+                    PlexusConfiguration c = children[i].getChild( "name", false );
+                    if ( c != null && "User-Agent".equals( c.getValue( null ) ) )
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+                
+                if ( !found )
+                {
+                    getLogger().debug( "Adding User-Agent configuration." );
+                    XmlPlexusConfiguration propertyConfig = new XmlPlexusConfiguration( "property" );
+                    headerConfig.addChild( propertyConfig );
+                    
+                    XmlPlexusConfiguration nameConfig = new XmlPlexusConfiguration( "name" );
+                    nameConfig.setValue( "User-Agent" );
+                    propertyConfig.addChild( nameConfig );
+                    
+                    XmlPlexusConfiguration versionConfig = new XmlPlexusConfiguration( "value" );
+                    versionConfig.setValue( httpUserAgent );
+                    propertyConfig.addChild( versionConfig );
+                }
+                else
+                {
+                    getLogger().debug( "User-Agent configuration found." );
+                }
+            }
+            catch ( SecurityException e )
+            {
+                getLogger().debug( "setHttpHeaders method not accessible on wagon: " + wagon + "; skipping User-Agent configuration." );
+                // forget it. this method is public, if it exists.
+            }
+            catch ( NoSuchMethodException e )
+            {
+                getLogger().debug( "setHttpHeaders method not found on wagon: " + wagon + "; skipping User-Agent configuration." );
+                // forget it.
+            }
+        }
+        
+        return config;
+    }
+
     public void addConfiguration( String repositoryId,
                                   Xpp3Dom configuration )
     {
@@ -1067,5 +1159,59 @@ public class DefaultWagonManager
     public void setDefaultRepositoryPermissions( RepositoryPermissions defaultRepositoryPermissions )
     {
         this.defaultRepositoryPermissions = defaultRepositoryPermissions;
+    }
+
+    // TODO: Remove this, once the maven-shade-plugin 1.2 release is out, allowing configuration of httpHeaders in the components.xml
+    public void initialize()
+        throws InitializationException
+    {
+        if ( httpUserAgent == null )
+        {
+            InputStream resourceAsStream = null;
+            try
+            {
+                Properties properties = new Properties();
+                resourceAsStream = getClass().getClassLoader().getResourceAsStream( MAVEN_ARTIFACT_PROPERTIES );
+
+                if ( resourceAsStream != null )
+                {
+                    try
+                    {
+                        properties.load( resourceAsStream );
+
+                        httpUserAgent =
+                            "maven-artifact/" + properties.getProperty( "version" ) + " (Java "
+                                + System.getProperty( "java.version" ) + "; " + System.getProperty( "os.name" ) + " "
+                                + System.getProperty( "os.version" ) + ")";
+                    }
+                    catch ( IOException e )
+                    {
+                        getLogger().warn(
+                                          "Failed to load Maven artifact properties from:\n" + MAVEN_ARTIFACT_PROPERTIES
+                                              + "\n\nUser-Agent HTTP header may be incorrect for artifact resolution." );
+                    }
+                }
+            }
+            finally
+            {
+                IOUtil.close( resourceAsStream );
+            }
+        }
+    }
+    
+    /**
+     * {@inheritDoc}
+     */
+    public void setHttpUserAgent( String userAgent )
+    {
+        this.httpUserAgent = userAgent;
+    }
+    
+    /**
+     * {@inheritDoc}
+     */
+    public String getHttpUserAgent()
+    {
+        return httpUserAgent;
     }
 }

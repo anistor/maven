@@ -244,7 +244,7 @@
 
   <properties>
     <mavenVersion>2.0.10-RC4-SNAPSHOT</mavenVersion>
-    <wagonVersion>1.0-beta-2</wagonVersion>
+    <wagonVersion>1.0-beta-4</wagonVersion>
   </properties>
 
     <!--start-->
@@ -404,7 +404,7 @@
       </dependency>
       <dependency>
         <groupId>org.apache.maven.wagon</groupId>
-        <artifactId>wagon-webdav</artifactId>
+        <artifactId>wagon-webdav-jackrabbit</artifactId>
         <version>${wagonVersion}</version>
       </dependency>
       <dependency>
