@@ -243,7 +243,7 @@
   </modules>
 
   <properties>
-    <mavenVersion>2.0.10-RC4</mavenVersion>
+    <mavenVersion>2.0.10-RC5-SNAPSHOT</mavenVersion>
     <wagonVersion>1.0-beta-4</wagonVersion>
   </properties>
 
