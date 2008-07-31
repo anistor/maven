@@ -543,7 +543,7 @@ public class DefaultMavenProjectBuilder
         }
         else
         {
-            getLogger().warn( "Attempting to build MavenProject instance for Artifact (" + artifact.getGroupId() + ":"
+            getLogger().debug( "Attempting to build MavenProject instance for Artifact (" + artifact.getGroupId() + ":"
                                   + artifact.getArtifactId() + ":" + artifact.getVersion() + ") of type: "
                                   + artifact.getType() + "; constructing POM artifact instead." );
 
