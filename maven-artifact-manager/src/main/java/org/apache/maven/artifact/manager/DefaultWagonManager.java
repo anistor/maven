@@ -617,6 +617,8 @@ public class DefaultWagonManager
                 // TODO: this should be illegal in settings.xml
                 id = repository.getId();
             }
+            
+            getLogger().debug( "Using mirror: " + mirror.getUrl() + " (id: " + id + ")" );
 
             repository = repositoryFactory.createArtifactRepository( id, mirror.getUrl(),
                                                                      repository.getLayout(), repository.getSnapshots(),
@@ -739,7 +741,14 @@ public class DefaultWagonManager
 
     public ProxyInfo getProxy( String protocol )
     {
-        return (ProxyInfo) proxies.get( protocol );
+        ProxyInfo info = (ProxyInfo) proxies.get( protocol );
+        
+        if ( info != null )
+        {
+            getLogger().debug( "Using Proxy: " + info.getHost() );
+        }
+        
+        return info;
     }
 
     public AuthenticationInfo getAuthenticationInfo( String id )
