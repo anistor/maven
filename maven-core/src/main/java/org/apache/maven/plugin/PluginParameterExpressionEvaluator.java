@@ -130,6 +130,8 @@ public class PluginParameterExpressionEvaluator
     public Object evaluate( String expr )
         throws ExpressionEvaluationException
     {
+        calculateConcreteState( project );
+        
         Object value = null;
 
         if ( expr == null )
@@ -213,8 +215,7 @@ public class PluginParameterExpressionEvaluator
         }
         else if ( "project".equals( expression ) )
         {
-            calculateConcreteState( project );
-            
+            // concrete state calculated above for the direct project.
             value = project;
         }
         else if ( "executedProject".equals( expression ) )
@@ -224,8 +225,7 @@ public class PluginParameterExpressionEvaluator
         }
         else if ( expression.startsWith( "project" ) )
         {
-            calculateConcreteState( project );
-            
+            // concrete state calculated above for the direct project.
             try
             {
                 int pathSeparator = expression.indexOf( "/" );
@@ -379,7 +379,7 @@ public class PluginParameterExpressionEvaluator
     private void calculateConcreteState( MavenProject project )
         throws ExpressionEvaluationException
     {
-        if ( projectBuilder != null && !project.isConcrete() )
+        if ( projectBuilder != null && project != null && !project.isConcrete() )
         {
             try
             {
