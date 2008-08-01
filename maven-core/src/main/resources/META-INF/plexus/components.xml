@@ -50,6 +50,9 @@ under the License.
         <requirement>
           <role>org.apache.maven.project.MavenProjectBuilder</role>
         </requirement>
+        <requirement>
+          <role>org.apache.maven.project.interpolation.ModelInterpolator</role>
+        </requirement>
       </requirements>
     </component>
 

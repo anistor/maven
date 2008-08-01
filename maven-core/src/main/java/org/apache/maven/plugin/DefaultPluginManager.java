@@ -58,6 +58,7 @@ import org.apache.maven.project.ProjectBuildingException;
 import org.apache.maven.project.artifact.InvalidDependencyVersionException;
 import org.apache.maven.project.artifact.MavenMetadataSource;
 import org.apache.maven.project.interpolation.ModelInterpolationException;
+import org.apache.maven.project.interpolation.ModelInterpolator;
 import org.apache.maven.project.path.PathTranslator;
 import org.apache.maven.reporting.MavenReport;
 import org.apache.maven.settings.Settings;
@@ -82,8 +83,14 @@ import org.codehaus.plexus.personality.plexus.lifecycle.phase.Contextualizable;
 import org.codehaus.plexus.personality.plexus.lifecycle.phase.Initializable;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
+import org.codehaus.plexus.util.xml.Xpp3DomBuilder;
+import org.codehaus.plexus.util.xml.Xpp3DomWriter;
+import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.StringReader;
+import java.io.StringWriter;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -127,6 +134,8 @@ public class DefaultPluginManager
     protected RuntimeInformation runtimeInformation;
 
     protected MavenProjectBuilder mavenProjectBuilder;
+    
+    protected ModelInterpolator modelInterpolator;
 
     protected PluginMappingManager pluginMappingManager;
 
@@ -667,6 +676,52 @@ public class DefaultPluginManager
         }
         else
         {
+            if ( project != null && !project.isConcrete() )
+            {
+                try
+                {
+                    mavenProjectBuilder.calculateConcreteState( project, session.getProjectBuilderConfiguration() );
+                }
+                catch ( ModelInterpolationException e )
+                {
+                    throw new PluginManagerException( "Error calculating concrete state for project: " + project
+                        + "\n(processing configuration for mojo: '" + mojoDescriptor.getRoleHint() + "' with execution-id: '"
+                        + mojoExecution.getExecutionId() + "')", e );
+                }
+            }
+            
+            StringWriter writer = new StringWriter();
+            Xpp3DomWriter.write( writer, dom );
+            
+            String domStr = writer.toString();
+            
+            try
+            {
+                domStr =
+                    modelInterpolator.interpolate( domStr, project.getModel(), project.getBasedir(),
+                                                   session.getProjectBuilderConfiguration(), getLogger().isDebugEnabled() );
+            }
+            catch ( ModelInterpolationException e )
+            {
+                throw new PluginManagerException( "Error interpolating configuration for: '" + mojoDescriptor.getRoleHint() +
+                                                  "' (execution: '" + mojoExecution.getExecutionId() + "')", e );
+            }
+            
+            try
+            {
+                dom = Xpp3DomBuilder.build( new StringReader( domStr ) );
+            }
+            catch ( XmlPullParserException e )
+            {
+                throw new PluginManagerException( "Error reading interpolated configuration for: '" + mojoDescriptor.getRoleHint() +
+                                                  "' (execution: '" + mojoExecution.getExecutionId() + "')", e );
+            }
+            catch ( IOException e )
+            {
+                throw new PluginManagerException( "Error reading interpolated configuration for: '" + mojoDescriptor.getRoleHint() +
+                                                  "' (execution: '" + mojoExecution.getExecutionId() + "')", e );
+            }
+            
             pomConfiguration = new XmlPlexusConfiguration( dom );
         }
 
