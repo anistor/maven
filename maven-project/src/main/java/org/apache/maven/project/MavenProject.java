@@ -151,6 +151,8 @@ public class MavenProject
     
     private Map moduleAdjustments;
 
+    private File basedir;
+
     public MavenProject()
     {
         Model model = new Model();
@@ -423,20 +425,27 @@ public class MavenProject
 
     public void setFile( File file )
     {
+        if ( file == null )
+        {
+            return;
+        }
+        
+        if ( basedir == null )
+        {
+            basedir = file.getParentFile();
+        }
+        
         this.file = file;
+    }
+    
+    public void setBasedir( File basedir )
+    {
+        this.basedir = basedir;
     }
 
     public File getBasedir()
     {
-        if ( getFile() != null )
-        {
-            return getFile().getParentFile();
-        }
-        else
-        {
-            // repository based POM
-            return null;
-        }
+        return basedir;
     }
 
     public void setDependencies( List dependencies )
