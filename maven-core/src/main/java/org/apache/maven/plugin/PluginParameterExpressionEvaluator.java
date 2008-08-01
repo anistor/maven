@@ -220,7 +220,7 @@ public class PluginParameterExpressionEvaluator
         }
         else if ( "executedProject".equals( expression ) )
         {
-            calculateConcreteState( project.getExecutionProject() );
+            // concrete state calculated above for the direct project and associated execution project.
             value = project.getExecutionProject();
         }
         else if ( expression.startsWith( "project" ) )
