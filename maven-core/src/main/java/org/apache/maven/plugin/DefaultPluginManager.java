@@ -421,18 +421,6 @@ public class DefaultPluginManager
         String artifactId = pluginDescriptor.getArtifactId();
         String executionId = mojoExecution.getExecutionId();
 
-        if ( !project.isConcrete() )
-        {
-            try
-            {
-                mavenProjectBuilder.calculateConcreteState( project, session.getProjectBuilderConfiguration() );
-            }
-            catch ( ModelInterpolationException e )
-            {
-                throw new PluginManagerException( "Failed to calculate concrete state for project: " + project, e );
-            }
-        }
-
         Xpp3Dom dom = project.getGoalConfiguration( groupId, artifactId, executionId, goalId );
         Xpp3Dom reportDom = project.getReportConfiguration( groupId, artifactId, executionId );
         dom = Xpp3Dom.mergeXpp3Dom( dom, reportDom );
@@ -538,13 +526,27 @@ public class DefaultPluginManager
             }
         }
 
-        try
+        restoreAllProjectDynamism( session );
+    }
+
+    private void restoreAllProjectDynamism( MavenSession session )
+        throws PluginManagerException
+    {
+        List reactorProjects = session.getSortedProjects();
+        if ( reactorProjects != null )
         {
-            mavenProjectBuilder.restoreDynamicState( project, session.getProjectBuilderConfiguration() );
-        }
-        catch ( ModelInterpolationException e )
-        {
-            throw new PluginManagerException( "Failed to restore dynamic state for project: " + project, e );
+            for ( Iterator it = reactorProjects.iterator(); it.hasNext(); )
+            {
+                MavenProject project = (MavenProject) it.next();
+                try
+                {
+                    mavenProjectBuilder.restoreDynamicState( project, session.getProjectBuilderConfiguration() );
+                }
+                catch ( ModelInterpolationException e )
+                {
+                    throw new PluginManagerException( "Failed to restore dynamic state for project: " + project, e );
+                }
+            }
         }
     }
 
@@ -557,18 +559,6 @@ public class DefaultPluginManager
         MojoDescriptor mojoDescriptor = mojoExecution.getMojoDescriptor();
         PluginDescriptor descriptor = mojoDescriptor.getPluginDescriptor();
         
-        if ( !project.isConcrete() )
-        {
-            try
-            {
-                mavenProjectBuilder.calculateConcreteState( project, session.getProjectBuilderConfiguration() );
-            }
-            catch ( ModelInterpolationException e )
-            {
-                throw new PluginManagerException( "Failed to calculate concrete state for project: " + project, e );
-            }
-        }
-        
         Xpp3Dom dom = project.getReportConfiguration( descriptor.getGroupId(), descriptor.getArtifactId(),
                                                       mojoExecution.getExecutionId() );
         
@@ -579,14 +569,7 @@ public class DefaultPluginManager
 
         MavenReport report = (MavenReport) getConfiguredMojo( session, dom, project, true, mojoExecution );
         
-        try
-        {
-            mavenProjectBuilder.restoreDynamicState( project, session.getProjectBuilderConfiguration() );
-        }
-        catch ( ModelInterpolationException e )
-        {
-            throw new PluginManagerException( "Failed to restore dynamic state for project: " + project, e );
-        }
+        restoreAllProjectDynamism( session );
         
         return report;
     }
@@ -698,7 +681,9 @@ public class DefaultPluginManager
         //                                                                          mojoDescriptor.getConfiguration() );
 
         ExpressionEvaluator expressionEvaluator = new PluginParameterExpressionEvaluator( session, mojoExecution,
-                                                                                          pathTranslator, getLogger(),
+                                                                                          pathTranslator,
+                                                                                          mavenProjectBuilder,
+                                                                                          getLogger(),
                                                                                           project,
                                                                                           session.getExecutionProperties() );
 
