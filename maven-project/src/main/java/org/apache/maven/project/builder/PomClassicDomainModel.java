@@ -24,6 +24,7 @@ import org.apache.maven.model.Parent;
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
 import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
 import org.apache.maven.shared.model.InputStreamDomainModel;
+import org.apache.maven.mercury.artifact.ArtifactBasicMetadata;
 import org.codehaus.plexus.util.IOUtil;
 import org.codehaus.plexus.util.ReaderFactory;
 import org.codehaus.plexus.util.WriterFactory;
@@ -58,6 +59,8 @@ public final class PomClassicDomainModel
     private Model model;
 
     private String id;
+
+    private ArtifactBasicMetadata metadata;
 
     /**
      * Constructor
@@ -209,6 +212,22 @@ public final class PomClassicDomainModel
         byte[] copy = new byte[inputBytes.length];
         System.arraycopy( inputBytes, 0, copy, 0, inputBytes.length );
         return new ByteArrayInputStream( copy );
+    }
+
+    public ArtifactBasicMetadata asArtifactBasicMetadata() {
+        if( metadata != null )
+        {
+            return metadata;
+        }
+
+        String groupId = ( model.getGroupId() == null ) ? model.getParent().getGroupId() : model.getGroupId();
+        String artifactId =
+            ( model.getArtifactId() == null ) ? model.getParent().getArtifactId() : model.getArtifactId();
+        String version = ( model.getVersion() == null ) ? model.getParent().getVersion() : model.getVersion();
+        String type = (model.getPackaging() != null) ? model.getPackaging() : "jar"; //todo: assuming packaging==type
+
+        metadata = new ArtifactBasicMetadata(groupId + ":" + artifactId + ":" + version + ":" + ":" + type);
+        return metadata;
     }
 
     /**

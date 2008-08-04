@@ -20,6 +20,10 @@ package org.apache.maven.project;
  */
 
 import org.apache.maven.MavenTools;
+import org.apache.maven.mercury.repository.api.*;
+import org.apache.maven.mercury.repository.local.m2.LocalRepositoryM2;
+import org.apache.maven.mercury.repository.remote.m2.RemoteRepositoryM2;
+import org.apache.maven.mercury.transport.api.Server;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.ArtifactStatus;
 import org.apache.maven.artifact.ArtifactUtils;
@@ -73,6 +77,7 @@ import org.apache.maven.project.workspace.ProjectWorkspace;
 import org.apache.maven.project.builder.PomArtifactResolver;
 import org.apache.maven.project.builder.ProjectBuilder;
 import org.apache.maven.project.builder.PomClassicDomainModel;
+import org.apache.maven.project.builder.impl.DefaultProjectBuilder;
 import org.codehaus.plexus.logging.LogEnabled;
 import org.codehaus.plexus.logging.Logger;
 import org.codehaus.plexus.personality.plexus.lifecycle.phase.Initializable;
@@ -83,6 +88,7 @@ import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
 import java.io.*;
 import java.net.URL;
+import java.net.MalformedURLException;
 import java.util.*;
 
 /*:apt
@@ -163,6 +169,7 @@ public class DefaultMavenProjectBuilder
 // the aspect weaving seems not to work for reflection from plugin.
     private Map processedProjectCache = new HashMap();
 
+   // private
 
     public static final String MAVEN_MODEL_VERSION = "4.0.0";
 
@@ -491,8 +498,7 @@ public class DefaultMavenProjectBuilder
 
         if ( project == null )
         {
-            Model model = readModelFromLocalPath( "unknown", projectDescriptor, new PomArtifactResolver(config.getLocalRepository(),
-                    buildArtifactRepositories( getSuperModel() ), artifactResolver) );
+            Model model = readModelFromLocalPath( "unknown", projectDescriptor, config.getLocalRepository() );
             project = buildInternal(model,
                 config,
                 buildArtifactRepositories( getSuperModel() ),
@@ -2071,23 +2077,36 @@ public class DefaultMavenProjectBuilder
     }
 
     private Model readModelFromLocalPath( String projectId,
-                            File projectDescriptor,
-                            PomArtifactResolver resolver )
+                            File projectDescriptor, ArtifactRepository localRepository)
        throws ProjectBuildingException
    {
        if(projectDescriptor == null) {
            throw new IllegalArgumentException("projectDescriptor: null, Project Id =" + projectId);
        }
 
-       if(projectBuilder == null) {
-           throw new IllegalArgumentException("projectBuilder: not initialized");
+       List<ArtifactRepository> artifactRepositories = buildArtifactRepositories( getSuperModel() );
+       List<RemoteRepository> remoteRepositories = new ArrayList<RemoteRepository>();
+       for(ArtifactRepository artifactRepository : artifactRepositories) {
+           try {
+               remoteRepositories.add(new RemoteRepositoryM2(artifactRepository.getId(), new Server(artifactRepository.getId(),
+                       new URL(artifactRepository.getUrl()))));
+           } catch (MalformedURLException e) {
+               e.printStackTrace();
+           }
        }
+        try {
+            DefaultProjectBuilder projectBuilder = new DefaultProjectBuilder();
+            RepositoryReader repositoryReader = (RepositoryReader) new VirtualRepositoryReader(new LocalRepositoryM2(localRepository.getId(),
+                    new File(localRepository.getUrl())), remoteRepositories, projectBuilder);
+            projectBuilder.init(repositoryReader);
+        } catch (RepositoryException e) {
+            e.printStackTrace();
+        }
 
        MavenProject mavenProject;
        try {
            mavenProject = projectBuilder.buildFromLocalPath(new FileInputStream(projectDescriptor),
-                   null, null, resolver,
-                   projectDescriptor.getParentFile());
+                   null, null, projectDescriptor.getParentFile());
        } catch (IOException e) {
            e.printStackTrace();
            throw new ProjectBuildingException(projectId, "File = " + projectDescriptor.getAbsolutePath() , e);

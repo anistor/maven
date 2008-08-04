@@ -35,28 +35,22 @@ import org.apache.maven.project.validation.ModelValidator;
 import org.apache.maven.shared.model.DomainModel;
 import org.apache.maven.shared.model.InterpolatorProperty;
 import org.apache.maven.shared.model.ModelTransformerContext;
+import org.apache.maven.mercury.builder.api.MetadataProcessor;
+import org.apache.maven.mercury.builder.api.MetadataReader;
+import org.apache.maven.mercury.builder.api.MetadataProcessingException;
+import org.apache.maven.mercury.artifact.ArtifactBasicMetadata;
 import org.codehaus.plexus.logging.LogEnabled;
 import org.codehaus.plexus.logging.Logger;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
+import java.io.*;
+import java.util.*;
 
 /**
  * Default implementation of the project builder.
  */
 public final class DefaultProjectBuilder
-    implements ProjectBuilder, LogEnabled
+    implements ProjectBuilder, MetadataProcessor, LogEnabled
 {
-
-    private ArtifactFactory artifactFactory;
-
     /**
      * Logger instance
      */
@@ -64,33 +58,33 @@ public final class DefaultProjectBuilder
 
     private ModelValidator validator;
 
-    /**
-     * Default constructor
-     */
-    public DefaultProjectBuilder()
-    {
-    }
+    private MetadataReader metadataReader;
+
 
     /**
      * Constructor
-     *
-     * @param artifactFactory the artifact factory
      */
-    protected DefaultProjectBuilder( ArtifactFactory artifactFactory )
+    public DefaultProjectBuilder( )
     {
-        if ( artifactFactory == null )
-        {
-            throw new IllegalArgumentException( "artifactFactory: null" );
-        }
-        this.artifactFactory = artifactFactory;
     }
 
     /**
-     * @see ProjectBuilder#buildFromLocalPath(java.io.InputStream, java.util.List, java.util.Collection, org.apache.maven.project.builder.PomArtifactResolver, java.io.File)
+     *
+     * @param metadataReader metadata reader
+     */
+    public void init(MetadataReader metadataReader) {
+        if ( metadataReader == null )
+        {
+            throw new IllegalArgumentException( "metadataReader: null" );
+        }
+        this.metadataReader = metadataReader;
+    }
+    /**
+     * @see ProjectBuilder#buildFromLocalPath(java.io.InputStream, java.util.List, java.util.Collection, java.io.File)
      */
     public MavenProject buildFromLocalPath( InputStream pom, List<Model> inheritedModels,
                                             Collection<InterpolatorProperty> interpolatorProperties,
-                                            PomArtifactResolver resolver, File projectDirectory )
+                                            File projectDirectory )
         throws IOException
     {
         if ( pom == null )
@@ -98,9 +92,9 @@ public final class DefaultProjectBuilder
             throw new IllegalArgumentException( "pom: null" );
         }
 
-        if ( resolver == null )
+        if ( metadataReader == null )
         {
-            throw new IllegalArgumentException( "resolver: null" );
+            throw new IllegalArgumentException( "metadataReader not initialized" );
         }
 
         if ( projectDirectory == null )
@@ -136,11 +130,11 @@ public final class DefaultProjectBuilder
         {
             if ( isParentLocal( domainModel.getModel().getParent(), projectDirectory ) )
             {
-                domainModels.addAll( getDomainModelParentsFromLocalPath( domainModel, resolver, projectDirectory ) );
+                domainModels.addAll( getDomainModelParentsFromLocalPath( domainModel, projectDirectory ) );
             }
             else
             {
-                domainModels.addAll( getDomainModelParentsFromRepository( domainModel, resolver ) );
+                domainModels.addAll( getDomainModelParentsFromRepository( domainModel ) );
             }
         }
 
@@ -154,7 +148,7 @@ public final class DefaultProjectBuilder
             Arrays.asList( new ArtifactModelContainerFactory(), new IdModelContainerFactory() ) );
 
         PomClassicDomainModel transformedDomainModel =
-            ( (PomClassicDomainModel) ctx.transform( domainModels, transformer, transformer, properties ) );
+            ( (PomClassicDomainModel) ctx.transform( domainModels, transformer, transformer, null, properties ) );
         Model model = transformedDomainModel.getModel();
         return new MavenProject( model );
     }
@@ -177,14 +171,9 @@ public final class DefaultProjectBuilder
         }
     }
 
-    private List<DomainModel> getDomainModelParentsFromRepository( PomClassicDomainModel domainModel,
-                                                                   PomArtifactResolver artifactResolver )
+    private List<DomainModel> getDomainModelParentsFromRepository( PomClassicDomainModel domainModel)
         throws IOException
     {
-        if ( artifactFactory == null )
-        {
-            throw new IllegalArgumentException( "artifactFactory: not initialized" );
-        }
 
         List<DomainModel> domainModels = new ArrayList<DomainModel>();
 
@@ -195,39 +184,31 @@ public final class DefaultProjectBuilder
             return domainModels;
         }
 
-        Artifact artifactParent =
-            artifactFactory.createParentArtifact( parent.getGroupId(), parent.getArtifactId(), parent.getVersion() );
-        artifactResolver.resolve( artifactParent );
+        PomClassicDomainModel parentDomainModel;
+        try {
+            parentDomainModel = new PomClassicDomainModel( new ByteArrayInputStream(
+                    metadataReader.readMetadata(domainModel.asArtifactBasicMetadata())) );
+        } catch (MetadataProcessingException e) {
+            e.printStackTrace();
+            throw new IOException(e.getMessage());
+        }
 
-        PomClassicDomainModel parentDomainModel =
-            new PomClassicDomainModel( new FileInputStream( artifactParent.getFile() ) );
         if ( !parentDomainModel.matchesParent( domainModel.getModel().getParent() ) )
         {
-            logger.warn( "Parent pom ids do not match: File = " + artifactParent.getFile().getAbsolutePath() );
+            logger.warn( "Parent pom ids do not match: Id = " + domainModel.getId() );
             return domainModels;
-        }
-        else
-        {
-            //  logger.info("Adding pom to hierarchy: Group Id = " + parent.getGroupId() + ", Artifact Id ="
-            //      + parent.getArtifactId()  + ", Version = " + parent.getVersion() + ", File" + artifactParent.getFile());
         }
 
         domainModels.add( parentDomainModel );
-        domainModels.addAll( getDomainModelParentsFromRepository( parentDomainModel, artifactResolver ) );
+        domainModels.addAll( getDomainModelParentsFromRepository( parentDomainModel) );
         return domainModels;
     }
 
 
     private List<DomainModel> getDomainModelParentsFromLocalPath( PomClassicDomainModel domainModel,
-                                                                  PomArtifactResolver artifactResolver,
                                                                   File projectDirectory )
         throws IOException
     {
-
-        if ( artifactFactory == null )
-        {
-            throw new IllegalArgumentException( "artifactFactory: not initialized" );
-        }
 
         List<DomainModel> domainModels = new ArrayList<DomainModel>();
 
@@ -262,12 +243,12 @@ public final class DefaultProjectBuilder
         {
             if ( isParentLocal( parentDomainModel.getModel().getParent(), parentFile.getParentFile() ) )
             {
-                domainModels.addAll( getDomainModelParentsFromLocalPath( parentDomainModel, artifactResolver,
+                domainModels.addAll( getDomainModelParentsFromLocalPath( parentDomainModel,
                                                                          parentFile.getParentFile() ) );
             }
             else
             {
-                domainModels.addAll( getDomainModelParentsFromRepository( parentDomainModel, artifactResolver ) );
+                domainModels.addAll( getDomainModelParentsFromRepository( parentDomainModel) );
             }
         }
 
@@ -292,4 +273,11 @@ public final class DefaultProjectBuilder
     }
 
 
+    public List<ArtifactBasicMetadata> getDependencies(ArtifactBasicMetadata bmd, MetadataReader mdReader, Hashtable env) 
+            throws MetadataProcessingException {
+        //PomClassicDomainModel model = new PomClassicDomainModel(new ByteArrayInputStream(mdReader.readMetadata(bmd)));
+
+       // return model.asArtifactBasicMetadata();
+       return null;
+    }
 }

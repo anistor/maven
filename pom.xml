@@ -274,6 +274,7 @@
     <wagonVersion>1.0-beta-3</wagonVersion>
     <mavenSharedModel>1.0-SNAPSHOT</mavenSharedModel>
     <woodstoxVersion>3.2.6</woodstoxVersion>
+    <mercuryVersion>1.0.0-SNAPSHOT</mercuryVersion>
   </properties>
 
   <!--start-->
@@ -406,6 +407,26 @@
         <groupId>org.apache.maven.doxia</groupId>
         <artifactId>doxia-sink-api</artifactId>
         <version>${doxiaVersion}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.maven.mercury</groupId>
+        <artifactId>mercury-repo-api</artifactId>
+        <version>${mercuryVersion}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.maven.mercury</groupId>
+        <artifactId>mercury-repo-local-m2</artifactId>
+        <version>${mercuryVersion}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.maven.mercury</groupId>
+        <artifactId>mercury-repo-remote-m2</artifactId>
+        <version>${mercuryVersion}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.maven.mercury</groupId>
+        <artifactId>mercury-transport-api</artifactId>
+        <version>${mercuryVersion}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.maven.shared</groupId>
