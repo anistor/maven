@@ -19,15 +19,21 @@ package org.apache.maven.project.artifact;
  * under the License.
  */
 
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.metadata.AbstractArtifactMetadata;
 import org.apache.maven.artifact.metadata.ArtifactMetadata;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.artifact.repository.metadata.RepositoryMetadataStoreException;
-import org.codehaus.plexus.util.FileUtils;
-
-import java.io.File;
-import java.io.IOException;
+import org.apache.maven.model.Model;
+import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
+import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
+import org.codehaus.plexus.util.IOUtil;
+import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
 /**
  * Attach a POM to an artifact.
@@ -74,23 +80,35 @@ public class ProjectArtifactMetadata
         File destination = new File( localRepository.getBasedir(),
                                      localRepository.pathOfLocalRepositoryMetadata( this, remoteRepository ) );
 
-        // ----------------------------------------------------------------------------
-        // I'm fully aware that the file could just be moved using File.rename but
-        // there are bugs in various JVM that have problems doing this across
-        // different filesystem. So we'll incur the small hit to actually copy
-        // here and be safe. jvz.
-        // ----------------------------------------------------------------------------
-
+        // In the future, maven-artifact should control the metadata format in the repository in an extensible manager 
+        // and we shouldn't be in the position of having to do this
+        FileReader fileReader = null;
+        FileWriter fileWriter = null;
         try
         {
-            FileUtils.copyFile( file, destination );
+            fileReader = new FileReader( file );
+            Model model = new MavenXpp3Reader().read( fileReader );
+            new ModelDowngrade( model ).process();
+            
+            // TODO: preserve more original formatting - reuse classes from the release plugin
+            fileWriter = new FileWriter( destination );
+            new MavenXpp3Writer().write( fileWriter, model );
         }
         catch ( IOException e )
         {
             throw new RepositoryMetadataStoreException( "Error copying POM to the local repository.", e );
         }
+        catch ( XmlPullParserException e )
+        {
+            throw new RepositoryMetadataStoreException( "Error copying POM to the local repository.", e );
+        }
+        finally
+        {
+            IOUtil.close( fileWriter );
+            IOUtil.close( fileReader );
+        }
     }
-    
+
     public String toString()
     {
         return "project information for " + artifact.getArtifactId() + " " + artifact.getVersion();
