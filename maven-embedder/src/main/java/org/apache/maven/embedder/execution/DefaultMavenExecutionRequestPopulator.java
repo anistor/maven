@@ -23,7 +23,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
@@ -697,13 +699,25 @@ public class DefaultMavenExecutionRequestPopulator
             
             if ( settings.getSecurity() != null )
             {
-                for ( String publicKeyRing : (Collection<String>) settings.getSecurity().getPublicKeyRings() )
+                // reverse order to load most important last
+                List<String> keyRings = new ArrayList<String>( settings.getSecurity().getPublicKeyRings() );
+                Collections.reverse( keyRings );
+                
+                for ( String publicKeyRing : keyRings )
                 {
                     InputStream is = null;
                     try            
                     {
-                        is = new FileInputStream( new File( publicKeyRing ) );
-                        wagonManager.registerPublicKeyRing( is );
+                        File file = new File( publicKeyRing );
+                        if ( file.exists() )
+                        {
+                            is = new FileInputStream( file );
+                            wagonManager.registerPublicKeyRing( is );
+                        }
+                        else
+                        {
+                            getLogger().debug( "Keyring file not found: " + file );
+                        }
                     }
                     catch ( IOException e )
                     {

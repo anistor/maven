@@ -67,6 +67,27 @@ public class SettingsUtilsTest
         assertEquals( Arrays.asList( "key-ring-user", "key-ring-global" ), dominant.getSecurity().getPublicKeyRings() );
     }
     
+    public void testMergeKeyringsOverlap()
+    {
+        Settings dominant = new Settings();
+        Security security = new Security();
+        dominant.setSecurity( security );
+        security.addPublicKeyRing( "key-ring-user" );
+        security.addPublicKeyRing( "key-ring-shared" );
+        
+        Settings recessive = new Settings();
+        security = new Security();
+        recessive.setSecurity( security );
+        security.addPublicKeyRing( "key-ring-global" );
+        security.addPublicKeyRing( "key-ring-shared" );
+        
+        SettingsUtils.merge( dominant, recessive, Settings.GLOBAL_LEVEL );
+        
+        assertNotNull( dominant.getSecurity() );
+        assertEquals( Arrays.asList( "key-ring-user", "key-ring-shared", "key-ring-global" ),
+                      dominant.getSecurity().getPublicKeyRings() );
+    }
+    
     public void testMergeKeyringsUserEmpty()
     {
         Settings dominant = new Settings();

@@ -2470,9 +2470,11 @@
           </description>
           <type>String</type>
         </field>
+        <!-- TODO: increment to 4.1.0 when we can handle multiple versions -->
         <field>
           <name>signaturePolicy</name>
           <version>4.0.0</version>
+          <!-- <version>4.1.0</version> -->
           <description>
             <![CDATA[
             What to do when verification of an artifact signature fails. Valid values are

@@ -151,6 +151,7 @@ under the License.
    -->
   <security>
     <publicKeyRings>
+      <publicKeyRing>${user.home}/.m2/pubring.gpg</publicKeyRing>
       <publicKeyRing>${maven.home}/conf/pubring.gpg</publicKeyRing>
     </publicKeyRings>
   </security>

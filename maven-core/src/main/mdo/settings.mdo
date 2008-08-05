@@ -1093,6 +1093,7 @@
           <version>2.1.0+</version>
           <description>
             The location of PGP keyrings that store public keys used by the Maven security infrastructure.
+            Those listed first take precedence.
           </description>
           <association>
             <type>String</type>
