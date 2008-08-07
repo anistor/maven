@@ -35,19 +35,12 @@ import org.apache.maven.project.artifact.ActiveProjectArtifact;
 import org.apache.maven.project.artifact.InvalidDependencyVersionException;
 import org.apache.maven.project.artifact.MavenMetadataSource;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
+import org.codehaus.plexus.util.StringUtils;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
-import java.util.Stack;
+import java.util.*;
 
 /**
  * The concern of the project is provide runtime values based on the model. <p/>
@@ -1161,6 +1154,41 @@ public class MavenProject
 
     public Set getPluginArtifacts()
     {
+        Set pa = new HashSet();
+        if(pluginArtifacts == null && artifactFactory != null) {
+            List plugins = getBuildPlugins();
+            for ( Iterator i = plugins.iterator(); i.hasNext(); )
+            {
+                Plugin p = (Plugin) i.next();
+
+                String version;
+                if ( StringUtils.isEmpty( p.getVersion() ) )
+                {
+                    version = "RELEASE";
+                }
+                else
+                {
+                    version = p.getVersion();
+                }
+
+                Artifact artifact;
+                try
+                {
+                    artifact = artifactFactory.createPluginArtifact( p.getGroupId(), p.getArtifactId(),
+                        VersionRange.createFromVersionSpec( version ) );
+                }
+                catch ( InvalidVersionSpecificationException e )
+                {
+                    return pa;
+                }
+
+                if ( artifact != null )
+                {
+                    pa.add( artifact );
+                }
+            }
+        }
+        pluginArtifacts = pa;
         return pluginArtifacts;
     }
 
@@ -1562,7 +1590,7 @@ public class MavenProject
         }
         
         Map map = null;
-        if( managedVersionMap == null && artifactFactory != null ) {
+        if( artifactFactory != null ) {
 
             List deps;
             DependencyManagement dependencyManagement = getDependencyManagement();

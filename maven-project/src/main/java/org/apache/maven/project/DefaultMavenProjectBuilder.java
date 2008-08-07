@@ -935,9 +935,6 @@ public class DefaultMavenProjectBuilder
 
         String projectId = safeVersionlessKey( model.getGroupId(), model.getArtifactId() );
 
-        // TODO: these aren't taking active project artifacts into consideration in the reactor
-        project.setPluginArtifacts( createPluginArtifacts( projectId, project.getBuildPlugins(), pomFile ) );
-
         project.setReportArtifacts( createReportArtifacts( projectId, project.getReportPlugins(), pomFile ) );
 
         project.setExtensionArtifacts( createExtensionArtifacts( projectId, project.getBuildExtensions(), pomFile ) );
@@ -1214,70 +1211,6 @@ public class DefaultMavenProjectBuilder
         {
             throw new InvalidProjectModelException( projectId, "Not a v" + MAVEN_MODEL_VERSION + " POM.", file );
         }
-    }
-
-    /**
-     * @deprecated use {@link #createPluginArtifacts(String, List, File)}
-     * @param projectId
-     * @param plugins
-     * @param pomLocation absolute path of pom file
-     * @return
-     * @throws ProjectBuildingException
-     */
-    @Deprecated
-    protected Set createPluginArtifacts( String projectId,
-                                         List plugins, String pomLocation )
-        throws ProjectBuildingException
-    {
-        return createPluginArtifacts( projectId, plugins, new File( pomLocation ) );
-    }
-
-    /**
-     *
-     * @param projectId
-     * @param plugins
-     * @param pomLocation pom file
-     * @return
-     * @throws ProjectBuildingException
-     */
-    protected Set createPluginArtifacts( String projectId,
-                                         List plugins, File pomLocation )
-        throws ProjectBuildingException
-    {
-        Set pluginArtifacts = new HashSet();
-
-        for ( Iterator i = plugins.iterator(); i.hasNext(); )
-        {
-            Plugin p = (Plugin) i.next();
-
-            String version;
-            if ( StringUtils.isEmpty( p.getVersion() ) )
-            {
-                version = "RELEASE";
-            }
-            else
-            {
-                version = p.getVersion();
-            }
-
-            Artifact artifact;
-            try
-            {
-                artifact = artifactFactory.createPluginArtifact( p.getGroupId(), p.getArtifactId(),
-                    VersionRange.createFromVersionSpec( version ) );
-            }
-            catch ( InvalidVersionSpecificationException e )
-            {
-                throw new InvalidProjectVersionException( projectId, "Plugin: " + p.getKey(), version, pomLocation, e );
-            }
-
-            if ( artifact != null )
-            {
-                pluginArtifacts.add( artifact );
-            }
-        }
-
-        return pluginArtifacts;
     }
 
     /**
