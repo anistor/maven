@@ -1805,6 +1805,8 @@ public class DefaultMavenProjectBuilder
         container = (PlexusContainer) context.get( PlexusConstants.PLEXUS_KEY );
     }
 
+    // NOTE: This is a code hotspot, PLEASE be careful about the performance of logic inside or
+    // called from this method. 
     public void calculateConcreteState( MavenProject project, ProjectBuilderConfiguration config )
         throws ModelInterpolationException
     {
@@ -1820,14 +1822,15 @@ public class DefaultMavenProjectBuilder
             initResourceMergeIds( build.getTestResources() );
         }
 
-        Model model = ModelUtils.cloneModel( project.getModel() );
-
-        // We don't need all the project methods that are added over those in the model, but we do need basedir
-        Map context = new HashMap();
+        // NOTE: Since interpolation makes a copy through serialization, we don't need this.
+        // See note below.
+        //
+        // Model model = ModelUtils.cloneModel( project.getModel() );
 
         File basedir = project.getBasedir();
 
-        model = modelInterpolator.interpolate( model, project.getBasedir(), config, getLogger().isDebugEnabled() );
+        // NOTE: If we ever get past serialization/deserialization for interpolation, we'll need to copy the model here!
+        Model model = modelInterpolator.interpolate( project.getModel(), project.getBasedir(), config, getLogger().isDebugEnabled() );
 
         List originalInterpolatedCompileSourceRoots = interpolateListOfStrings( project.getCompileSourceRoots(),
                                                                            model,
@@ -1860,14 +1863,12 @@ public class DefaultMavenProjectBuilder
         project.setScriptSourceRoots( originalInterpolatedScriptSourceRoots == null ? null
                         : translateListOfPaths( originalInterpolatedScriptSourceRoots, basedir ) );
 
-        Model model2 = ModelUtils.cloneModel( model );
-
         if ( basedir != null )
         {
             pathTranslator.alignToBaseDirectory( model, basedir );
         }
 
-        project.preserveBuild( model2.getBuild() );
+        project.preserveBuild( ModelUtils.cloneBuild( model.getBuild() ) );
         project.setBuild( model.getBuild() );
 
         calculateConcreteProjectReferences( project, config );
@@ -1933,6 +1934,8 @@ public class DefaultMavenProjectBuilder
         return result;
     }
 
+    // NOTE: This is a code hotspot, PLEASE be careful about the performance of logic inside or
+    // called from this method. 
     public void restoreDynamicState( MavenProject project, ProjectBuilderConfiguration config )
         throws ModelInterpolationException
     {
@@ -1943,14 +1946,45 @@ public class DefaultMavenProjectBuilder
 
         restoreBuildRoots( project, config, getLogger().isDebugEnabled() );
         restoreModelBuildSection( project, config, getLogger().isDebugEnabled() );
-
+        
         restoreDynamicProjectReferences( project, config );
+        
         if ( project.getExecutionProject() != null )
         {
             restoreDynamicState( project.getExecutionProject(), config );
         }
 
         project.setConcrete( false );
+    }
+
+    private void propagateNewPlugins( MavenProject project )
+    {
+        Build changedBuild = project.getBuild();
+        Build dynamicBuild = project.getDynamicBuild();
+        
+        if ( changedBuild == null || dynamicBuild == null )
+        {
+            return;
+        }
+        
+        List changedPlugins = changedBuild.getPlugins();
+        List dynamicPlugins = dynamicBuild.getPlugins();
+        
+        if ( changedPlugins != null && dynamicPlugins != null && changedPlugins.size() != dynamicPlugins.size() )
+        {
+            changedPlugins.removeAll( dynamicPlugins );
+            if ( !changedPlugins.isEmpty() )
+            {
+                for ( Iterator it = changedPlugins.iterator(); it.hasNext(); )
+                {
+                    Plugin plugin = (Plugin) it.next();
+                    
+                    dynamicBuild.addPlugin( plugin );
+                }
+            }
+        }
+        
+        dynamicBuild.flushPluginMap();
     }
 
     private void restoreDynamicProjectReferences( MavenProject project,
@@ -2083,6 +2117,8 @@ public class DefaultMavenProjectBuilder
                                                       config,
                                                       debugMessages ) );
 
+        propagateNewPlugins( project );
+        
         project.setBuild( dynamicBuild );
 
         project.clearRestorableBuild();

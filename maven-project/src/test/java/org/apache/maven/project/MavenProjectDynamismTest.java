@@ -19,30 +19,24 @@ package org.apache.maven.project;
  * under the License.
  */
 
+import java.io.File;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
 import org.apache.maven.model.Build;
 import org.apache.maven.model.Dependency;
-import org.apache.maven.model.Model;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.model.Resource;
-import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
 import org.apache.maven.project.interpolation.ModelInterpolationException;
 import org.codehaus.plexus.PlexusTestCase;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
-
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.StringWriter;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.net.URLDecoder;
-import java.net.URLEncoder;
-import java.util.Iterator;
-import java.util.List;
 
 public class MavenProjectDynamismTest
     extends PlexusTestCase
@@ -471,31 +465,86 @@ public class MavenProjectDynamismTest
                       compileSourceRoots.get( 1 ) );
     }
 
+    public void testShouldMaintainAddedAndExistingPluginEntriesInRoundTrip()
+        throws IOException, XmlPullParserException, URISyntaxException, ProjectBuildingException,
+        ModelInterpolationException
+    {
+        // TODO: Make this run!
+        MavenProject project = buildProject( "pom-plugins.xml" );
+
+        String firstPlugin = "one:first-maven-plugin";
+        String secondPlugin = "two:second-maven-plugin";
+        String thirdPlugin = "three:third-maven-plugin";
+        
+        project.getBuild().flushPluginMap();
+        Map pluginMap = project.getBuild().getPluginsAsMap();
+        
+        assertNotNull( "Before calculating concrete state, project should contain plugin: " + firstPlugin, pluginMap.get( firstPlugin ) );
+        assertNotNull( "Before calculating concrete state, project should contain plugin: " + secondPlugin, pluginMap.get( secondPlugin ) );
+        assertNull( "Before calculating concrete state, project should NOT contain plugin: " + thirdPlugin, pluginMap.get( thirdPlugin ) );
+
+        ProjectBuilderConfiguration config = new DefaultProjectBuilderConfiguration();
+        projectBuilder.calculateConcreteState( project, config );
+        
+        project.getBuild().flushPluginMap();
+        pluginMap = project.getBuild().getPluginsAsMap();
+        
+        assertNotNull( "After calculating concrete state, project should contain plugin: " + firstPlugin, pluginMap.get( firstPlugin ) );
+        assertNotNull( "After calculating concrete state, project should contain plugin: " + secondPlugin, pluginMap.get( secondPlugin ) );
+        assertNull( "After calculating concrete state, project should NOT contain plugin: " + thirdPlugin, pluginMap.get( thirdPlugin ) );
+        
+        Plugin third = new Plugin();
+        third.setGroupId( "three" );
+        third.setArtifactId( "third-maven-plugin" );
+        third.setVersion( "3" );
+        
+        project.addPlugin( third );
+        
+        project.getBuild().flushPluginMap();
+        pluginMap = project.getBuild().getPluginsAsMap();
+        
+        assertNotNull( "After adding third plugin, project should contain plugin: " + firstPlugin, pluginMap.get( firstPlugin ) );
+        assertNotNull( "After adding third plugin, project should contain plugin: " + secondPlugin, pluginMap.get( secondPlugin ) );
+        assertNotNull( "After adding third plugin, project should contain plugin: " + thirdPlugin, pluginMap.get( thirdPlugin ) );
+        
+        projectBuilder.restoreDynamicState( project, config );
+
+        project.getBuild().flushPluginMap();
+        pluginMap = project.getBuild().getPluginsAsMap();
+        
+        assertNotNull( "After restoring project dynamism, project should contain plugin: " + firstPlugin, pluginMap.get( firstPlugin ) );
+        assertNotNull( "After restoring project dynamism, project should contain plugin: " + secondPlugin, pluginMap.get( secondPlugin ) );
+        assertNotNull( "After restoring project dynamism, project should contain plugin: " + thirdPlugin, pluginMap.get( thirdPlugin ) );
+    }
+
     public void testShouldInterpolatePluginLevelDependency()
         throws IOException, XmlPullParserException, URISyntaxException, ProjectBuildingException,
         ModelInterpolationException
     {
         MavenProject project = buildProject( "plugin-level-dep.pom.xml" );
 
-        Plugin plugin = (Plugin) project.getBuild().getPluginsAsMap().get( "org.apache.maven.plugins:maven-compiler-plugin" );
-        
+        Plugin plugin =
+            (Plugin) project.getBuild().getPluginsAsMap().get( "org.apache.maven.plugins:maven-compiler-plugin" );
+
         assertNotNull( "ERROR - compiler plugin config not found!", plugin );
-        assertTrue( "ERROR - compiler plugin custom dependencies not found!", ( plugin.getDependencies() != null && !plugin.getDependencies().isEmpty() ) );
-        
+        assertTrue( "ERROR - compiler plugin custom dependencies not found!",
+                    ( plugin.getDependencies() != null && !plugin.getDependencies().isEmpty() ) );
+
         Dependency dep = (Dependency) plugin.getDependencies().get( 0 );
-        
-        assertEquals( "custom dependency version should be an INTERPOLATED reference to this project's version.", project.getVersion(), dep.getVersion() );
+
+        assertEquals( "custom dependency version should be an INTERPOLATED reference to this project's version.",
+                      project.getVersion(), dep.getVersion() );
     }
 
     // Useful for diagnostics.
-//    private void displayPOM( Model model )
-//        throws IOException
-//    {
-//        StringWriter writer = new StringWriter();
-//        new MavenXpp3Writer().write( writer, model );
-//
-//        System.out.println( writer.toString() );
-//    }
+    // private void displayPOM( Model model )
+    // throws IOException
+    // {
+    // StringWriter writer = new StringWriter();
+    // new MavenXpp3Writer().write( writer, model );
+    //
+    // System.out.println( writer.toString() );
+    // }
 
     private void assertResourcePresent( String testLabel, String directory, List resources )
     {

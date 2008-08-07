@@ -135,8 +135,6 @@ public class DefaultPluginManager
 
     protected MavenProjectBuilder mavenProjectBuilder;
     
-    protected ModelInterpolator modelInterpolator;
-
     protected PluginMappingManager pluginMappingManager;
 
     // END component requirements
@@ -534,30 +532,8 @@ public class DefaultPluginManager
                 }
             }
         }
-
-        restoreAllProjectDynamism( session );
     }
 
-    private void restoreAllProjectDynamism( MavenSession session )
-        throws PluginManagerException
-    {
-        List reactorProjects = session.getSortedProjects();
-        if ( reactorProjects != null )
-        {
-            for ( Iterator it = reactorProjects.iterator(); it.hasNext(); )
-            {
-                MavenProject project = (MavenProject) it.next();
-                try
-                {
-                    mavenProjectBuilder.restoreDynamicState( project, session.getProjectBuilderConfiguration() );
-                }
-                catch ( ModelInterpolationException e )
-                {
-                    throw new PluginManagerException( "Failed to restore dynamic state for project: " + project, e );
-                }
-            }
-        }
-    }
 
     public MavenReport getReport( MavenProject project,
                                   MojoExecution mojoExecution,
@@ -577,8 +553,6 @@ public class DefaultPluginManager
         }
 
         MavenReport report = (MavenReport) getConfiguredMojo( session, dom, project, true, mojoExecution );
-        
-        restoreAllProjectDynamism( session );
         
         return report;
     }
@@ -676,52 +650,6 @@ public class DefaultPluginManager
         }
         else
         {
-            if ( project != null && !project.isConcrete() )
-            {
-                try
-                {
-                    mavenProjectBuilder.calculateConcreteState( project, session.getProjectBuilderConfiguration() );
-                }
-                catch ( ModelInterpolationException e )
-                {
-                    throw new PluginManagerException( "Error calculating concrete state for project: " + project
-                        + "\n(processing configuration for mojo: '" + mojoDescriptor.getRoleHint() + "' with execution-id: '"
-                        + mojoExecution.getExecutionId() + "')", e );
-                }
-            }
-            
-            StringWriter writer = new StringWriter();
-            Xpp3DomWriter.write( writer, dom );
-            
-            String domStr = writer.toString();
-            
-            try
-            {
-                domStr =
-                    modelInterpolator.interpolate( domStr, project.getModel(), project.getBasedir(),
-                                                   session.getProjectBuilderConfiguration(), getLogger().isDebugEnabled() );
-            }
-            catch ( ModelInterpolationException e )
-            {
-                throw new PluginManagerException( "Error interpolating configuration for: '" + mojoDescriptor.getRoleHint() +
-                                                  "' (execution: '" + mojoExecution.getExecutionId() + "')", e );
-            }
-            
-            try
-            {
-                dom = Xpp3DomBuilder.build( new StringReader( domStr ) );
-            }
-            catch ( XmlPullParserException e )
-            {
-                throw new PluginManagerException( "Error reading interpolated configuration for: '" + mojoDescriptor.getRoleHint() +
-                                                  "' (execution: '" + mojoExecution.getExecutionId() + "')", e );
-            }
-            catch ( IOException e )
-            {
-                throw new PluginManagerException( "Error reading interpolated configuration for: '" + mojoDescriptor.getRoleHint() +
-                                                  "' (execution: '" + mojoExecution.getExecutionId() + "')", e );
-            }
-            
             pomConfiguration = new XmlPlexusConfiguration( dom );
         }
 
@@ -737,7 +665,6 @@ public class DefaultPluginManager
 
         ExpressionEvaluator expressionEvaluator = new PluginParameterExpressionEvaluator( session, mojoExecution,
                                                                                           pathTranslator,
-                                                                                          mavenProjectBuilder,
                                                                                           getLogger(),
                                                                                           project,
                                                                                           session.getExecutionProperties() );

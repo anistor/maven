@@ -63,7 +63,6 @@ import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
 import org.apache.maven.project.artifact.ActiveProjectArtifact;
 import org.apache.maven.project.artifact.InvalidDependencyVersionException;
 import org.apache.maven.project.artifact.MavenMetadataSource;
-import org.apache.maven.project.overlay.BuildOverlay;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 
 /**
@@ -144,8 +143,6 @@ public class MavenProject
     private Map managedVersionMap;
 
     private Map projectReferences = new HashMap();
-
-    private Build buildOverlay;
 
     private boolean executionRoot;
     
@@ -1085,19 +1082,12 @@ public class MavenProject
 
     public void setBuild( Build build )
     {
-        this.buildOverlay = new BuildOverlay( build );
-
         getModel().setBuild( build );
     }
 
     public Build getBuild()
     {
-        if ( buildOverlay == null )
-        {
-            buildOverlay = new BuildOverlay( getModelBuild() );
-        }
-
-        return buildOverlay;
+        return getModelBuild();
     }
 
     public List getResources()

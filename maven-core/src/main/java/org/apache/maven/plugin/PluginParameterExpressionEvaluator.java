@@ -23,8 +23,6 @@ import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.descriptor.MojoDescriptor;
 import org.apache.maven.plugin.descriptor.PluginDescriptor;
 import org.apache.maven.project.MavenProject;
-import org.apache.maven.project.MavenProjectBuilder;
-import org.apache.maven.project.interpolation.ModelInterpolationException;
 import org.apache.maven.project.path.PathTranslator;
 import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluationException;
 import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluator;
@@ -33,8 +31,6 @@ import org.codehaus.plexus.util.introspection.ReflectionValueExtractor;
 
 import java.io.File;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
@@ -78,22 +74,9 @@ public class PluginParameterExpressionEvaluator
 
     private final Properties properties;
 
-    private final MavenProjectBuilder projectBuilder;
-
     public PluginParameterExpressionEvaluator( MavenSession context,
                                                MojoExecution mojoExecution,
                                                PathTranslator pathTranslator,
-                                               Logger logger,
-                                               MavenProject project,
-                                               Properties properties )
-    {
-        this( context, mojoExecution, pathTranslator, null, logger, project, properties );
-    }
-    
-    public PluginParameterExpressionEvaluator( MavenSession context,
-                                               MojoExecution mojoExecution,
-                                               PathTranslator pathTranslator,
-                                               MavenProjectBuilder projectBuilder,
                                                Logger logger,
                                                MavenProject project,
                                                Properties properties )
@@ -101,7 +84,6 @@ public class PluginParameterExpressionEvaluator
         this.context = context;
         this.mojoExecution = mojoExecution;
         this.pathTranslator = pathTranslator;
-        this.projectBuilder = projectBuilder;
         this.logger = logger;
         this.project = project;
         this.properties = properties;
@@ -130,8 +112,6 @@ public class PluginParameterExpressionEvaluator
     public Object evaluate( String expr )
         throws ExpressionEvaluationException
     {
-        calculateConcreteState( project );
-        
         Object value = null;
 
         if ( expr == null )
@@ -195,14 +175,10 @@ public class PluginParameterExpressionEvaluator
         }
         else if ( "session".equals( expression ) )
         {
-            calculateAllConcreteStates();
-            
             value = context;
         }
         else if ( "reactorProjects".equals( expression ) )
         {
-            calculateAllConcreteStates();
-            
             value = context.getSortedProjects();
         }
         else if ( "reports".equals( expression ) )
@@ -215,17 +191,14 @@ public class PluginParameterExpressionEvaluator
         }
         else if ( "project".equals( expression ) )
         {
-            // concrete state calculated above for the direct project.
             value = project;
         }
         else if ( "executedProject".equals( expression ) )
         {
-            // concrete state calculated above for the direct project and associated execution project.
             value = project.getExecutionProject();
         }
         else if ( expression.startsWith( "project" ) )
         {
-            // concrete state calculated above for the direct project.
             try
             {
                 int pathSeparator = expression.indexOf( "/" );
@@ -361,35 +334,6 @@ public class PluginParameterExpressionEvaluator
         }
 
         return value;
-    }
-
-    private void calculateAllConcreteStates()
-        throws ExpressionEvaluationException
-    {
-        List projects = context.getSortedProjects();
-        if ( projects != null )
-        {
-            for ( Iterator it = projects.iterator(); it.hasNext(); )
-            {
-                calculateConcreteState( (MavenProject) it.next() );
-            }
-        }
-    }
-
-    private void calculateConcreteState( MavenProject project )
-        throws ExpressionEvaluationException
-    {
-        if ( projectBuilder != null && project != null && !project.isConcrete() )
-        {
-            try
-            {
-                projectBuilder.calculateConcreteState( project, context.getProjectBuilderConfiguration() );
-            }
-            catch ( ModelInterpolationException e )
-            {
-                throw new ExpressionEvaluationException( "Failed to calculate concrete state for project: " + project, e );
-            }
-        }
     }
 
     private String stripTokens( String expr )

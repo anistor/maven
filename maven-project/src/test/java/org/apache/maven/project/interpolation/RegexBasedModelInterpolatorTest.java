@@ -29,6 +29,7 @@ import org.apache.maven.model.Scm;
 import org.apache.maven.project.DefaultProjectBuilderConfiguration;
 import org.apache.maven.project.path.DefaultPathTranslator;
 import org.apache.maven.project.path.PathTranslator;
+import org.codehaus.plexus.personality.plexus.lifecycle.phase.InitializationException;
 
 import java.io.File;
 import java.io.IOException;
@@ -49,7 +50,7 @@ public class RegexBasedModelInterpolatorTest
     extends TestCase
 {
     private Map context;
-
+    
     protected void setUp()
         throws Exception
     {
@@ -59,7 +60,7 @@ public class RegexBasedModelInterpolatorTest
     }
 
     public void testShouldNotThrowExceptionOnReferenceToNonExistentValue()
-        throws IOException, ModelInterpolationException
+        throws IOException, ModelInterpolationException, InitializationException
     {
         Model model = new Model();
 
@@ -68,13 +69,16 @@ public class RegexBasedModelInterpolatorTest
 
         model.setScm( scm );
 
-        Model out = new RegexBasedModelInterpolator().interpolate( model, context );
+        RegexBasedModelInterpolator interpolator = new RegexBasedModelInterpolator();
+        interpolator.initialize();
+        
+        Model out = interpolator.interpolate( model, context );
 
         assertEquals( "${test}/somepath", out.getScm().getConnection() );
     }
 
     public void testShouldThrowExceptionOnRecursiveScmConnectionReference()
-        throws IOException
+        throws IOException, InitializationException
     {
         Model model = new Model();
 
@@ -85,7 +89,10 @@ public class RegexBasedModelInterpolatorTest
 
         try
         {
-            Model out = new RegexBasedModelInterpolator().interpolate( model, context );
+            RegexBasedModelInterpolator interpolator = new RegexBasedModelInterpolator();
+            interpolator.initialize();
+            
+            interpolator.interpolate( model, context );
 
             fail( "The interpolator should not allow self-referencing expressions in POM." );
         }
@@ -96,7 +103,7 @@ public class RegexBasedModelInterpolatorTest
     }
 
     public void testShouldNotThrowExceptionOnReferenceToValueContainingNakedExpression()
-        throws IOException, ModelInterpolationException
+        throws IOException, ModelInterpolationException, InitializationException
     {
         Model model = new Model();
 
@@ -107,8 +114,11 @@ public class RegexBasedModelInterpolatorTest
 
         model.addProperty( "test", "test" );
 
-        Model out = new RegexBasedModelInterpolator().interpolate( model, context );
-
+        RegexBasedModelInterpolator interpolator = new RegexBasedModelInterpolator();
+        interpolator.initialize();
+        
+        Model out = interpolator.interpolate( model, context );
+        
         assertEquals( "test/somepath", out.getScm().getConnection() );
     }
 
@@ -125,8 +135,11 @@ public class RegexBasedModelInterpolatorTest
 
         model.setOrganization( org );
 
-        Model out = new RegexBasedModelInterpolator().interpolate( model, context );
-
+        RegexBasedModelInterpolator interpolator = new RegexBasedModelInterpolator();
+        interpolator.initialize();
+        
+        Model out = interpolator.interpolate( model, context );
+        
         assertEquals( orgName + " Tools", out.getName() );
     }
 
@@ -141,8 +154,11 @@ public class RegexBasedModelInterpolatorTest
 
         model.addDependency( dep );
 
-        Model out = new RegexBasedModelInterpolator().interpolate( model, context );
-
+        RegexBasedModelInterpolator interpolator = new RegexBasedModelInterpolator();
+        interpolator.initialize();
+        
+        Model out = interpolator.interpolate( model, context );
+        
         assertEquals( "3.8.1", ( (Dependency) out.getDependencies().get( 0 ) ).getVersion() );
     }
 
@@ -172,8 +188,11 @@ public class RegexBasedModelInterpolatorTest
          }
          */
 
-        Model out = new RegexBasedModelInterpolator().interpolate( model, context );
-
+        RegexBasedModelInterpolator interpolator = new RegexBasedModelInterpolator();
+        interpolator.initialize();
+        
+        Model out = interpolator.interpolate( model, context );
+        
         assertEquals( "${something}", ( (Dependency) out.getDependencies().get( 0 ) ).getVersion() );
     }
 
@@ -189,8 +208,11 @@ public class RegexBasedModelInterpolatorTest
 
         model.addDependency( dep );
 
-        Model out = new RegexBasedModelInterpolator().interpolate( model, context );
-
+        RegexBasedModelInterpolator interpolator = new RegexBasedModelInterpolator();
+        interpolator.initialize();
+        
+        Model out = interpolator.interpolate( model, context );
+        
         assertEquals( "foo-3.8.1", ( (Dependency) out.getDependencies().get( 0 ) ).getVersion() );
     }
 
@@ -207,8 +229,11 @@ public class RegexBasedModelInterpolatorTest
 
         model.addRepository( repository );
 
-        Model out = new RegexBasedModelInterpolator().interpolate( model, context );
-
+        RegexBasedModelInterpolator interpolator = new RegexBasedModelInterpolator();
+        interpolator.initialize();
+        
+        Model out = interpolator.interpolate( model, context );
+        
         assertEquals( "file://localhost/myBasedir/temp-repo", ( (Repository) out.getRepositories().get( 0 ) ).getUrl() );
     }
 
@@ -227,8 +252,11 @@ public class RegexBasedModelInterpolatorTest
 
         model.setProperties( modelProperties );
 
-        Model out = new RegexBasedModelInterpolator().interpolate( model, context );
-
+        RegexBasedModelInterpolator interpolator = new RegexBasedModelInterpolator();
+        interpolator.initialize();
+        
+        Model out = interpolator.interpolate( model, context );
+        
         assertEquals( out.getProperties().getProperty( "outputDirectory" ), "/path/to/home" );
     }
 
@@ -245,7 +273,10 @@ public class RegexBasedModelInterpolatorTest
 
         model.setProperties( modelProperties );
 
-        Model out = new RegexBasedModelInterpolator( envars ).interpolate( model, context );
+        RegexBasedModelInterpolator interpolator = new RegexBasedModelInterpolator( envars );
+        interpolator.initialize();
+        
+        Model out = interpolator.interpolate( model, context );
 
         assertEquals( out.getProperties().getProperty( "outputDirectory" ), "${env.DOES_NOT_EXIST}" );
     }
@@ -261,8 +292,11 @@ public class RegexBasedModelInterpolatorTest
 
         model.setProperties( modelProperties );
 
-        Model out = new RegexBasedModelInterpolator().interpolate( model, context );
-
+        RegexBasedModelInterpolator interpolator = new RegexBasedModelInterpolator();
+        interpolator.initialize();
+        
+        Model out = interpolator.interpolate( model, context );
+        
         assertEquals( out.getProperties().getProperty( "outputDirectory" ), "${DOES_NOT_EXIST}" );
     }
 
@@ -291,8 +325,11 @@ public class RegexBasedModelInterpolatorTest
 
         model.setBuild( build );
 
-        Model out = new RegexBasedModelInterpolator().interpolate( model, context );
-
+        RegexBasedModelInterpolator interpolator = new RegexBasedModelInterpolator();
+        interpolator.initialize();
+        
+        Model out = interpolator.interpolate( model, context );
+        
         List outResources = out.getBuild().getResources();
         Iterator resIt = outResources.iterator();
 
@@ -302,7 +339,7 @@ public class RegexBasedModelInterpolatorTest
     }
 
     public void testShouldInterpolateUnprefixedBasedirExpression()
-        throws ModelInterpolationException, IOException
+        throws ModelInterpolationException, IOException, InitializationException
     {
         File basedir = new File( "/test/path" );
         Model model = new Model();
@@ -311,7 +348,10 @@ public class RegexBasedModelInterpolatorTest
 
         model.addDependency( dep );
 
-        Model result = new RegexBasedModelInterpolator().interpolate( model, basedir, new DefaultProjectBuilderConfiguration(), true );
+        RegexBasedModelInterpolator interpolator = new RegexBasedModelInterpolator();
+        interpolator.initialize();
+        
+        Model result = interpolator.interpolate( model, basedir, new DefaultProjectBuilderConfiguration(), true );
 
         List rDeps = result.getDependencies();
         assertNotNull( rDeps );
@@ -333,6 +373,7 @@ public class RegexBasedModelInterpolatorTest
         
         PathTranslator translator = new DefaultPathTranslator();
         RegexBasedModelInterpolator interpolator = new RegexBasedModelInterpolator( translator );
+        interpolator.initialize();
         
         File basedir = new File( System.getProperty( "java.io.tmpdir" ), "base" );
         

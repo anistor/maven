@@ -36,6 +36,8 @@ import org.codehaus.plexus.interpolation.RegexBasedInterpolator;
 import org.codehaus.plexus.interpolation.ValueSource;
 import org.codehaus.plexus.logging.AbstractLogEnabled;
 import org.codehaus.plexus.logging.Logger;
+import org.codehaus.plexus.personality.plexus.lifecycle.phase.Initializable;
+import org.codehaus.plexus.personality.plexus.lifecycle.phase.InitializationException;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
 import java.io.File;
@@ -58,7 +60,7 @@ import java.util.Properties;
  */
 public class RegexBasedModelInterpolator
     extends AbstractLogEnabled
-    implements ModelInterpolator
+    implements ModelInterpolator, Initializable
 {
     private static final List PROJECT_PREFIXES = Arrays.asList( new String[]{ "pom.", "project." } );
 
@@ -85,6 +87,10 @@ public class RegexBasedModelInterpolator
     }
 
     private PathTranslator pathTranslator;
+    
+    private RegexBasedInterpolator interpolator;
+    
+    private RecursionInterceptor recursionInterceptor;
 
     public RegexBasedModelInterpolator( Properties envars )
     {
@@ -141,7 +147,7 @@ public class RegexBasedModelInterpolator
                               boolean debugEnabled )
         throws ModelInterpolationException
     {
-        StringWriter sWriter = new StringWriter();
+        StringWriter sWriter = new StringWriter( 1024 );
 
         MavenXpp3Writer writer = new MavenXpp3Writer();
         try
@@ -224,78 +230,105 @@ public class RegexBasedModelInterpolator
         },
         PROJECT_PREFIXES, true );
 
-        RegexBasedInterpolator interpolator = new RegexBasedInterpolator();
-
-        // NOTE: Order counts here!
-        interpolator.addValueSource( basedirValueSource );
-        interpolator.addValueSource( new BuildTimestampValueSource( config.getBuildStartTime(), timestampFormat ) );
-        interpolator.addValueSource( new MapBasedValueSource( config.getExecutionProperties() ) );
-        interpolator.addValueSource( modelValueSource1 );
-        interpolator.addValueSource( new PrefixedValueSourceWrapper( new MapBasedValueSource( modelProperties ), PROJECT_PREFIXES, true ) );
-        interpolator.addValueSource( modelValueSource2 );
-        interpolator.addValueSource( new MapBasedValueSource( config.getUserProperties() ) );
-        
         PathTranslatingPostProcessor pathTranslatingPostProcessor =
             new PathTranslatingPostProcessor( TRANSLATED_PATH_EXPRESSIONS, projectDir, pathTranslator );
         
-        interpolator.addPostProcessor( pathTranslatingPostProcessor );
-
-        RecursionInterceptor recursionInterceptor = new PrefixAwareRecursionInterceptor( PROJECT_PREFIXES );
-
         String result = src;
-        try
+        synchronized( this )
         {
-            result = interpolator.interpolate( result, "", recursionInterceptor );
-        }
-        catch( InterpolationException e )
-        {
-            throw new ModelInterpolationException( e.getMessage(), e );
-        }
-
-        if ( debug )
-        {
-            List feedback = interpolator.getFeedback();
-            if ( feedback != null && !feedback.isEmpty() )
+            List valueSources = new ArrayList( 7 );
+            
+            // NOTE: Order counts here!
+            valueSources.add( basedirValueSource );
+            valueSources.add( new BuildTimestampValueSource( config.getBuildStartTime(), timestampFormat ) );
+            valueSources.add( new MapBasedValueSource( config.getExecutionProperties() ) );
+            valueSources.add( modelValueSource1 );
+            valueSources.add( new PrefixedValueSourceWrapper( new MapBasedValueSource( modelProperties ), PROJECT_PREFIXES, true ) );
+            valueSources.add( modelValueSource2 );
+            valueSources.add( new MapBasedValueSource( config.getUserProperties() ) );
+            
+            for ( Iterator it = valueSources.iterator(); it.hasNext(); )
             {
-                logger.debug( "Maven encountered the following problems during initial POM interpolation:" );
+                ValueSource vs = (ValueSource) it.next();
+                interpolator.addValueSource( vs );
+            }
+            
+            interpolator.addPostProcessor( pathTranslatingPostProcessor );
 
-                Object last = null;
-                for ( Iterator it = feedback.iterator(); it.hasNext(); )
+            try
+            {
+                try
                 {
-                    Object next = it.next();
+                    result = interpolator.interpolate( result, "", recursionInterceptor );
+                }
+                catch( InterpolationException e )
+                {
+                    throw new ModelInterpolationException( e.getMessage(), e );
+                }
 
-                    if ( next instanceof Throwable )
+                if ( debug )
+                {
+                    List feedback = interpolator.getFeedback();
+                    if ( feedback != null && !feedback.isEmpty() )
                     {
-                        if ( last == null )
+                        logger.debug( "Maven encountered the following problems during initial POM interpolation:" );
+
+                        Object last = null;
+                        for ( Iterator it = feedback.iterator(); it.hasNext(); )
                         {
-                            logger.debug( "", ( (Throwable) next ) );
+                            Object next = it.next();
+
+                            if ( next instanceof Throwable )
+                            {
+                                if ( last == null )
+                                {
+                                    logger.debug( "", ( (Throwable) next ) );
+                                }
+                                else
+                                {
+                                    logger.debug( String.valueOf( last ), ( (Throwable) next ) );
+                                }
+                            }
+                            else
+                            {
+                                if ( last != null )
+                                {
+                                    logger.debug( String.valueOf( last ) );
+                                }
+
+                                last = next;
+                            }
                         }
-                        else
-                        {
-                            logger.debug( String.valueOf( last ), ( (Throwable) next ) );
-                        }
-                    }
-                    else
-                    {
+
                         if ( last != null )
                         {
                             logger.debug( String.valueOf( last ) );
                         }
-
-                        last = next;
                     }
                 }
 
-                if ( last != null )
+                interpolator.clearFeedback();
+            }
+            finally
+            {
+                for ( Iterator iterator = valueSources.iterator(); iterator.hasNext(); )
                 {
-                    logger.debug( String.valueOf( last ) );
+                    ValueSource vs = (ValueSource) iterator.next();
+                    interpolator.removeValuesSource( vs );
                 }
+                
+                interpolator.removePostProcessor( pathTranslatingPostProcessor );
             }
         }
 
-        interpolator.clearFeedback();
-
         return result;
+    }
+
+    public void initialize()
+        throws InitializationException
+    {
+        interpolator = new RegexBasedInterpolator();
+        recursionInterceptor = new PrefixAwareRecursionInterceptor( PROJECT_PREFIXES );
     }
 
 }

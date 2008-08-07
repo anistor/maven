@@ -46,13 +46,17 @@ import org.apache.maven.plugin.PluginManager;
 import org.apache.maven.plugin.PluginManagerException;
 import org.apache.maven.plugin.PluginNotFoundException;
 import org.apache.maven.plugin.descriptor.MojoDescriptor;
+import org.apache.maven.plugin.descriptor.Parameter;
 import org.apache.maven.plugin.descriptor.PluginDescriptor;
 import org.apache.maven.plugin.lifecycle.Execution;
 import org.apache.maven.plugin.lifecycle.Phase;
 import org.apache.maven.plugin.version.PluginVersionNotFoundException;
 import org.apache.maven.plugin.version.PluginVersionResolutionException;
 import org.apache.maven.project.MavenProject;
+import org.apache.maven.project.MavenProjectBuilder;
 import org.apache.maven.project.artifact.InvalidDependencyVersionException;
+import org.apache.maven.project.interpolation.ModelInterpolationException;
+import org.apache.maven.project.interpolation.ModelInterpolator;
 import org.apache.maven.reporting.MavenReport;
 import org.apache.maven.settings.Settings;
 import org.codehaus.plexus.PlexusContainerException;
@@ -60,9 +64,13 @@ import org.codehaus.plexus.component.repository.exception.ComponentLookupExcepti
 import org.codehaus.plexus.logging.AbstractLogEnabled;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
+import org.codehaus.plexus.util.xml.Xpp3DomBuilder;
+import org.codehaus.plexus.util.xml.Xpp3DomWriter;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
 import java.io.IOException;
+import java.io.StringReader;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -97,6 +105,10 @@ public class DefaultLifecycleExecutor
     private List defaultReports;
 
     private Map phaseToLifecycleMap;
+
+    private MavenProjectBuilder mavenProjectBuilder;
+
+    private ModelInterpolator modelInterpolator;
 
     // ----------------------------------------------------------------------
     //
@@ -542,6 +554,41 @@ public class DefaultLifecycleExecutor
 
             MojoDescriptor mojoDescriptor = mojoExecution.getMojoDescriptor();
 
+            calculateConcreteState( project, session );
+            
+            boolean usesAllProjects = false;
+            
+            List params = mojoDescriptor.getParameters();
+            if ( params != null && !params.isEmpty() )
+            {
+                for ( Iterator it = params.iterator(); it.hasNext(); )
+                {
+                    Parameter param = (Parameter) it.next();
+                    
+                    if ( param.getExpression() != null
+                        && ( param.getExpression().startsWith( "session" ) || param.getExpression().equals(
+                                                                                                            "reactorProjects" ) ) )
+                    {
+                        usesAllProjects = true;
+                        break;
+                    }
+                    else if ( param.getDefaultValue() != null
+                        && ( param.getDefaultValue().startsWith( "session" ) || param.getDefaultValue().equals(
+                                                                                                                "reactorProjects" ) ) )
+                    {
+                        usesAllProjects = true;
+                        break;
+                    }
+                }
+            }
+            
+            if ( usesAllProjects )
+            {
+                calculateAllConcreteStates( session );
+            }
+            
+            calculateConcreteConfiguration( mojoExecution, project, session );
+
             if ( mojoDescriptor.getExecutePhase() != null || mojoDescriptor.getExecuteGoal() != null )
             {
                 forkEntryPoints.push( mojoDescriptor );
@@ -550,7 +597,7 @@ public class DefaultLifecycleExecutor
 
                 forkEntryPoints.pop();
             }
-
+            
             if ( mojoDescriptor.isRequiresReports() )
             {
                 List reports = getReports( project, forkEntryPoints, mojoExecution, session );
@@ -606,6 +653,110 @@ public class DefaultLifecycleExecutor
             {
                 throw new LifecycleExecutionException( e.getMessage(), e );
             }
+            
+            restoreDynamicState( project, session );
+            
+            if ( usesAllProjects )
+            {
+                restoreAllDynamicStates( session );
+            }
+        }
+    }
+    
+    private void calculateConcreteConfiguration( MojoExecution mojoExecution, MavenProject project, MavenSession session )
+        throws LifecycleExecutionException
+    {
+        if ( mojoExecution.getConfiguration() == null )
+        {
+            return;
+        }
+        
+        StringWriter writer = new StringWriter();
+        Xpp3DomWriter.write( writer, mojoExecution.getConfiguration() );
+        
+        String domStr = writer.toString();
+        
+        try
+        {
+            domStr =
+                modelInterpolator.interpolate( domStr, project.getModel(), project.getBasedir(),
+                                               session.getProjectBuilderConfiguration(), getLogger().isDebugEnabled() );
+        }
+        catch ( ModelInterpolationException e )
+        {
+            throw new LifecycleExecutionException( "Error interpolating configuration for: '" + mojoExecution.getMojoDescriptor().getRoleHint() +
+                                              "' (execution: '" + mojoExecution.getExecutionId() + "')", e );
+        }
+        
+        try
+        {
+            mojoExecution.setConfiguration( Xpp3DomBuilder.build( new StringReader( domStr ) ) );
+        }
+        catch ( XmlPullParserException e )
+        {
+            throw new LifecycleExecutionException( "Error reading interpolated configuration for: '" + mojoExecution.getMojoDescriptor().getRoleHint() +
+                                              "' (execution: '" + mojoExecution.getExecutionId() + "')", e );
+        }
+        catch ( IOException e )
+        {
+            throw new LifecycleExecutionException( "Error reading interpolated configuration for: '" + mojoExecution.getMojoDescriptor().getRoleHint() +
+                                              "' (execution: '" + mojoExecution.getExecutionId() + "')", e );
+        }
+    }
+    
+    private void calculateAllConcreteStates( MavenSession session )
+        throws LifecycleExecutionException
+    {
+        List projects = session.getSortedProjects();
+        if ( projects != null )
+        {
+            for ( Iterator it = projects.iterator(); it.hasNext(); )
+            {
+                calculateConcreteState( (MavenProject) it.next(), session );
+            }
+        }
+    }
+
+    private void calculateConcreteState( MavenProject project, MavenSession session )
+        throws LifecycleExecutionException
+    {
+        if ( mavenProjectBuilder != null && project != null && !project.isConcrete() )
+        {
+            try
+            {
+                mavenProjectBuilder.calculateConcreteState( project, session.getProjectBuilderConfiguration() );
+            }
+            catch ( ModelInterpolationException e )
+            {
+                throw new LifecycleExecutionException( "Failed to calculate concrete state for project: " + project,
+                                                         e );
+            }
+        }
+    }
+    private void restoreAllDynamicStates( MavenSession session )
+        throws LifecycleExecutionException
+    {
+        List reactorProjects = session.getSortedProjects();
+        if ( reactorProjects != null )
+        {
+            for ( Iterator it = reactorProjects.iterator(); it.hasNext(); )
+            {
+                MavenProject project = (MavenProject) it.next();
+                restoreDynamicState( project, session );
+            }
+        }
+    }
+
+    private void restoreDynamicState( MavenProject project, MavenSession session )
+        throws LifecycleExecutionException
+    {
+        try
+        {
+            mavenProjectBuilder.restoreDynamicState( project, session.getProjectBuilderConfiguration() );
+        }
+        catch ( ModelInterpolationException e )
+        {
+            throw new LifecycleExecutionException( "Failed to restore dynamic state for project: " + project, e );
         }
     }
 
@@ -896,6 +1047,7 @@ public class DefaultLifecycleExecutor
                             }
 
                             Xpp3Dom configuration = (Xpp3Dom) exec.getConfiguration();
+                            // NOTE: This seems to be duplicated below. Why??
                             if ( phase.getConfiguration() != null )
                             {
                                 configuration = Xpp3Dom.mergeXpp3Dom( new Xpp3Dom( (Xpp3Dom) phase.getConfiguration() ),
