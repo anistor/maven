@@ -157,6 +157,8 @@ public final class DefaultProjectBuilder
 
         PomClassicDomainModel transformedDomainModel =
             ( (PomClassicDomainModel) ctx.transform( domainModels, transformer, transformer, importModels, properties ) );
+
+
         Model model = transformedDomainModel.getModel();
         return new MavenProject( model );
     }

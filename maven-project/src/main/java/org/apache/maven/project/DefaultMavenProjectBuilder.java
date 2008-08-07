@@ -2086,7 +2086,7 @@ public class DefaultMavenProjectBuilder
        MavenProject mavenProject;
        try {
            mavenProject = projectBuilder.buildFromLocalPath(new FileInputStream(projectDescriptor),
-                   null, null, resolver,
+                   null, null, null, resolver,
                    projectDescriptor.getParentFile());
        } catch (IOException e) {
            e.printStackTrace();

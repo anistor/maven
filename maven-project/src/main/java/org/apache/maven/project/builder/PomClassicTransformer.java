@@ -132,6 +132,26 @@ public final class PomClassicTransformer
             }
         }
 
+        //dependency management
+                ModelDataSource source = new DefaultModelDataSource();
+                source.init( props, Arrays.asList( new ArtifactModelContainerFactory(), new IdModelContainerFactory() ) );
+
+        for(ModelContainer dependencyContainer : source.queryFor( ProjectUri.Dependencies.Dependency.xUri)) {
+                for ( ModelContainer managementContainer : source.queryFor( ProjectUri.DependencyManagement.Dependencies.Dependency.xUri) )
+                {
+                    managementContainer = new ArtifactModelContainerFactory().create(transformA(managementContainer.getProperties()));
+                    ModelContainerAction action = dependencyContainer.containerAction(managementContainer);
+                    if(action.equals(ModelContainerAction.JOIN) || action.equals(ModelContainerAction.DELETE)) {
+                        source.join(dependencyContainer, managementContainer);
+                    }
+                }
+        }
+
+        props = source.getModelProperties();
+      //   for(ModelProperty mp : props) {
+       //      System.out.println("-" + mp);
+      //   }
+
         String xml = null;
         try
         {
@@ -142,7 +162,7 @@ public final class PomClassicTransformer
         {
             throw new IOException( e + ":\r\n" + xml );
         }
-        }
+    }
 
     /**
      * @see ModelTransformer#transformToModelProperties(java.util.List)
@@ -355,11 +375,12 @@ public final class PomClassicTransformer
             }
                        */
         }
-        return ModelTransformerContext.transformModelProperties(modelProperties, Arrays.asList(
-                new ProfileModelPropertyTransformer(),
-                new PluginManagementModelPropertyTransformer(),
-                new DependencyManagementModelPropertyTransformer()
-                ));
+       return modelProperties;
+      //  return ModelTransformerContext.transformModelProperties(modelProperties, Arrays.asList(
+      //          new ProfileModelPropertyTransformer(),
+      //          new PluginManagementModelPropertyTransformer(),
+      //          new DependencyManagementModelPropertyTransformer()
+      //          ));
     }
 
     /**
@@ -412,13 +433,28 @@ public final class PomClassicTransformer
         return null;
     }
 
+        private static List<ModelProperty> transformA(List<ModelProperty> modelProperties) {
+            List<ModelProperty> properties = new ArrayList<ModelProperty>();
+            List<ModelProperty> transformedProperties = new ArrayList<ModelProperty>();
+            for(ModelProperty mp : modelProperties) {
+                if(mp.getUri().startsWith(ProjectUri.DependencyManagement.xUri))
+                {
+                    transformedProperties.add(new ModelProperty(
+                            mp.getUri().replace(ProjectUri.DependencyManagement.xUri, ProjectUri.xUri), mp.getValue()));
+                }
+            }
+            properties.addAll(transformedProperties);
+            return properties;
+        }
+ /*
     private static class ProfileModelPropertyTransformer implements ModelPropertyTransformer {
         public List<ModelProperty> transform(List<ModelProperty> modelProperties) {
+            List<ModelProperty> properties = new ArrayList<ModelProperty>(modelProperties);
             List<ModelProperty> transformedProperties = new ArrayList<ModelProperty>();
             for(ModelProperty mp : modelProperties) {
                 String uri = mp.getUri().replace("profiles#collection/profile", "");
             }
-            return transformedProperties;
+            return properties;
         }
 
         public String getBaseUri() {
@@ -467,5 +503,6 @@ public final class PomClassicTransformer
             return ProjectUri.baseUri;
         }
     }
+    */
 }
 
