@@ -160,7 +160,7 @@ public final class DefaultProjectBuilder
 
 
         Model model = transformedDomainModel.getModel();
-        return new MavenProject( model );
+        return new MavenProject( model, artifactFactory );
     }
 
     private boolean isParentLocal( Parent parent, File projectDirectory )

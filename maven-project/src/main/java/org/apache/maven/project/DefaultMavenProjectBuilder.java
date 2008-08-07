@@ -287,12 +287,12 @@ public class DefaultMavenProjectBuilder
             }
         }
 
-        MavenProject project = new MavenProject( superModel );
+        MavenProject project = new MavenProject( superModel, artifactFactory );
 
         String projectId = safeVersionlessKey( STANDALONE_SUPERPOM_GROUPID, STANDALONE_SUPERPOM_ARTIFACTID );
 
-        project.setManagedVersionMap(
-            createManagedVersionMap( projectId, superModel.getDependencyManagement(), null ) );
+       // project.setManagedVersionMap(
+       //     createManagedVersionMap( projectId, superModel.getDependencyManagement(), null ) );
 
         getLogger().debug( "Activated the following profiles for standalone super-pom: " + activeProfiles );
         project.setActiveProfiles( activeProfiles );
@@ -400,85 +400,6 @@ public class DefaultMavenProjectBuilder
         project.setArtifacts( result.getArtifacts() );
 
         return new MavenProjectBuildingResult( project, result );
-    }
-
-    // ----------------------------------------------------------------------
-    //
-    // ----------------------------------------------------------------------
-
-    private Map createManagedVersionMap( String projectId,
-                                         DependencyManagement dependencyManagement, File pomFile )
-        throws ProjectBuildingException
-    {
-        Map map = null;
-        List deps;
-        if ( ( dependencyManagement != null ) && ( ( deps = dependencyManagement.getDependencies() ) != null ) && ( deps.size() > 0 ) )
-        {
-            map = new ManagedVersionMap( map );
-
-            if ( getLogger().isDebugEnabled() )
-            {
-                getLogger().debug( "Adding managed dependencies for " + projectId );
-            }
-
-            for ( Iterator i = dependencyManagement.getDependencies().iterator(); i.hasNext(); )
-            {
-                Dependency d = (Dependency) i.next();
-
-                try
-                {
-                    VersionRange versionRange = VersionRange.createFromVersionSpec( d.getVersion() );
-
-                    Artifact artifact = artifactFactory.createDependencyArtifact( d.getGroupId(), d.getArtifactId(), versionRange, d.getType(),
-                        d.getClassifier(), d.getScope(), d.isOptional() );
-
-                    if ( Artifact.SCOPE_SYSTEM.equals( d.getScope() ) && ( d.getSystemPath() != null ) )
-                    {
-                        artifact.setFile( new File( d.getSystemPath() ) );
-                    }
-
-                    if ( getLogger().isDebugEnabled() )
-                    {
-                        getLogger().debug( "  " + artifact );
-                    }
-
-                    // If the dependencyManagement section listed exclusions,
-                    // add them to the managed artifacts here so that transitive
-                    // dependencies will be excluded if necessary.
-
-                    if ( ( null != d.getExclusions() ) && !d.getExclusions().isEmpty() )
-                    {
-                        List exclusions = new ArrayList();
-
-                        for ( Iterator j = d.getExclusions().iterator(); j.hasNext(); )
-                        {
-                            Exclusion e = (Exclusion) j.next();
-
-                            exclusions.add( e.getGroupId() + ":" + e.getArtifactId() );
-                        }
-
-                        ExcludesArtifactFilter eaf = new ExcludesArtifactFilter( exclusions );
-
-                        artifact.setDependencyFilter( eaf );
-                    }
-                    else
-                    {
-                        artifact.setDependencyFilter( null );
-                    }
-
-                    map.put( d.getManagementKey(), artifact );
-                }
-                catch ( InvalidVersionSpecificationException e )
-                {
-                    throw new InvalidDependencyVersionException( projectId, d, pomFile, e );
-                }
-            }
-        }
-        else if ( map == null )
-        {
-            map = Collections.EMPTY_MAP;
-        }
-        return map;
     }
 
     private MavenProject buildFromSourceFileInternal( File projectDescriptor,
@@ -679,7 +600,7 @@ public class DefaultMavenProjectBuilder
     {
         Model superModel = getSuperModel();
 
-        MavenProject superProject = new MavenProject( superModel );
+        MavenProject superProject = new MavenProject( superModel, artifactFactory );
 
         String projectId = safeVersionlessKey( model.getGroupId(), model.getArtifactId() );
 
@@ -828,7 +749,7 @@ public class DefaultMavenProjectBuilder
         projectWorkspace.storeProjectByCoordinate( project );
         projectWorkspace.storeProjectByFile( project );
 
-        project.setManagedVersionMap( createManagedVersionMap( projectId, project.getDependencyManagement(), projectDescriptor ) );
+        //project.setManagedVersionMap( createManagedVersionMap( projectId, project.getDependencyManagement(), projectDescriptor ) );
 
         return project;
     }
@@ -982,7 +903,7 @@ public class DefaultMavenProjectBuilder
         Artifact parentArtifact = project.getParentArtifact();
 
         // We will return a different project object using the new model (hence the need to return a project, not just modify the parameter)
-        project = new MavenProject( model );
+        project = new MavenProject( model, artifactFactory );
 
         project.setOriginalModel( originalModel );
 
@@ -1664,7 +1585,7 @@ public class DefaultMavenProjectBuilder
 
             File currentPom = it.getPOMFile();
 
-            MavenProject project = new MavenProject( currentModel );
+            MavenProject project = new MavenProject( currentModel, artifactFactory );
             project.setFile( currentPom );
 
             if ( lastProject != null )

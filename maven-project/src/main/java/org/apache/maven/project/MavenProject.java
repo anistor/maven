@@ -25,28 +25,11 @@ import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.artifact.factory.ArtifactFactory;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.artifact.resolver.filter.ArtifactFilter;
+import org.apache.maven.artifact.resolver.filter.ExcludesArtifactFilter;
 import org.apache.maven.artifact.versioning.ManagedVersionMap;
-import org.apache.maven.model.Build;
-import org.apache.maven.model.CiManagement;
-import org.apache.maven.model.Contributor;
-import org.apache.maven.model.Dependency;
-import org.apache.maven.model.DependencyManagement;
-import org.apache.maven.model.Developer;
-import org.apache.maven.model.DistributionManagement;
-import org.apache.maven.model.IssueManagement;
-import org.apache.maven.model.License;
-import org.apache.maven.model.MailingList;
-import org.apache.maven.model.Model;
-import org.apache.maven.model.Organization;
-import org.apache.maven.model.Plugin;
-import org.apache.maven.model.PluginExecution;
-import org.apache.maven.model.PluginManagement;
-import org.apache.maven.model.Prerequisites;
-import org.apache.maven.model.ReportPlugin;
-import org.apache.maven.model.ReportSet;
-import org.apache.maven.model.Reporting;
-import org.apache.maven.model.Resource;
-import org.apache.maven.model.Scm;
+import org.apache.maven.artifact.versioning.VersionRange;
+import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException;
+import org.apache.maven.model.*;
 import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
 import org.apache.maven.project.artifact.ActiveProjectArtifact;
 import org.apache.maven.project.artifact.InvalidDependencyVersionException;
@@ -153,6 +136,8 @@ public class MavenProject
 
     private Stack previousExecutionProjects = new Stack();
 
+    private ArtifactFactory artifactFactory;
+
     public MavenProject()
     {
         Model model = new Model();
@@ -167,6 +152,11 @@ public class MavenProject
     public MavenProject( Model model )
     {
         setModel( model );
+    }
+
+    public MavenProject(Model model, ArtifactFactory artifactFactory) {
+        setModel( model );
+        this.artifactFactory = artifactFactory;
     }
 
     /**
@@ -1567,6 +1557,72 @@ public class MavenProject
 
     public Map getManagedVersionMap()
     {
+        if(managedVersionMap != null) {
+            return managedVersionMap;
+        }
+        
+        Map map = null;
+        if( managedVersionMap == null && artifactFactory != null ) {
+
+            List deps;
+            DependencyManagement dependencyManagement = getDependencyManagement();
+            if ( ( dependencyManagement != null ) && ( ( deps = dependencyManagement.getDependencies() ) != null ) && ( deps.size() > 0 ) )
+            {
+                map = new ManagedVersionMap( map );
+                for ( Iterator i = dependencyManagement.getDependencies().iterator(); i.hasNext(); )
+                {
+                    Dependency d = (Dependency) i.next();
+
+                    try
+                    {
+                        VersionRange versionRange = VersionRange.createFromVersionSpec( d.getVersion() );
+
+                        Artifact artifact = artifactFactory.createDependencyArtifact( d.getGroupId(), d.getArtifactId(), versionRange, d.getType(),
+                            d.getClassifier(), d.getScope(), d.isOptional() );
+
+                        if ( Artifact.SCOPE_SYSTEM.equals( d.getScope() ) && ( d.getSystemPath() != null ) )
+                        {
+                            artifact.setFile( new File( d.getSystemPath() ) );
+                        }
+
+                        // If the dependencyManagement section listed exclusions,
+                        // add them to the managed artifacts here so that transitive
+                        // dependencies will be excluded if necessary.
+
+                        if ( ( null != d.getExclusions() ) && !d.getExclusions().isEmpty() )
+                        {
+                            List exclusions = new ArrayList();
+
+                            for ( Iterator j = d.getExclusions().iterator(); j.hasNext(); )
+                            {
+                                Exclusion e = (Exclusion) j.next();
+
+                                exclusions.add( e.getGroupId() + ":" + e.getArtifactId() );
+                            }
+
+                            ExcludesArtifactFilter eaf = new ExcludesArtifactFilter( exclusions );
+
+                            artifact.setDependencyFilter( eaf );
+                        }
+                        else
+                        {
+                            artifact.setDependencyFilter( null );
+                        }
+
+                        map.put( d.getManagementKey(), artifact );
+                    }
+                    catch ( InvalidVersionSpecificationException e )
+                    {
+                        map = Collections.EMPTY_MAP;
+                    }
+                }
+            }
+            else if ( map == null )
+            {
+                map = Collections.EMPTY_MAP;
+            }
+        }
+        managedVersionMap = map;
         return managedVersionMap;
     }
 

@@ -133,19 +133,30 @@ public final class PomClassicTransformer
         }
 
         //dependency management
-                ModelDataSource source = new DefaultModelDataSource();
-                source.init( props, Arrays.asList( new ArtifactModelContainerFactory(), new IdModelContainerFactory() ) );
+        ModelDataSource source = new DefaultModelDataSource();
+        source.init( props, Arrays.asList( new ArtifactModelContainerFactory(), new IdModelContainerFactory() ) );
 
         for(ModelContainer dependencyContainer : source.queryFor( ProjectUri.Dependencies.Dependency.xUri)) {
                 for ( ModelContainer managementContainer : source.queryFor( ProjectUri.DependencyManagement.Dependencies.Dependency.xUri) )
                 {
-                    managementContainer = new ArtifactModelContainerFactory().create(transformA(managementContainer.getProperties()));
+                    managementContainer = new ArtifactModelContainerFactory().create(transformDependencyManagement(managementContainer.getProperties()));
                     ModelContainerAction action = dependencyContainer.containerAction(managementContainer);
                     if(action.equals(ModelContainerAction.JOIN) || action.equals(ModelContainerAction.DELETE)) {
                         source.join(dependencyContainer, managementContainer);
                     }
                 }
         }
+
+        for(ModelContainer dependencyContainer : source.queryFor( ProjectUri.Build.Plugins.Plugin.xUri)) {
+                for ( ModelContainer managementContainer : source.queryFor( ProjectUri.Build.PluginManagement.Plugins.Plugin.xUri) )
+                {
+                    managementContainer = new ArtifactModelContainerFactory().create(transformPluginManagement(managementContainer.getProperties()));
+                    ModelContainerAction action = dependencyContainer.containerAction(managementContainer);
+                    if(action.equals(ModelContainerAction.JOIN) || action.equals(ModelContainerAction.DELETE)) {
+                        source.join(dependencyContainer, managementContainer);
+                    }
+                }
+        }        
 
         props = source.getModelProperties();
       //   for(ModelProperty mp : props) {
@@ -433,8 +444,7 @@ public final class PomClassicTransformer
         return null;
     }
 
-        private static List<ModelProperty> transformA(List<ModelProperty> modelProperties) {
-            List<ModelProperty> properties = new ArrayList<ModelProperty>();
+        private static List<ModelProperty> transformDependencyManagement(List<ModelProperty> modelProperties) {
             List<ModelProperty> transformedProperties = new ArrayList<ModelProperty>();
             for(ModelProperty mp : modelProperties) {
                 if(mp.getUri().startsWith(ProjectUri.DependencyManagement.xUri))
@@ -443,9 +453,21 @@ public final class PomClassicTransformer
                             mp.getUri().replace(ProjectUri.DependencyManagement.xUri, ProjectUri.xUri), mp.getValue()));
                 }
             }
-            properties.addAll(transformedProperties);
-            return properties;
+            return transformedProperties;
         }
+
+        public static List<ModelProperty> transformPluginManagement(List<ModelProperty> modelProperties) {
+            List<ModelProperty> transformedProperties = new ArrayList<ModelProperty>();
+            for(ModelProperty mp : modelProperties) {
+                if(mp.getUri().startsWith(ProjectUri.Build.PluginManagement.xUri))
+                {
+                    transformedProperties.add(new ModelProperty(
+                            mp.getUri().replace(ProjectUri.Build.PluginManagement.xUri, ProjectUri.Build.xUri), mp.getValue()));
+                }
+            }
+            return transformedProperties;
+        }
+
  /*
     private static class ProfileModelPropertyTransformer implements ModelPropertyTransformer {
         public List<ModelProperty> transform(List<ModelProperty> modelProperties) {
@@ -454,48 +476,6 @@ public final class PomClassicTransformer
             for(ModelProperty mp : modelProperties) {
                 String uri = mp.getUri().replace("profiles#collection/profile", "");
             }
-            return properties;
-        }
-
-        public String getBaseUri() {
-            return ProjectUri.baseUri;
-        }
-    }
-
-    private static class PluginManagementModelPropertyTransformer implements ModelPropertyTransformer {
-
-        public List<ModelProperty> transform(List<ModelProperty> modelProperties) {
-            List<ModelProperty> properties = new ArrayList<ModelProperty>(modelProperties);
-            List<ModelProperty> transformedProperties = new ArrayList<ModelProperty>();
-            for(ModelProperty mp : properties) {
-                if(mp.getUri().startsWith(ProjectUri.Build.PluginManagement.xUri))
-                {
-                    transformedProperties.add(new ModelProperty(
-                            mp.getUri().replace(ProjectUri.Build.PluginManagement.xUri, ProjectUri.Build.xUri), mp.getValue()));
-                }
-            }
-            properties.addAll(transformedProperties);
-            return properties;
-        }
-
-        public String getBaseUri() {
-            return ProjectUri.baseUri;
-        }
-    }
-
-    private static class DependencyManagementModelPropertyTransformer implements ModelPropertyTransformer {
-
-        public List<ModelProperty> transform(List<ModelProperty> modelProperties) {
-            List<ModelProperty> properties = new ArrayList<ModelProperty>(modelProperties);
-            List<ModelProperty> transformedProperties = new ArrayList<ModelProperty>();
-            for(ModelProperty mp : modelProperties) {
-                if(mp.getUri().startsWith(ProjectUri.DependencyManagement.xUri))
-                {
-                    transformedProperties.add(new ModelProperty(
-                            mp.getUri().replace(ProjectUri.DependencyManagement.xUri, ProjectUri.xUri), mp.getValue()));
-                }
-            }
-            properties.addAll(transformedProperties);
             return properties;
         }
 
