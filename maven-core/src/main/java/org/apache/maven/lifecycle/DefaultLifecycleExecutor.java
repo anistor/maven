@@ -54,6 +54,7 @@ import org.apache.maven.plugin.version.PluginVersionNotFoundException;
 import org.apache.maven.plugin.version.PluginVersionResolutionException;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.MavenProjectBuilder;
+import org.apache.maven.project.ProjectBuildingException;
 import org.apache.maven.project.artifact.InvalidDependencyVersionException;
 import org.apache.maven.project.interpolation.ModelInterpolationException;
 import org.apache.maven.project.interpolation.ModelInterpolator;
@@ -675,6 +676,19 @@ public class DefaultLifecycleExecutor
         Xpp3DomWriter.write( writer, mojoExecution.getConfiguration() );
         
         String domStr = writer.toString();
+        
+        if ( project == null )
+        {
+            try
+            {
+                project = mavenProjectBuilder.buildStandaloneSuperProject( session.getProjectBuilderConfiguration() );
+            }
+            catch ( ProjectBuildingException e )
+            {
+                throw new LifecycleExecutionException( "Error building super-POM to interpolate configuration for: '" + mojoExecution.getMojoDescriptor().getRoleHint() +
+                                                       "' (execution: '" + mojoExecution.getExecutionId() + "')", e );
+            }
+        }
         
         try
         {
