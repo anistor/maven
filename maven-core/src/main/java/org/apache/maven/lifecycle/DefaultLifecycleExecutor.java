@@ -46,7 +46,6 @@ import org.apache.maven.plugin.PluginManager;
 import org.apache.maven.plugin.PluginManagerException;
 import org.apache.maven.plugin.PluginNotFoundException;
 import org.apache.maven.plugin.descriptor.MojoDescriptor;
-import org.apache.maven.plugin.descriptor.Parameter;
 import org.apache.maven.plugin.descriptor.PluginDescriptor;
 import org.apache.maven.plugin.lifecycle.Execution;
 import org.apache.maven.plugin.lifecycle.Phase;
@@ -62,6 +61,8 @@ import org.apache.maven.reporting.MavenReport;
 import org.apache.maven.settings.Settings;
 import org.codehaus.plexus.PlexusContainerException;
 import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
+import org.codehaus.plexus.configuration.PlexusConfiguration;
+import org.codehaus.plexus.configuration.PlexusConfigurationException;
 import org.codehaus.plexus.logging.AbstractLogEnabled;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
@@ -559,31 +560,8 @@ public class DefaultLifecycleExecutor
             
             boolean usesAllProjects = false;
             
-            List params = mojoDescriptor.getParameters();
-            if ( params != null && !params.isEmpty() )
-            {
-                for ( Iterator it = params.iterator(); it.hasNext(); )
-                {
-                    Parameter param = (Parameter) it.next();
-                    
-                    if ( param.getExpression() != null
-                        && ( param.getExpression().startsWith( "session" ) || param.getExpression().equals(
-                                                                                                            "reactorProjects" ) ) )
-                    {
-                        usesAllProjects = true;
-                        break;
-                    }
-                    else if ( param.getDefaultValue() != null
-                        && ( param.getDefaultValue().startsWith( "session" ) || param.getDefaultValue().equals(
-                                                                                                                "reactorProjects" ) ) )
-                    {
-                        usesAllProjects = true;
-                        break;
-                    }
-                }
-            }
-            
-            if ( usesAllProjects )
+            PlexusConfiguration configuration = mojoDescriptor.getMojoConfiguration();
+            if ( usesSessionOrReactorProjects( configuration ) )
             {
                 calculateAllConcreteStates( session );
             }
@@ -664,6 +642,38 @@ public class DefaultLifecycleExecutor
         }
     }
     
+    private boolean usesSessionOrReactorProjects( PlexusConfiguration configuration )
+    {
+        String value = null;
+        try
+        {
+            value = configuration.getValue();
+        }
+        catch ( PlexusConfigurationException e )
+        {
+            // ignore it.
+        }
+        
+        if ( value != null )
+        {
+            if ( value.startsWith( "${session" ) || value.equals( "${reactorProjects}" ) )
+            {
+                return true;
+            }
+        }
+        
+        PlexusConfiguration[] children = configuration.getChildren();
+        if ( children != null )
+        {
+            for ( int i = 0; i < children.length; i++ )
+            {
+                return usesSessionOrReactorProjects( children[i] );
+            }
+        }
+        
+        return false;
+    }
+
     private void calculateConcreteConfiguration( MojoExecution mojoExecution, MavenProject project, MavenSession session )
         throws LifecycleExecutionException
     {
