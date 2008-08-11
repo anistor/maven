@@ -59,6 +59,7 @@ TODO:
     <property name="maven.repo.local" value="${user.home}/.m2/repository"/>
     <property name="surefire.useFile" value="true"/>    
     <echo>maven.home = ${maven.home}</echo>
+    <echo>maven.assembly = ${maven.assembly}</echo>
   </target>
 
   <target name="clean-bootstrap" description="cleans up generated bootstrap classes">
