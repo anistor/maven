@@ -575,6 +575,8 @@ public class DefaultLifecycleExecutor
                 forkLifecycle( mojoDescriptor, forkEntryPoints, session, project );
 
                 forkEntryPoints.pop();
+                
+                calculateConcreteState( project.getExecutionProject(), session );
             }
             
             if ( mojoDescriptor.isRequiresReports() )
