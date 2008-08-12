@@ -59,11 +59,18 @@ import org.apache.maven.project.interpolation.ModelInterpolationException;
 import org.apache.maven.project.interpolation.ModelInterpolator;
 import org.apache.maven.reporting.MavenReport;
 import org.apache.maven.settings.Settings;
+import org.codehaus.plexus.PlexusConstants;
+import org.codehaus.plexus.PlexusContainer;
 import org.codehaus.plexus.PlexusContainerException;
 import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
 import org.codehaus.plexus.configuration.PlexusConfiguration;
 import org.codehaus.plexus.configuration.PlexusConfigurationException;
+import org.codehaus.plexus.context.Context;
+import org.codehaus.plexus.context.ContextException;
 import org.codehaus.plexus.logging.AbstractLogEnabled;
+import org.codehaus.plexus.personality.plexus.lifecycle.phase.Contextualizable;
+import org.codehaus.plexus.personality.plexus.lifecycle.phase.Initializable;
+import org.codehaus.plexus.personality.plexus.lifecycle.phase.InitializationException;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 import org.codehaus.plexus.util.xml.Xpp3DomBuilder;
@@ -90,7 +97,7 @@ import java.util.StringTokenizer;
  */
 public class DefaultLifecycleExecutor
     extends AbstractLogEnabled
-    implements LifecycleExecutor
+    implements LifecycleExecutor, Initializable, Contextualizable
 {
     // ----------------------------------------------------------------------
     // Components
@@ -1876,5 +1883,59 @@ public class DefaultLifecycleExecutor
     public List getLifecycles()
     {
         return lifecycles;
+    }
+
+    // -------------------------------------------------------------------------
+    // TODO: The methods and fields below are only needed for products like Hudson,
+    //  that provide their own LifecycleExecutor and component configuration, 
+    //  which may not contain up-to-date component requirements.
+    public void initialize()
+        throws InitializationException
+    {
+        if ( mavenProjectBuilder == null )
+        {
+            warnOfIncompleteComponentConfiguration( MavenProjectBuilder.ROLE );
+            try
+            {
+                mavenProjectBuilder = (MavenProjectBuilder) container.lookup( MavenProjectBuilder.ROLE );
+            }
+            catch ( ComponentLookupException e )
+            {
+                throw new InitializationException( "Failed to lookup project builder after it was NOT injected via component requirement." );
+            }
+        }
+        
+        if ( modelInterpolator == null )
+        {
+            warnOfIncompleteComponentConfiguration( ModelInterpolator.ROLE );
+            try
+            {
+                modelInterpolator = (ModelInterpolator) container.lookup( ModelInterpolator.ROLE );
+            }
+            catch ( ComponentLookupException e )
+            {
+                throw new InitializationException( "Failed to lookup model interpolator after it was NOT injected via component requirement." );
+            }
+        }
+    }
+    
+    private void warnOfIncompleteComponentConfiguration( String role )
+    {
+        StringBuffer buffer = new StringBuffer();
+        buffer.append( "\n************ WARNING ************" );
+        buffer.append( "\n\nThis Maven runtime contains a LifecycleExecutor component with an incomplete configuration." );
+        buffer.append( "\n\nLifecycleExecutor class: " ).append( getClass().getName() );
+        buffer.append( "\nMissing component requirement: " ).append( role );
+        buffer.append( "\n\n" );
+        
+        getLogger().warn( buffer.toString() );
+    }
+
+    private PlexusContainer container;
+
+    public void contextualize( Context context )
+        throws ContextException
+    {
+        container = (PlexusContainer) context.get( PlexusConstants.PLEXUS_KEY );
     }
 }
