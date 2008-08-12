@@ -179,10 +179,10 @@ public class MavenProject
             setArtifacts( Collections.unmodifiableSet( project.getArtifacts() ) );
         }
 
-        if ( project.getPluginArtifacts() != null )
-        {
-            setPluginArtifacts( Collections.unmodifiableSet( project.getPluginArtifacts() ) );
-        }
+    //    if ( project.getPluginArtifacts() != null )
+    //    {
+           // setPluginArtifacts( Collections.unmodifiableSet( project.getPluginArtifacts() ) );
+      //  }
 
         if ( project.getReportArtifacts() != null )
         {
@@ -1145,17 +1145,13 @@ public class MavenProject
         return artifactMap;
     }
 
-    public void setPluginArtifacts( Set pluginArtifacts )
-    {
-        this.pluginArtifacts = pluginArtifacts;
-
-        pluginArtifactMap = null;
-    }
-
     public Set getPluginArtifacts()
     {
+        if(pluginArtifacts != null) {
+            return pluginArtifacts;
+        }
         Set pa = new HashSet();
-        if(pluginArtifacts == null && artifactFactory != null) {
+        if(artifactFactory != null) {
             List plugins = getBuildPlugins();
             for ( Iterator i = plugins.iterator(); i.hasNext(); )
             {
@@ -1189,16 +1185,13 @@ public class MavenProject
             }
         }
         pluginArtifacts = pa;
+        pluginArtifactMap = null;
         return pluginArtifacts;
     }
 
     public Map getPluginArtifactMap()
     {
-        if ( pluginArtifactMap == null )
-        {
-            pluginArtifactMap = ArtifactUtils.artifactMapByVersionlessId( getPluginArtifacts() );
-        }
-
+        pluginArtifactMap = ArtifactUtils.artifactMapByVersionlessId( getPluginArtifacts() );
         return pluginArtifactMap;
     }
 

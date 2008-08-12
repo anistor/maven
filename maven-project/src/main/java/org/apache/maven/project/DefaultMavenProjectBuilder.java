@@ -385,7 +385,7 @@ public class DefaultMavenProjectBuilder
                                                       ProjectBuilderConfiguration config )
         throws ProjectBuildingException
     {
-        MavenProject project = projectWorkspace.getProject( projectDescriptor );
+        MavenProject project = null;//projectWorkspace.getProject( projectDescriptor );
 
         if ( project == null )
         {
