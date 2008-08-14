@@ -63,8 +63,10 @@ import org.apache.maven.plugin.lifecycle.Execution;
 import org.apache.maven.plugin.lifecycle.Phase;
 import org.apache.maven.plugin.version.PluginVersionNotFoundException;
 import org.apache.maven.plugin.version.PluginVersionResolutionException;
+import org.apache.maven.project.DefaultProjectBuilderConfiguration;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.MavenProjectBuilder;
+import org.apache.maven.project.ProjectBuilderConfiguration;
 import org.apache.maven.project.ProjectBuildingException;
 import org.apache.maven.project.artifact.InvalidDependencyVersionException;
 import org.apache.maven.project.interpolation.ModelInterpolationException;
@@ -602,11 +604,20 @@ public class DefaultLifecycleExecutor
             
             if ( hasFork )
             {
-                MavenProject executionProject = new MavenProject( project );
+                createExecutionProject( project, session );
                 
-                calculateConcreteState( executionProject, session );
-                
-                project.setExecutionProject( executionProject );
+                if ( mojoDescriptor.isAggregator() )
+                {
+                    List reactorProjects = session.getSortedProjects();
+                    for ( Iterator it = reactorProjects.iterator(); it.hasNext(); )
+                    {
+                        MavenProject reactorProject = (MavenProject) it.next();
+                        if ( reactorProject.getExecutionProject() == null )
+                        {
+                            createExecutionProject( reactorProject, session );
+                        }
+                    }
+                }
             }
 
             if ( mojoDescriptor.getExecutePhase() != null || mojoDescriptor.getExecuteGoal() != null )
@@ -644,6 +655,16 @@ public class DefaultLifecycleExecutor
             {
                 // TODO: Would be nice to find a way to cause the execution project to stay in a concrete state...
                 calculateConcreteState( project.getExecutionProject(), session );
+                
+                if ( mojoDescriptor.isAggregator() )
+                {
+                    List reactorProjects = session.getSortedProjects();
+                    for ( Iterator it = reactorProjects.iterator(); it.hasNext(); )
+                    {
+                        MavenProject reactorProject = (MavenProject) it.next();
+                        calculateConcreteState( reactorProject.getExecutionProject(), session );
+                    }
+                }
             }
 
             try
@@ -680,7 +701,20 @@ public class DefaultLifecycleExecutor
                 throw new LifecycleExecutionException( e.getMessage(), e );
             }
             
-            project.setExecutionProject( null );
+            if ( hasFork )
+            {
+                project.setExecutionProject( null );
+                
+                if ( mojoDescriptor.isAggregator() )
+                {
+                    List reactorProjects = session.getSortedProjects();
+                    for ( Iterator it = reactorProjects.iterator(); it.hasNext(); )
+                    {
+                        MavenProject reactorProject = (MavenProject) it.next();
+                        reactorProject.setExecutionProject( null );
+                    }
+                }
+            }
             
             restoreDynamicState( project, session );
             
@@ -691,6 +725,16 @@ public class DefaultLifecycleExecutor
         }
     }
     
+    private void createExecutionProject( MavenProject project, MavenSession session )
+        throws LifecycleExecutionException
+    {
+        MavenProject executionProject = new MavenProject( project );
+        
+        calculateConcreteState( executionProject, session );
+        
+        project.setExecutionProject( executionProject );
+    }
+
     private boolean usesSessionOrReactorProjects( PlexusConfiguration configuration )
     {
         String value = null;
@@ -1011,7 +1055,7 @@ public class DefaultLifecycleExecutor
             for ( Iterator i = session.getSortedProjects().iterator(); i.hasNext(); )
             {
                 MavenProject reactorProject = (MavenProject) i.next();
-
+                
                 line();
 
                 getLogger().info( "Building " + reactorProject.getName() );
