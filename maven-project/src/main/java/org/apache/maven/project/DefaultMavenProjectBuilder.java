@@ -857,14 +857,6 @@ public class DefaultMavenProjectBuilder
         mergeDeterministicBuildElements( model.getBuild(), dynamicBuild );
         model.setBuild( dynamicBuild );
 
-        // We must inject any imported dependencyManagement information ahead of the defaults injection.
-        if ( !isSuperPom )
-        {
-            // TODO: [jdcasey] This line appears to be part of the problem for MNG-3391...
-            // the same line is in 2.0.x, so this is related to caching changes too...need to figure out how the two interact.
-            mergeManagedDependencies( model, config.getLocalRepository(), remoteRepositories );
-        }
-
         // interpolation is before injection, because interpolation is off-limits in the injected variables
         modelDefaultsInjector.injectDefaults( model );
 
@@ -1089,76 +1081,6 @@ public class DefaultMavenProjectBuilder
         return result;
     }
 
-    private void mergeManagedDependencies(Model model, ArtifactRepository localRepository, List parentSearchRepositories)
-        throws ProjectBuildingException
-    {
-        DependencyManagement modelDepMgmt = model.getDependencyManagement();
-
-        if (modelDepMgmt != null)
-        {
-            Map depsMap = new TreeMap();
-            Iterator iter = modelDepMgmt.getDependencies().iterator();
-            boolean doInclude = false;
-            while (iter.hasNext())
-            {
-                Dependency dep = (Dependency) iter.next();
-                depsMap.put( dep.getManagementKey(), dep );
-
-                // MNG-3391: SEE BELOW.
-                if (dep.getType().equals("pom") && Artifact.SCOPE_IMPORT.equals( dep.getScope() ) )
-                {
-                    doInclude = true;
-                }
-            }
-            Map newDeps = new TreeMap(depsMap);
-            iter = modelDepMgmt.getDependencies().iterator();
-            if (doInclude)
-            {
-                while (iter.hasNext())
-                {
-                    Dependency dep = (Dependency)iter.next();
-
-                    // MNG-3391: The check for scope == 'import' to limit the StackOverflowExceptions caused
-                    // when importing from the parent and the import-target is a module that declares the
-                    // current pom as a parent.
-                    //
-                    // Also, dependencies with type == 'pom' are the best way we currently have to
-                    // aggregate multiple other dependencies without messing with the issues caused by using
-                    // an assembly (ClassCastException if a second-level dep is also part of the maven core,
-                    // for instance)
-                    if (dep.getType().equals("pom") && Artifact.SCOPE_IMPORT.equals( dep.getScope() ) )
-                    {
-                        Artifact artifact = artifactFactory.createProjectArtifact( dep.getGroupId(), dep.getArtifactId(),
-                                                                                  dep.getVersion(), dep.getScope() );
-                        MavenProject project = buildFromRepository(artifact, parentSearchRepositories, localRepository, false);
-
-                        DependencyManagement depMgmt = project.getDependencyManagement();
-
-                        if (depMgmt != null)
-                        {
-                            if ( getLogger().isDebugEnabled() )
-                            {
-                                getLogger().debug( "Importing managed dependencies for " + dep.toString() );
-                            }
-
-                            for ( Iterator it = depMgmt.getDependencies().iterator(); it.hasNext(); )
-                            {
-                                Dependency includedDep = (Dependency) it.next();
-                                String key = includedDep.getManagementKey();
-                                if (!newDeps.containsKey(key))
-                                {
-                                    newDeps.put( includedDep.getManagementKey(), includedDep );
-                                }
-                            }
-                            newDeps.remove(dep.getManagementKey());
-                        }
-                    }
-                }
-                List deps = new ArrayList(newDeps.values());
-                modelDepMgmt.setDependencies(deps);
-            }
-        }
-    }
 
     private Model readModelLegacy( String projectId,
                              File file,
