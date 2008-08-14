@@ -46,10 +46,16 @@ import org.apache.maven.model.RepositoryBase;
 import org.apache.maven.model.RepositoryPolicy;
 import org.apache.maven.model.Resource;
 import org.apache.maven.model.Site;
+import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
+import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
 import org.apache.maven.project.inheritance.DefaultModelInheritanceAssembler;
 import org.apache.maven.project.inheritance.ModelInheritanceAssembler;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
+import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
+import java.io.IOException;
+import java.io.StringReader;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -561,37 +567,84 @@ public final class ModelUtils
 
     public static Model cloneModel( Model model )
     {
+        StringWriter writer = new StringWriter();
+        try
+        {
+            new MavenXpp3Writer().write( writer, model );
+        }
+        catch ( IOException e )
+        {
+        }
+        
+        try
+        {
+            return new MavenXpp3Reader().read( new StringReader( writer.toString() ) );
+        }
+        catch ( IOException e )
+        {
+        }
+        catch ( XmlPullParserException e )
+        {
+        }
+        
+        return null;
+        
         // TODO: would be nice for the modello:java code to generate this as a copy constructor
         // FIXME: Fix deep cloning issues with existing plugin instances (setting 
         //       a version when resolved will pollute the original model instance)
-        Model newModel = new Model();
-        ModelInheritanceAssembler assembler = new DefaultModelInheritanceAssembler();
-        newModel.setModelVersion( model.getModelVersion() );
-        newModel.setName( model.getName() );
-        newModel.setParent( cloneParent( model.getParent() ) );
-        newModel.setVersion( model.getVersion() );
-        newModel.setArtifactId( model.getArtifactId() );
-        newModel.setProperties( new Properties( model.getProperties() ) );
-        newModel.setGroupId( model.getGroupId() );
-        newModel.setPackaging( model.getPackaging() );
-        newModel.setModules( cloneModules( model.getModules() ) );
-
-        newModel.setProfiles( cloneProfiles( model.getProfiles() ) );
-
-        assembler.copyModel( newModel, model );
-
-        return newModel;
+//        Model newModel = new Model();
+//        ModelInheritanceAssembler assembler = new DefaultModelInheritanceAssembler();
+//        newModel.setModelVersion( model.getModelVersion() );
+//        newModel.setName( model.getName() );
+//        newModel.setParent( cloneParent( model.getParent() ) );
+//        newModel.setVersion( model.getVersion() );
+//        newModel.setArtifactId( model.getArtifactId() );
+//        newModel.setProperties( new Properties( model.getProperties() ) );
+//        newModel.setGroupId( model.getGroupId() );
+//        newModel.setPackaging( model.getPackaging() );
+//        newModel.setModules( cloneModules( model.getModules() ) );
+//
+//        newModel.setProfiles( cloneProfiles( model.getProfiles() ) );
+//
+//        assembler.copyModel( newModel, model );
+//
+//        return newModel;
     }
 
     public static Build cloneBuild( Build build )
     {
-        ModelInheritanceAssembler assembler = new DefaultModelInheritanceAssembler();
-
-        Build clone = new Build();
-
-        assembler.assembleBuildInheritance( clone, build, false );
-
-        return clone;
+        Model model = new Model();
+        model.setBuild( build );
+        
+        StringWriter writer = new StringWriter();
+        try
+        {
+            new MavenXpp3Writer().write( writer, model );
+        }
+        catch ( IOException e )
+        {
+        }
+        
+        try
+        {
+            return new MavenXpp3Reader().read( new StringReader( writer.toString() ) ).getBuild();
+        }
+        catch ( IOException e )
+        {
+        }
+        catch ( XmlPullParserException e )
+        {
+        }
+        
+        return null;
+        
+//        ModelInheritanceAssembler assembler = new DefaultModelInheritanceAssembler();
+//
+//        Build clone = new Build();
+//
+//        assembler.assembleBuildInheritance( clone, build, false );
+//
+//        return clone;
     }
 
     private static List cloneProfiles( List profiles )
