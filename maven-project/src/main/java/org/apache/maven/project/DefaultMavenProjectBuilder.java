@@ -29,15 +29,7 @@ import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.artifact.resolver.ArtifactResolutionRequest;
 import org.apache.maven.artifact.resolver.ArtifactResolutionResult;
 import org.apache.maven.artifact.resolver.ArtifactResolver;
-import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException;
-import org.apache.maven.artifact.versioning.VersionRange;
-import org.apache.maven.model.Build;
-import org.apache.maven.model.DistributionManagement;
-import org.apache.maven.model.Extension;
-import org.apache.maven.model.Model;
-import org.apache.maven.model.Plugin;
-import org.apache.maven.model.PluginManagement;
-import org.apache.maven.model.ReportPlugin;
+import org.apache.maven.model.*;
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
 import org.apache.maven.profiles.MavenProfilesBuilder;
 import org.apache.maven.profiles.ProfileManager;
@@ -50,6 +42,8 @@ import org.apache.maven.project.build.model.DefaultModelLineage;
 import org.apache.maven.project.build.model.ModelLineage;
 import org.apache.maven.project.build.model.ModelLineageBuilder;
 import org.apache.maven.project.build.model.ModelLineageIterator;
+import org.apache.maven.project.builder.PomArtifactResolver;
+import org.apache.maven.project.builder.ProjectBuilder;
 import org.apache.maven.project.inheritance.ModelInheritanceAssembler;
 import org.apache.maven.project.injection.ModelDefaultsInjector;
 import org.apache.maven.project.interpolation.ModelInterpolationException;
@@ -58,8 +52,6 @@ import org.apache.maven.project.path.PathTranslator;
 import org.apache.maven.project.validation.ModelValidationResult;
 import org.apache.maven.project.validation.ModelValidator;
 import org.apache.maven.project.workspace.ProjectWorkspace;
-import org.apache.maven.project.builder.PomArtifactResolver;
-import org.apache.maven.project.builder.ProjectBuilder;
 import org.codehaus.plexus.logging.LogEnabled;
 import org.codehaus.plexus.logging.Logger;
 import org.codehaus.plexus.personality.plexus.lifecycle.phase.Initializable;
@@ -110,10 +102,9 @@ Notes
  * @version $Id$
  */
 public class DefaultMavenProjectBuilder
-    implements MavenProjectBuilder,
-    Initializable, LogEnabled
-{
-    protected MavenProfilesBuilder profilesBuilder;                        
+        implements MavenProjectBuilder,
+        Initializable, LogEnabled {
+    protected MavenProfilesBuilder profilesBuilder;
 
     protected ArtifactResolver artifactResolver;
 
@@ -146,17 +137,18 @@ public class DefaultMavenProjectBuilder
 
     private RepositoryHelper repositoryHelper;
 
+    private Logger logger;
+
+
     //DO NOT USE, it is here only for backward compatibility reasons. The existing
     // maven-assembly-plugin (2.2-beta-1) is accessing it via reflection.
 
-// the aspect weaving seems not to work for reflection from plugin.
+    // the aspect weaving seems not to work for reflection from plugin.
     private Map processedProjectCache = new HashMap();
 
+    private static final String MAVEN_MODEL_VERSION = "4.0.0";
 
-    public static final String MAVEN_MODEL_VERSION = "4.0.0";
-
-    public void initialize()
-    {
+    public void initialize() {
         modelReader = new MavenXpp3Reader();
     }
 
@@ -164,173 +156,173 @@ public class DefaultMavenProjectBuilder
     // MavenProjectBuilder Implementation
     // ----------------------------------------------------------------------
 
-    public MavenProject build( File projectDescriptor,
-                               ArtifactRepository localRepository,
-                               ProfileManager profileManager )
-        throws ProjectBuildingException
-    {
-        ProjectBuilderConfiguration config = new DefaultProjectBuilderConfiguration().setLocalRepository( localRepository )
-                                                                                     .setGlobalProfileManager( profileManager );
+    public MavenProject build(File projectDescriptor,
+                              ArtifactRepository localRepository,
+                              ProfileManager profileManager)
+            throws ProjectBuildingException {
+        ProjectBuilderConfiguration config = new DefaultProjectBuilderConfiguration().setLocalRepository(localRepository)
+                .setGlobalProfileManager(profileManager);
 
-        return buildFromSourceFileInternal( projectDescriptor, config );
+        return build(projectDescriptor, config);
     }
 
-    public MavenProject build( File projectDescriptor,
-                               ProjectBuilderConfiguration config )
-        throws ProjectBuildingException
-    {
-        return buildFromSourceFileInternal( projectDescriptor, config );
+    public MavenProject build(File projectDescriptor,
+                              ProjectBuilderConfiguration config)
+            throws ProjectBuildingException {
+                MavenProject project = null;//projectWorkspace.getProject( projectDescriptor );
+
+        if (project == null) {
+            Model model = readModelFromLocalPath("unknown", projectDescriptor, new PomArtifactResolver(config.getLocalRepository(),
+                    repositoryHelper.buildArtifactRepositories(getSuperModel()), artifactResolver));
+            project = buildInternal(model,
+                    config,
+                    repositoryHelper.buildArtifactRepositories(getSuperModel()),
+                    projectDescriptor,
+                    STRICT_MODEL_PARSING,
+                    true,
+                    true);
+        }
+        return project;
     }
 
-    /** @deprecated  */
+    /**
+     * @deprecated
+     */
     @Deprecated
-    public MavenProject buildFromRepository( Artifact artifact,
-                                             List remoteArtifactRepositories,
-                                             ArtifactRepository localRepository,
-                                             boolean allowStub )
-        throws ProjectBuildingException
+    public MavenProject buildFromRepository(Artifact artifact,
+                                            List remoteArtifactRepositories,
+                                            ArtifactRepository localRepository,
+                                            boolean allowStub)
+            throws ProjectBuildingException
 
     {
-        return buildFromRepository( artifact, remoteArtifactRepositories, localRepository );
+        return buildFromRepository(artifact, remoteArtifactRepositories, localRepository);
     }
 
 
-    public MavenProject buildFromRepository( Artifact artifact,
-                                             List remoteArtifactRepositories,
-                                             ArtifactRepository localRepository )
-        throws ProjectBuildingException
-    {
+    public MavenProject buildFromRepository(Artifact artifact,
+                                            List remoteArtifactRepositories,
+                                            ArtifactRepository localRepository)
+            throws ProjectBuildingException {
         MavenProject project = null;
-        if ( !Artifact.LATEST_VERSION.equals( artifact.getVersion() ) && !Artifact.RELEASE_VERSION.equals( artifact.getVersion() ) )
-        {
-            project = projectWorkspace.getProject( artifact.getGroupId(), artifact.getArtifactId(), artifact.getVersion() );
+        if (!Artifact.LATEST_VERSION.equals(artifact.getVersion()) && !Artifact.RELEASE_VERSION.equals(artifact.getVersion())) {
+            project = projectWorkspace.getProject(artifact.getGroupId(), artifact.getArtifactId(), artifact.getVersion());
         }
 
-        if ( project == null )
-        {
-            Model model = repositoryHelper.findModelFromRepository( artifact, remoteArtifactRepositories, localRepository );
+        if (project == null) {
+            Model model = repositoryHelper.findModelFromRepository(artifact, remoteArtifactRepositories, localRepository);
 
-            ProjectBuilderConfiguration config = new DefaultProjectBuilderConfiguration().setLocalRepository( localRepository );
+            ProjectBuilderConfiguration config = new DefaultProjectBuilderConfiguration().setLocalRepository(localRepository);
 
-            project = buildInternal( model, config, remoteArtifactRepositories, artifact.getFile(),
-                                  false, false, false );
+            project = buildInternal(model, config, remoteArtifactRepositories, artifact.getFile(),
+                    false, false, false);
         }
 
         return project;
     }
 
-    private Logger logger;
-
     // what is using this externally? jvz.
     public MavenProject buildStandaloneSuperProject()
-        throws ProjectBuildingException
-    {
+            throws ProjectBuildingException {
         //TODO mkleint - use the (Container, Properties) constructor to make system properties embeddable
-        return buildStandaloneSuperProject( new DefaultProjectBuilderConfiguration() );
+        return buildStandaloneSuperProject(new DefaultProjectBuilderConfiguration());
     }
 
-    public MavenProject buildStandaloneSuperProject( ProfileManager profileManager )
-        throws ProjectBuildingException
-    {
+    public MavenProject buildStandaloneSuperProject(ProfileManager profileManager)
+            throws ProjectBuildingException {
         //TODO mkleint - use the (Container, Properties) constructor to make system properties embeddable
-        return buildStandaloneSuperProject( new DefaultProjectBuilderConfiguration().setGlobalProfileManager( profileManager ) );
+        return buildStandaloneSuperProject(new DefaultProjectBuilderConfiguration().setGlobalProfileManager(profileManager));
     }
 
-    public MavenProject buildStandaloneSuperProject( ProjectBuilderConfiguration config )
-        throws ProjectBuildingException
-    {
+    public MavenProject buildStandaloneSuperProject(ProjectBuilderConfiguration config)
+            throws ProjectBuildingException {
         Model superModel = getSuperModel();
 
-        superModel.setGroupId( STANDALONE_SUPERPOM_GROUPID );
+        superModel.setGroupId(STANDALONE_SUPERPOM_GROUPID);
 
-        superModel.setArtifactId( STANDALONE_SUPERPOM_ARTIFACTID );
+        superModel.setArtifactId(STANDALONE_SUPERPOM_ARTIFACTID);
 
-        superModel.setVersion( STANDALONE_SUPERPOM_VERSION );
+        superModel.setVersion(STANDALONE_SUPERPOM_VERSION);
 
-        superModel = ModelUtils.cloneModel( superModel );
+        superModel = ModelUtils.cloneModel(superModel);
 
         ProfileManager profileManager = config.getGlobalProfileManager();
 
         List activeProfiles = new ArrayList();
-        if ( profileManager != null )
-        {
-            List activated = profileAdvisor.applyActivatedProfiles( superModel, null, false, profileManager.getProfileActivationContext() );
-            if ( !activated.isEmpty() )
-            {
-                activeProfiles.addAll( activated );
+        if (profileManager != null) {
+            List activated = profileAdvisor.applyActivatedProfiles(superModel, null, false, profileManager.getProfileActivationContext());
+            if (!activated.isEmpty()) {
+                activeProfiles.addAll(activated);
             }
 
-            activated = profileAdvisor.applyActivatedExternalProfiles( superModel, null, profileManager );
-            if ( !activated.isEmpty() )
-            {
-                activeProfiles.addAll( activated );
+            activated = profileAdvisor.applyActivatedExternalProfiles(superModel, null, profileManager);
+            if (!activated.isEmpty()) {
+                activeProfiles.addAll(activated);
             }
         }
 
-        MavenProject project = new MavenProject( superModel, artifactFactory );
+        MavenProject project = new MavenProject(superModel, artifactFactory);
 
-        getLogger().debug( "Activated the following profiles for standalone super-pom: " + activeProfiles );
-        project.setActiveProfiles( activeProfiles );
+        getLogger().debug("Activated the following profiles for standalone super-pom: " + activeProfiles);
+        project.setActiveProfiles(activeProfiles);
 
-        try
-        {
-            processProjectLogic( project, null, config);
+        try {
+            processProjectLogic(project, null, config);
 
-            project.setRemoteArtifactRepositories( mavenTools.buildArtifactRepositories( superModel.getRepositories() ) );
-            project.setPluginArtifactRepositories( mavenTools.buildArtifactRepositories( superModel.getRepositories() ) );
+            project.setRemoteArtifactRepositories(mavenTools.buildArtifactRepositories(superModel.getRepositories()));
+            project.setPluginArtifactRepositories(mavenTools.buildArtifactRepositories(superModel.getRepositories()));
         }
-        catch ( InvalidRepositoryException e )
-        {
+        catch (InvalidRepositoryException e) {
             // we shouldn't be swallowing exceptions, no matter how unlikely.
             // or, if we do, we should pay attention to the one coming from getSuperModel()...
-            throw new ProjectBuildingException( STANDALONE_SUPERPOM_GROUPID + ":"
-                                             + STANDALONE_SUPERPOM_ARTIFACTID,
-                                                "Maven super-POM contains an invalid repository!",
-                                                e );
+            throw new ProjectBuildingException(STANDALONE_SUPERPOM_GROUPID + ":"
+                    + STANDALONE_SUPERPOM_ARTIFACTID,
+                    "Maven super-POM contains an invalid repository!",
+                    e);
         }
-        catch ( ModelInterpolationException e )
-        {
+        catch (ModelInterpolationException e) {
             // we shouldn't be swallowing exceptions, no matter how unlikely.
             // or, if we do, we should pay attention to the one coming from getSuperModel()...
-            throw new ProjectBuildingException( STANDALONE_SUPERPOM_GROUPID + ":"
-                                             + STANDALONE_SUPERPOM_ARTIFACTID,
-                                                "Maven super-POM contains an invalid expressions!",
-                                                e );
+            throw new ProjectBuildingException(STANDALONE_SUPERPOM_GROUPID + ":"
+                    + STANDALONE_SUPERPOM_ARTIFACTID,
+                    "Maven super-POM contains an invalid expressions!",
+                    e);
         }
 
-        project.setOriginalModel( superModel );
+        project.setOriginalModel(superModel);
 
-        project.setExecutionRoot( true );
+        project.setExecutionRoot(true);
 
         return project;
     }
 
-    /** @since 2.0.x */
-    public MavenProject buildWithDependencies( File projectDescriptor,
-                                               ArtifactRepository localRepository,
-                                               ProfileManager profileManager )
-        throws ProjectBuildingException
-    {
-        return buildProjectWithDependencies( projectDescriptor, localRepository, profileManager ).getProject();
+    /**
+     * @since 2.0.x
+     */
+    public MavenProject buildWithDependencies(File projectDescriptor,
+                                              ArtifactRepository localRepository,
+                                              ProfileManager profileManager)
+            throws ProjectBuildingException {
+        return buildProjectWithDependencies(projectDescriptor, localRepository, profileManager).getProject();
     }
 
-    /** @since 2.1 */
-    public MavenProjectBuildingResult buildProjectWithDependencies( File projectDescriptor,
-                                                             ArtifactRepository localRepository,
-                                                             ProfileManager profileManager )
-        throws ProjectBuildingException
-    {
-        ProjectBuilderConfiguration config = new DefaultProjectBuilderConfiguration().setLocalRepository( localRepository )
-                                                                                     .setGlobalProfileManager( profileManager );
+    /**
+     * @since 2.1
+     */
+    public MavenProjectBuildingResult buildProjectWithDependencies(File projectDescriptor,
+                                                                   ArtifactRepository localRepository,
+                                                                   ProfileManager profileManager)
+            throws ProjectBuildingException {
+        ProjectBuilderConfiguration config = new DefaultProjectBuilderConfiguration().setLocalRepository(localRepository)
+                .setGlobalProfileManager(profileManager);
 
-        return buildProjectWithDependencies( projectDescriptor, config );
+        return buildProjectWithDependencies(projectDescriptor, config);
     }
 
-    public MavenProjectBuildingResult buildProjectWithDependencies( File projectDescriptor,
-                                                                    ProjectBuilderConfiguration config )
-               throws ProjectBuildingException
-   {
-        MavenProject project = build( projectDescriptor, config );
+    public MavenProjectBuildingResult buildProjectWithDependencies(File projectDescriptor,
+                                                                   ProjectBuilderConfiguration config)
+            throws ProjectBuildingException {
+        MavenProject project = build(projectDescriptor, config);
 
         // ----------------------------------------------------------------------
         // Typically when the project builder is being used from maven proper
@@ -346,238 +338,193 @@ public class DefaultMavenProjectBuilder
 
         Artifact projectArtifact = project.getArtifact();
 
-        String projectId = safeVersionlessKey( project.getGroupId(), project.getArtifactId() );
+        String projectId = safeVersionlessKey(project.getGroupId(), project.getArtifactId());
 
         Map managedVersions = project.getManagedVersionMap();
 
-        try
-        {
-            project.setDependencyArtifacts( project.createArtifacts( artifactFactory, null, null ) );
+        try {
+            project.setDependencyArtifacts(project.createArtifacts(artifactFactory, null, null));
         }
-        catch ( InvalidDependencyVersionException e )
-        {
-            throw new ProjectBuildingException( projectId,
-                "Unable to build project due to an invalid dependency version: " +
-                    e.getMessage(), projectDescriptor, e );
+        catch (InvalidDependencyVersionException e) {
+            throw new ProjectBuildingException(projectId,
+                    "Unable to build project due to an invalid dependency version: " +
+                            e.getMessage(), projectDescriptor, e);
         }
 
         ArtifactResolutionRequest request = new ArtifactResolutionRequest()
-            .setArtifact( projectArtifact )
-            .setArtifactDependencies( project.getDependencyArtifacts() )
-            .setLocalRepository( config.getLocalRepository() )
-            .setRemoteRepostories( project.getRemoteArtifactRepositories() )
-            .setManagedVersionMap( managedVersions )
-            .setMetadataSource( artifactMetadataSource );
+                .setArtifact(projectArtifact)
+                .setArtifactDependencies(project.getDependencyArtifacts())
+                .setLocalRepository(config.getLocalRepository())
+                .setRemoteRepostories(project.getRemoteArtifactRepositories())
+                .setManagedVersionMap(managedVersions)
+                .setMetadataSource(artifactMetadataSource);
 
-        ArtifactResolutionResult result = artifactResolver.resolve( request );
+        ArtifactResolutionResult result = artifactResolver.resolve(request);
 
-        project.setArtifacts( result.getArtifacts() );
+        project.setArtifacts(result.getArtifacts());
 
-        return new MavenProjectBuildingResult( project, result );
+        return new MavenProjectBuildingResult(project, result);
+    }
+        public void calculateConcreteState(MavenProject project, ProjectBuilderConfiguration config)
+            throws ModelInterpolationException {
+        new MavenProjectRestorer(pathTranslator, modelInterpolator, getLogger()).calculateConcreteState(project, config);
     }
 
-    private MavenProject buildFromSourceFileInternal( File projectDescriptor,
-                                                      ProjectBuilderConfiguration config )
-        throws ProjectBuildingException
-    {
-        MavenProject project = null;//projectWorkspace.getProject( projectDescriptor );
-
-        if ( project == null )
-        {
-            Model model = readModelFromLocalPath( "unknown", projectDescriptor, new PomArtifactResolver(config.getLocalRepository(),
-                    repositoryHelper.buildArtifactRepositories( getSuperModel() ), artifactResolver) );
-            project = buildInternal(model,
-                config,
-                repositoryHelper.buildArtifactRepositories( getSuperModel() ),
-                projectDescriptor,
-                STRICT_MODEL_PARSING,
-                true,
-                true );
-        }
-        return project;
+    public void restoreDynamicState(MavenProject project, ProjectBuilderConfiguration config)
+            throws ModelInterpolationException {
+        new MavenProjectRestorer(pathTranslator, modelInterpolator, getLogger()).restoreDynamicState(project, config);
     }
+
+    public void enableLogging(Logger logger) {
+        this.logger = logger;
+    }
+
+    private Logger getLogger() {
+        return logger;
+    }
+
 
     // jvz:note
     // We've got a mixture of things going in the USD and from the repository, sometimes the descriptor
     // is a real file and sometimes null which makes things confusing.
-    private MavenProject buildInternal( Model model,
-                                        ProjectBuilderConfiguration config,
-                                        List parentSearchRepositories,
-                                        File projectDescriptor,
-                                        boolean strict,
-                                        boolean isReactorProject,
-                                        boolean fromSourceTree )
-        throws ProjectBuildingException
-    {
+    private MavenProject buildInternal(Model model,
+                                       ProjectBuilderConfiguration config,
+                                       List parentSearchRepositories,
+                                       File projectDescriptor,
+                                       boolean strict,
+                                       boolean isReactorProject,
+                                       boolean fromSourceTree)
+            throws ProjectBuildingException {
 
-        MavenProject superProject = new MavenProject( getSuperModel(), artifactFactory );
+        MavenProject superProject = new MavenProject(getSuperModel(), artifactFactory);
 
-        String projectId = safeVersionlessKey( model.getGroupId(), model.getArtifactId() );
+        String projectId = safeVersionlessKey(model.getGroupId(), model.getArtifactId());
 
         // FIXME: Find a way to pass in this context, so it's never null!
         ProfileActivationContext profileActivationContext;
 
         ProfileManager externalProfileManager = config.getGlobalProfileManager();
-        if ( externalProfileManager != null )
-        {
+        if (externalProfileManager != null) {
             // used to trigger the caching of SystemProperties in the container context...
-            try
-            {
+            try {
                 externalProfileManager.getActiveProfiles();
             }
-            catch ( ProfileActivationException e )
-            {
-                throw new ProjectBuildingException( projectId, "Failed to activate external profiles.", projectDescriptor, e );
+            catch (ProfileActivationException e) {
+                throw new ProjectBuildingException(projectId, "Failed to activate external profiles.", projectDescriptor, e);
             }
 
             profileActivationContext = externalProfileManager.getProfileActivationContext();
-        }
-        else
-        {
-            profileActivationContext = new DefaultProfileActivationContext( config.getExecutionProperties(), false );
+        } else {
+            profileActivationContext = new DefaultProfileActivationContext(config.getExecutionProperties(), false);
         }
 
         LinkedHashSet activeInSuperPom = new LinkedHashSet();
-        List activated = profileAdvisor.applyActivatedProfiles( getSuperModel(), projectDescriptor, isReactorProject, profileActivationContext );
-        if ( !activated.isEmpty() )
-        {
-            activeInSuperPom.addAll( activated );
+        List activated = profileAdvisor.applyActivatedProfiles(getSuperModel(), projectDescriptor, isReactorProject, profileActivationContext);
+        if (!activated.isEmpty()) {
+            activeInSuperPom.addAll(activated);
         }
 
-        activated = profileAdvisor.applyActivatedExternalProfiles( getSuperModel(), projectDescriptor, externalProfileManager );
-        if ( !activated.isEmpty() )
-        {
-            activeInSuperPom.addAll( activated );
+        activated = profileAdvisor.applyActivatedExternalProfiles(getSuperModel(), projectDescriptor, externalProfileManager);
+        if (!activated.isEmpty()) {
+            activeInSuperPom.addAll(activated);
         }
 
-        superProject.setActiveProfiles( activated );
+        superProject.setActiveProfiles(activated);
 
         //noinspection CollectionDeclaredAsConcreteClass
         LinkedList lineage = new LinkedList();
 
-        LinkedHashSet aggregatedRemoteWagonRepositories = repositoryHelper.collectInitialRepositories( model, getSuperModel(),
-            parentSearchRepositories,
-            projectDescriptor,
-            isReactorProject,
-            profileActivationContext );
+        LinkedHashSet aggregatedRemoteWagonRepositories = repositoryHelper.collectInitialRepositories(model, getSuperModel(),
+                parentSearchRepositories,
+                projectDescriptor,
+                isReactorProject,
+                profileActivationContext);
 
-        Model originalModel = ModelUtils.cloneModel( model );
+        Model originalModel = ModelUtils.cloneModel(model);
 
         MavenProject project;
 
-        try
-        {
-            project = assembleLineage( model, lineage, config, projectDescriptor, aggregatedRemoteWagonRepositories, strict, isReactorProject );
+        try {
+            project = assembleLineage(model, lineage, config, projectDescriptor, aggregatedRemoteWagonRepositories, strict, isReactorProject);
         }
-        catch ( InvalidRepositoryException e )
-        {
-            throw new ProjectBuildingException( projectId, e.getMessage(), e );
+        catch (InvalidRepositoryException e) {
+            throw new ProjectBuildingException(projectId, e.getMessage(), e);
         }
 
-        project.setOriginalModel( originalModel );
+        project.setOriginalModel(originalModel);
 
         // we don't have to force the collision exception for superModel here, it's already been done in getSuperModel()
         MavenProject previousProject = superProject;
 
         Model previous = superProject.getModel();
 
-        for ( Iterator i = lineage.iterator(); i.hasNext(); )
-        {
+        for (Iterator i = lineage.iterator(); i.hasNext();) {
             MavenProject currentProject = (MavenProject) i.next();
 
             Model current = currentProject.getModel();
 
             String pathAdjustment = null;
 
-            try
-            {
-                pathAdjustment = previousProject.getModulePathAdjustment( currentProject );
+            try {
+                pathAdjustment = previousProject.getModulePathAdjustment(currentProject);
             }
-            catch ( IOException e )
-            {
+            catch (IOException e) {
                 getLogger().debug(
-                    "Cannot determine whether " + currentProject.getId() + " is a module of " + previousProject.getId() + ". Reason: " + e.getMessage(),
-                    e );
+                        "Cannot determine whether " + currentProject.getId() + " is a module of " + previousProject.getId() + ". Reason: " + e.getMessage(),
+                        e);
             }
 
-            modelInheritanceAssembler.assembleModelInheritance( current, previous, pathAdjustment );
+            modelInheritanceAssembler.assembleModelInheritance(current, previous, pathAdjustment);
 
             previous = current;
             previousProject = currentProject;
         }
 
         // only add the super repository if it wasn't overridden by a profile or project
-        List repositories = new ArrayList( aggregatedRemoteWagonRepositories );
+        List repositories = new ArrayList(aggregatedRemoteWagonRepositories);
 
-        List superRepositories = repositoryHelper.buildArtifactRepositories( getSuperModel() );
+        List superRepositories = repositoryHelper.buildArtifactRepositories(getSuperModel());
 
-        for ( Iterator i = superRepositories.iterator(); i.hasNext(); )
-        {
+        for (Iterator i = superRepositories.iterator(); i.hasNext();) {
             ArtifactRepository repository = (ArtifactRepository) i.next();
 
-            if ( !repositories.contains( repository ) )
-            {
-                repositories.add( repository );
+            if (!repositories.contains(repository)) {
+                repositories.add(repository);
             }
         }
 
         // merge any duplicated plugin definitions together, using the first appearance as the dominant one.
-        ModelUtils.mergeDuplicatePluginDefinitions( project.getModel().getBuild() );
+        ModelUtils.mergeDuplicatePluginDefinitions(project.getModel().getBuild());
 
-        try
-        {
-            project = processProjectLogic( project, projectDescriptor, config);
+        try {
+            project = processProjectLogic(project, projectDescriptor, config);
         }
-        catch ( ModelInterpolationException e )
-        {
-            throw new InvalidProjectModelException( projectId, e.getMessage(), projectDescriptor, e );
+        catch (ModelInterpolationException e) {
+            throw new InvalidProjectModelException(projectId, e.getMessage(), projectDescriptor, e);
         }
-        catch ( InvalidRepositoryException e )
-        {
-            throw new InvalidProjectModelException( projectId, e.getMessage(), projectDescriptor, e );
+        catch (InvalidRepositoryException e) {
+            throw new InvalidProjectModelException(projectId, e.getMessage(), projectDescriptor, e);
         }
 
-        if ( fromSourceTree )
-        {
+        if (fromSourceTree) {
             Build build = project.getBuild();
 
             // NOTE: setting this script-source root before path translation, because
             // the plugin tools compose basedir and scriptSourceRoot into a single file.
-            project.addScriptSourceRoot( build.getScriptSourceDirectory() );
+            project.addScriptSourceRoot(build.getScriptSourceDirectory());
 
-            project.addCompileSourceRoot( build.getSourceDirectory() );
+            project.addCompileSourceRoot(build.getSourceDirectory());
 
-            project.addTestCompileSourceRoot( build.getTestSourceDirectory() );
+            project.addTestCompileSourceRoot(build.getTestSourceDirectory());
 
             // Only track the file of a POM in the source tree
-            project.setFile( projectDescriptor );
+            project.setFile(projectDescriptor);
         }
 
-        projectWorkspace.storeProjectByCoordinate( project );
-        projectWorkspace.storeProjectByFile( project );
+        projectWorkspace.storeProjectByCoordinate(project);
+        projectWorkspace.storeProjectByFile(project);
 
         return project;
-    }
-
-
-    private String safeVersionlessKey( String groupId,
-                                       String artifactId )
-    {
-        String gid = groupId;
-
-        if ( StringUtils.isEmpty( gid ) )
-        {
-            gid = "unknown";
-        }
-
-        String aid = artifactId;
-
-        if ( StringUtils.isEmpty( aid ) )
-        {
-            aid = "unknown";
-        }
-
-        return ArtifactUtils.versionlessKey( gid, aid );
     }
 
     /**
@@ -591,29 +538,27 @@ public class DefaultMavenProjectBuilder
                                              File pomFile,
                                              ProjectBuilderConfiguration config
     )
-        throws ProjectBuildingException, ModelInterpolationException, InvalidRepositoryException
-    {
+            throws ProjectBuildingException, ModelInterpolationException, InvalidRepositoryException {
         Model model = project.getModel();
 
         List activeProfiles = project.getActiveProfiles();
 
         File projectDir = null;
 
-        if ( pomFile != null )
-        {
+        if (pomFile != null) {
             projectDir = pomFile.getAbsoluteFile().getParentFile();
         }
 
         Build dynamicBuild = model.getBuild();
-        model.setBuild( ModelUtils.cloneBuild( dynamicBuild ) );
+        model.setBuild(ModelUtils.cloneBuild(dynamicBuild));
 
-        model = modelInterpolator.interpolate( model, projectDir, config, getLogger().isDebugEnabled() );
+        model = modelInterpolator.interpolate(model, projectDir, config, getLogger().isDebugEnabled());
 
-        mergeDeterministicBuildElements( model.getBuild(), dynamicBuild );
-        model.setBuild( dynamicBuild );
+        mergeDeterministicBuildElements(model.getBuild(), dynamicBuild);
+        model.setBuild(dynamicBuild);
 
         // interpolation is before injection, because interpolation is off-limits in the injected variables
-        modelDefaultsInjector.injectDefaults( model );
+        modelDefaultsInjector.injectDefaults(model);
 
         MavenProject parentProject = project.getParent();
 
@@ -622,59 +567,52 @@ public class DefaultMavenProjectBuilder
         Artifact parentArtifact = project.getParentArtifact();
 
         // We will return a different project object using the new model (hence the need to return a project, not just modify the parameter)
-        project = new MavenProject( model, artifactFactory );
+        project = new MavenProject(model, artifactFactory);
 
-        project.setOriginalModel( originalModel );
+        project.setOriginalModel(originalModel);
 
-        project.setActiveProfiles( activeProfiles );
+        project.setActiveProfiles(activeProfiles);
 
         // TODO: such a call in MavenMetadataSource too - packaging not really the intention of type
         // TODO: maybe not strictly correct, while we should enfore that packaging has a type handler of the same id, we don't
-        Artifact projectArtifact = artifactFactory.createBuildArtifact( project.getGroupId(), project.getArtifactId(),
-            project.getVersion(), project.getPackaging() );
-        project.setArtifact( projectArtifact );
+        Artifact projectArtifact = artifactFactory.createBuildArtifact(project.getGroupId(), project.getArtifactId(),
+                project.getVersion(), project.getPackaging());
+        project.setArtifact(projectArtifact);
 
         DistributionManagement dm = model.getDistributionManagement();
 
-        if ( dm != null )
-        {
-            ArtifactRepository repo = mavenTools.buildDeploymentArtifactRepository( dm.getRepository() );
-            project.setReleaseArtifactRepository( repo );
+        if (dm != null) {
+            ArtifactRepository repo = mavenTools.buildDeploymentArtifactRepository(dm.getRepository());
+            project.setReleaseArtifactRepository(repo);
 
-            if ( dm.getSnapshotRepository() != null )
-            {
-                repo = mavenTools.buildDeploymentArtifactRepository( dm.getSnapshotRepository() );
-                project.setSnapshotArtifactRepository( repo );
+            if (dm.getSnapshotRepository() != null) {
+                repo = mavenTools.buildDeploymentArtifactRepository(dm.getSnapshotRepository());
+                project.setSnapshotArtifactRepository(repo);
             }
         }
 
-        project.setParent( parentProject );
+        project.setParent(parentProject);
 
-        if ( parentProject != null )
-        {
-            project.setParentArtifact( parentArtifact );
+        if (parentProject != null) {
+            project.setParentArtifact(parentArtifact);
         }
 
-        validateModel( model, pomFile );
+        validateModel(model, pomFile);
 
-        try
-        {
+        try {
             LinkedHashSet repoSet = new LinkedHashSet();
-            if ( ( model.getRepositories() != null ) && !model.getRepositories().isEmpty() )
-            {
-                repoSet.addAll( model.getRepositories() );
+            if ((model.getRepositories() != null) && !model.getRepositories().isEmpty()) {
+                repoSet.addAll(model.getRepositories());
             }
 
-            if ( ( model.getPluginRepositories() != null ) && !model.getPluginRepositories().isEmpty() )
-            {
-                repoSet.addAll( model.getPluginRepositories() );
+            if ((model.getPluginRepositories() != null) && !model.getPluginRepositories().isEmpty()) {
+                repoSet.addAll(model.getPluginRepositories());
             }
 
             project.setRemoteArtifactRepositories(
-                                                  mavenTools.buildArtifactRepositories( new ArrayList( repoSet ) ) );
+                    mavenTools.buildArtifactRepositories(new ArrayList(repoSet)));
         }
-        catch( Exception e )
-        {
+        catch (Exception e) {
             e.printStackTrace();
         }
 
@@ -683,68 +621,49 @@ public class DefaultMavenProjectBuilder
 
     // TODO: Remove this!
     @SuppressWarnings("unchecked")
-    private void mergeDeterministicBuildElements( Build interpolatedBuild,
-                                                  Build dynamicBuild )
-    {
+    private void mergeDeterministicBuildElements(Build interpolatedBuild,
+                                                 Build dynamicBuild) {
         List<Plugin> dPlugins = dynamicBuild.getPlugins();
 
-        if ( dPlugins != null )
-        {
+        if (dPlugins != null) {
             List<Plugin> iPlugins = interpolatedBuild.getPlugins();
 
-            for ( int i = 0; i < dPlugins.size(); i++ )
-            {
-                Plugin dPlugin = dPlugins.get( i );
-                Plugin iPlugin = iPlugins.get( i );
+            for (int i = 0; i < dPlugins.size(); i++) {
+                Plugin dPlugin = dPlugins.get(i);
+                Plugin iPlugin = iPlugins.get(i);
 
-                dPlugin.setGroupId( iPlugin.getGroupId() );
-                dPlugin.setArtifactId( iPlugin.getArtifactId() );
-                dPlugin.setVersion( iPlugin.getVersion() );
-                
-                dPlugin.setDependencies( iPlugin.getDependencies() );
+                dPlugin.setGroupId(iPlugin.getGroupId());
+                dPlugin.setArtifactId(iPlugin.getArtifactId());
+                dPlugin.setVersion(iPlugin.getVersion());
+
+                dPlugin.setDependencies(iPlugin.getDependencies());
             }
         }
 
         PluginManagement dPluginMgmt = dynamicBuild.getPluginManagement();
 
-        if ( dPluginMgmt != null )
-        {
+        if (dPluginMgmt != null) {
             PluginManagement iPluginMgmt = interpolatedBuild.getPluginManagement();
             dPlugins = dPluginMgmt.getPlugins();
-            if ( dPlugins != null )
-            {
+            if (dPlugins != null) {
                 List<Plugin> iPlugins = iPluginMgmt.getPlugins();
 
-                for ( int i = 0; i < dPlugins.size(); i++ )
-                {
-                    Plugin dPlugin = dPlugins.get( i );
-                    Plugin iPlugin = iPlugins.get( i );
+                for (int i = 0; i < dPlugins.size(); i++) {
+                    Plugin dPlugin = dPlugins.get(i);
+                    Plugin iPlugin = iPlugins.get(i);
 
-                    dPlugin.setGroupId( iPlugin.getGroupId() );
-                    dPlugin.setArtifactId( iPlugin.getArtifactId() );
-                    dPlugin.setVersion( iPlugin.getVersion() );
-                    
-                    dPlugin.setDependencies( iPlugin.getDependencies() );
+                    dPlugin.setGroupId(iPlugin.getGroupId());
+                    dPlugin.setArtifactId(iPlugin.getArtifactId());
+                    dPlugin.setVersion(iPlugin.getVersion());
+
+                    dPlugin.setDependencies(iPlugin.getDependencies());
                 }
             }
         }
 
-        if ( dynamicBuild.getExtensions() != null )
-        {
-            dynamicBuild.setExtensions( interpolatedBuild.getExtensions() );
+        if (dynamicBuild.getExtensions() != null) {
+            dynamicBuild.setExtensions(interpolatedBuild.getExtensions());
         }
-    }
-
-    public void calculateConcreteState( MavenProject project, ProjectBuilderConfiguration config )
-        throws ModelInterpolationException
-    {
-        new MavenProjectRestorer(pathTranslator, modelInterpolator, getLogger()).calculateConcreteState(project, config);
-    }
-
-    public void restoreDynamicState( MavenProject project, ProjectBuilderConfiguration config )
-        throws ModelInterpolationException
-    {
-        new MavenProjectRestorer(pathTranslator, modelInterpolator, getLogger()).restoreDynamicState(project, config);
     }
 
     /**
@@ -753,189 +672,165 @@ public class DefaultMavenProjectBuilder
      * @todo We need to find an effective way to unit test parts of this method!
      * @todo Refactor this into smaller methods with discrete purposes.
      */
-    private MavenProject assembleLineage( Model model,
-                                          LinkedList lineage,
-                                          ProjectBuilderConfiguration config,
-                                          File pomFile,
-                                          Set aggregatedRemoteWagonRepositories,
-                                          boolean strict,
-                                          boolean isReactorProject )
-        throws ProjectBuildingException, InvalidRepositoryException
-    {
+    private MavenProject assembleLineage(Model model,
+                                         LinkedList lineage,
+                                         ProjectBuilderConfiguration config,
+                                         File pomFile,
+                                         Set aggregatedRemoteWagonRepositories,
+                                         boolean strict,
+                                         boolean isReactorProject)
+            throws ProjectBuildingException, InvalidRepositoryException {
         ModelLineage modelLineage = new DefaultModelLineage();
 
-        modelLineage.setOrigin( model, pomFile, new ArrayList( aggregatedRemoteWagonRepositories ), isReactorProject );
+        modelLineage.setOrigin(model, pomFile, new ArrayList(aggregatedRemoteWagonRepositories), isReactorProject);
 
-        modelLineageBuilder.resumeBuildingModelLineage( modelLineage, config, !strict, isReactorProject );
+        modelLineageBuilder.resumeBuildingModelLineage(modelLineage, config, !strict, isReactorProject);
 
         // FIXME: Find a way to pass in this context, so it's never null!
         ProfileActivationContext profileActivationContext;
         ProfileManager externalProfileManager = config.getGlobalProfileManager();
 
-        if ( externalProfileManager != null )
-        {
+        if (externalProfileManager != null) {
             profileActivationContext = externalProfileManager.getProfileActivationContext();
-        }
-        else
-        {
-            profileActivationContext = new DefaultProfileActivationContext( config.getExecutionProperties(), false );
+        } else {
+            profileActivationContext = new DefaultProfileActivationContext(config.getExecutionProperties(), false);
         }
 
         MavenProject lastProject = null;
-        for ( ModelLineageIterator it = modelLineage.lineageIterator(); it.hasNext(); )
-        {
+        for (ModelLineageIterator it = modelLineage.lineageIterator(); it.hasNext();) {
             Model currentModel = (Model) it.next();
 
             File currentPom = it.getPOMFile();
 
-            MavenProject project = new MavenProject( currentModel, artifactFactory );
-            project.setFile( currentPom );
+            MavenProject project = new MavenProject(currentModel, artifactFactory);
+            project.setFile(currentPom);
 
-            if ( lastProject != null )
-            {
+            if (lastProject != null) {
                 // TODO: Use cached parent project here, and stop looping, if possible...
-                lastProject.setParent( project );
+                lastProject.setParent(project);
                 project = lastProject.getParent();
 
-                lastProject.setParentArtifact( artifactFactory.createParentArtifact( project.getGroupId(), project
-                    .getArtifactId(), project.getVersion() ) );
+                lastProject.setParentArtifact(artifactFactory.createParentArtifact(project.getGroupId(), project
+                        .getArtifactId(), project.getVersion()));
             }
 
             // NOTE: the caching aspect may replace the parent project instance, so we apply profiles here.
             // TODO: Review this...is that a good idea, to allow application of profiles when other profiles could have been applied already?
-            project.setActiveProfiles( profileAdvisor.applyActivatedProfiles( project.getModel(), project.getFile(), isReactorProject, profileActivationContext ) );
+            project.setActiveProfiles(profileAdvisor.applyActivatedProfiles(project.getModel(), project.getFile(), isReactorProject, profileActivationContext));
 
-            lineage.addFirst( project );
+            lineage.addFirst(project);
 
             lastProject = project;
         }
 
         MavenProject result = (MavenProject) lineage.getLast();
 
-        if ( externalProfileManager != null )
-        {
+        if (externalProfileManager != null) {
             LinkedHashSet active = new LinkedHashSet();
 
             List existingActiveProfiles = result.getActiveProfiles();
-            if ( ( existingActiveProfiles != null ) && !existingActiveProfiles.isEmpty() )
-            {
-                active.addAll( existingActiveProfiles );
+            if ((existingActiveProfiles != null) && !existingActiveProfiles.isEmpty()) {
+                active.addAll(existingActiveProfiles);
             }
 
-            profileAdvisor.applyActivatedExternalProfiles( result.getModel(), pomFile, externalProfileManager );
+            profileAdvisor.applyActivatedExternalProfiles(result.getModel(), pomFile, externalProfileManager);
         }
 
         return result;
     }
 
-
-    private void checkModelVersion( String modelSource,
-                                    String projectId,
-                                    File file )
-        throws InvalidProjectModelException
-    {
-        if ( modelSource.indexOf( "<modelVersion>" + MAVEN_MODEL_VERSION ) < 0 )
-        {
-            throw new InvalidProjectModelException( projectId, "Not a v" + MAVEN_MODEL_VERSION + " POM.", file );
-        }
-    }
-
-    // ----------------------------------------------------------------------
-    //
-    // ----------------------------------------------------------------------
-
     private Model superModel;
 
     private Model getSuperModel()
-        throws ProjectBuildingException
-    {
-        if ( superModel != null )
-        {
+            throws ProjectBuildingException {
+        if (superModel != null) {
             return superModel;
         }
 
-        URL url = DefaultMavenProjectBuilder.class.getResource( "pom-" + MAVEN_MODEL_VERSION + ".xml" );
+        URL url = DefaultMavenProjectBuilder.class.getResource("pom-" + MAVEN_MODEL_VERSION + ".xml");
 
-        String projectId = safeVersionlessKey( STANDALONE_SUPERPOM_GROUPID, STANDALONE_SUPERPOM_ARTIFACTID );
+        String projectId = safeVersionlessKey(STANDALONE_SUPERPOM_GROUPID, STANDALONE_SUPERPOM_ARTIFACTID);
 
         Reader reader = null;
-        try
-        {
-            reader = ReaderFactory.newXmlReader( url.openStream() );
-            String modelSource = IOUtil.toString( reader );
+        try {
+            reader = ReaderFactory.newXmlReader(url.openStream());
+            String modelSource = IOUtil.toString(reader);
 
-            checkModelVersion( modelSource, projectId, null );
+            if (modelSource.indexOf("<modelVersion>" + MAVEN_MODEL_VERSION) < 0) {
+                throw new InvalidProjectModelException(projectId, "Not a v" + MAVEN_MODEL_VERSION + " POM.", new File("."));
+            }
 
-            StringReader sReader = new StringReader( modelSource );
+            StringReader sReader = new StringReader(modelSource);
 
-            superModel = modelReader.read( sReader, STRICT_MODEL_PARSING );
+            superModel = modelReader.read(sReader, STRICT_MODEL_PARSING);
             return superModel;
         }
-        catch ( XmlPullParserException e )
-        {
-            throw new InvalidProjectModelException( projectId, "Parse error reading POM. Reason: " + e.getMessage(), e );
+        catch (XmlPullParserException e) {
+            throw new InvalidProjectModelException(projectId, "Parse error reading POM. Reason: " + e.getMessage(), e);
         }
-        catch ( IOException e )
-        {
-            throw new ProjectBuildingException( projectId, "Failed build model from URL \'" + url.toExternalForm() +
-                "\'\nError: \'" + e.getLocalizedMessage() + "\'", e );
+        catch (IOException e) {
+            throw new ProjectBuildingException(projectId, "Failed build model from URL \'" + url.toExternalForm() +
+                    "\'\nError: \'" + e.getLocalizedMessage() + "\'", e);
         }
-        finally
-        {
-            IOUtil.close( reader );
+        finally {
+            IOUtil.close(reader);
         }
     }
 
-    protected Logger getLogger()
-    {
-        return logger;
+    private Model readModelFromLocalPath(String projectId,
+                                         File projectDescriptor,
+                                         PomArtifactResolver resolver)
+            throws ProjectBuildingException {
+        if (projectDescriptor == null) {
+            throw new IllegalArgumentException("projectDescriptor: null, Project Id =" + projectId);
+        }
+
+        if (projectBuilder == null) {
+            throw new IllegalArgumentException("projectBuilder: not initialized");
+        }
+
+        MavenProject mavenProject;
+        try {
+            mavenProject = projectBuilder.buildFromLocalPath(new FileInputStream(projectDescriptor),
+                    null, null, null, resolver,
+                    projectDescriptor.getParentFile());
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new ProjectBuildingException(projectId, "File = " + projectDescriptor.getAbsolutePath(), e);
+        }
+
+        return mavenProject.getModel();
+
     }
 
-    public void enableLogging( Logger logger )
-    {
-        this.logger = logger;
-    }
-
-    private Model readModelFromLocalPath( String projectId,
-                            File projectDescriptor,
-                            PomArtifactResolver resolver )
-       throws ProjectBuildingException
-   {
-       if(projectDescriptor == null) {
-           throw new IllegalArgumentException("projectDescriptor: null, Project Id =" + projectId);
-       }
-
-       if(projectBuilder == null) {
-           throw new IllegalArgumentException("projectBuilder: not initialized");
-       }
-
-       MavenProject mavenProject;
-       try {
-           mavenProject = projectBuilder.buildFromLocalPath(new FileInputStream(projectDescriptor),
-                   null, null, null, resolver,
-                   projectDescriptor.getParentFile());
-       } catch (IOException e) {
-           e.printStackTrace();
-           throw new ProjectBuildingException(projectId, "File = " + projectDescriptor.getAbsolutePath() , e);
-       }
-
-      return mavenProject.getModel();
-
-   }
-
-    private void validateModel( Model model,
-                                File pomFile )
-        throws InvalidProjectModelException
-    {
+    private void validateModel(Model model,
+                               File pomFile)
+            throws InvalidProjectModelException {
         // Must validate before artifact construction to make sure dependencies are good
-        ModelValidationResult validationResult = validator.validate( model );
+        ModelValidationResult validationResult = validator.validate(model);
 
-        String projectId = safeVersionlessKey( model.getGroupId(), model.getArtifactId() );
+        String projectId = safeVersionlessKey(model.getGroupId(), model.getArtifactId());
 
-        if ( validationResult.getMessageCount() > 0 )
-        {
-            throw new InvalidProjectModelException( projectId, "Failed to validate POM", pomFile,
-                validationResult );
+        if (validationResult.getMessageCount() > 0) {
+            throw new InvalidProjectModelException(projectId, "Failed to validate POM", pomFile,
+                    validationResult);
         }
+    }
+
+    private static String safeVersionlessKey(String groupId,
+                                      String artifactId) {
+        String gid = groupId;
+
+        if (StringUtils.isEmpty(gid)) {
+            gid = "unknown";
+        }
+
+        String aid = artifactId;
+
+        if (StringUtils.isEmpty(aid)) {
+            aid = "unknown";
+        }
+
+        return ArtifactUtils.versionlessKey(gid, aid);
     }
 }
