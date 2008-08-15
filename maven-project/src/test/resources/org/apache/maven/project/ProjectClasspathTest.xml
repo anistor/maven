@@ -19,6 +19,27 @@ under the License.
 
 <plexus>
   <components>
+<!--Eliminate this component after Mercury Integration-->
+    <component>
+      <role>org.apache.maven.project.RepositoryHelper</role>
+      <implementation>org.apache.maven.project.DefaultRepositoryHelper</implementation>
+      <requirements>
+        <requirement>
+          <role>org.apache.maven.profiles.build.ProfileAdvisor</role>
+          <role-hint>default</role-hint>
+        </requirement>
+        <requirement>
+          <role>org.apache.maven.artifact.factory.ArtifactFactory</role>
+        </requirement>
+        <requirement>
+          <role>org.apache.maven.artifact.resolver.ArtifactResolver</role>
+          <role-hint>default</role-hint>
+        </requirement>
+        <requirement>
+          <role>org.apache.maven.MavenTools</role>
+        </requirement>
+      </requirements>
+    </component>       
     <!-- Due to PLX-108, have to work around it...
     <component>
       <role>org.apache.maven.artifact.ArtifactResolver</role>
@@ -91,8 +112,11 @@ under the License.
       <implementation>org.apache.maven.project.TestProjectBuilder</implementation>
       <requirements>
         <requirement>
-             <role>org.apache.maven.project.builder.ProjectBuilder</role>
+             <role>org.apache.maven.project.RepositoryHelper</role>
         </requirement>          
+        <requirement>
+             <role>org.apache.maven.project.builder.ProjectBuilder</role>
+        </requirement>
         <requirement>
           <role>org.apache.maven.project.workspace.ProjectWorkspace</role>
         </requirement>

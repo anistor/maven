@@ -21,30 +21,23 @@ package org.apache.maven.project;
 
 import org.apache.maven.MavenTools;
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.ArtifactStatus;
 import org.apache.maven.artifact.ArtifactUtils;
 import org.apache.maven.artifact.InvalidRepositoryException;
 import org.apache.maven.artifact.factory.ArtifactFactory;
 import org.apache.maven.artifact.metadata.ArtifactMetadataSource;
 import org.apache.maven.artifact.repository.ArtifactRepository;
-import org.apache.maven.artifact.repository.ArtifactRepositoryPolicy;
-import org.apache.maven.artifact.resolver.ArtifactNotFoundException;
-import org.apache.maven.artifact.resolver.ArtifactResolutionException;
 import org.apache.maven.artifact.resolver.ArtifactResolutionRequest;
 import org.apache.maven.artifact.resolver.ArtifactResolutionResult;
 import org.apache.maven.artifact.resolver.ArtifactResolver;
 import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException;
 import org.apache.maven.artifact.versioning.VersionRange;
 import org.apache.maven.model.Build;
-import org.apache.maven.model.Dependency;
-import org.apache.maven.model.DependencyManagement;
 import org.apache.maven.model.DistributionManagement;
 import org.apache.maven.model.Extension;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.model.PluginManagement;
 import org.apache.maven.model.ReportPlugin;
-import org.apache.maven.model.Repository;
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
 import org.apache.maven.profiles.MavenProfilesBuilder;
 import org.apache.maven.profiles.ProfileManager;
@@ -151,6 +144,8 @@ public class DefaultMavenProjectBuilder
 
     private ProjectBuilder projectBuilder;
 
+    private RepositoryHelper repositoryHelper;
+
     //DO NOT USE, it is here only for backward compatibility reasons. The existing
     // maven-assembly-plugin (2.2-beta-1) is accessing it via reflection.
 
@@ -213,7 +208,7 @@ public class DefaultMavenProjectBuilder
 
         if ( project == null )
         {
-            Model model = findModelFromRepository( artifact, remoteArtifactRepositories, localRepository );
+            Model model = repositoryHelper.findModelFromRepository( artifact, remoteArtifactRepositories, localRepository );
 
             ProjectBuilderConfiguration config = new DefaultProjectBuilderConfiguration().setLocalRepository( localRepository );
 
@@ -279,7 +274,7 @@ public class DefaultMavenProjectBuilder
 
         try
         {
-            processProjectLogic( project, null, config, null, true, true );
+            processProjectLogic( project, null, config);
 
             project.setRemoteArtifactRepositories( mavenTools.buildArtifactRepositories( superModel.getRepositories() ) );
             project.setPluginArtifactRepositories( mavenTools.buildArtifactRepositories( superModel.getRepositories() ) );
@@ -390,177 +385,16 @@ public class DefaultMavenProjectBuilder
         if ( project == null )
         {
             Model model = readModelFromLocalPath( "unknown", projectDescriptor, new PomArtifactResolver(config.getLocalRepository(),
-                    buildArtifactRepositories( getSuperModel() ), artifactResolver) );
+                    repositoryHelper.buildArtifactRepositories( getSuperModel() ), artifactResolver) );
             project = buildInternal(model,
                 config,
-                buildArtifactRepositories( getSuperModel() ),
+                repositoryHelper.buildArtifactRepositories( getSuperModel() ),
                 projectDescriptor,
                 STRICT_MODEL_PARSING,
                 true,
                 true );
         }
         return project;
-    }
-
-    private Model findModelFromRepository( Artifact artifact,
-                                           List remoteArtifactRepositories,
-                                           ArtifactRepository localRepository )
-        throws ProjectBuildingException
-    {
-
-        String projectId = safeVersionlessKey( artifact.getGroupId(), artifact.getArtifactId() );
-        remoteArtifactRepositories = normalizeToArtifactRepositories( remoteArtifactRepositories, projectId );
-
-        Artifact projectArtifact;
-
-        // if the artifact is not a POM, we need to construct a POM artifact based on the artifact parameter given.
-        if ( "pom".equals( artifact.getType() ) )
-        {
-            projectArtifact = artifact;
-        }
-        else
-        {
-            getLogger().warn( "Attempting to build MavenProject instance for Artifact (" + artifact.getGroupId() + ":"
-             + artifact.getArtifactId() + ":" + artifact.getVersion() + ") of type: "
-             + artifact.getType() + "; constructing POM artifact instead." );
-
-            projectArtifact = artifactFactory.createProjectArtifact( artifact.getGroupId(),
-                artifact.getArtifactId(),
-                artifact.getVersion(),
-                artifact.getScope() );
-        }
-
-        Model legacy_model;
-        try
-        {
-            artifactResolver.resolve( projectArtifact, remoteArtifactRepositories, localRepository );
-
-            File file = projectArtifact.getFile();
-
-            legacy_model = readModelLegacy( projectId, file, STRICT_MODEL_PARSING );
-
-            String downloadUrl = null;
-
-            ArtifactStatus status = ArtifactStatus.NONE;
-
-            DistributionManagement distributionManagement = legacy_model.getDistributionManagement();
-
-            if ( distributionManagement != null )
-            {
-                downloadUrl = distributionManagement.getDownloadUrl();
-
-                status = ArtifactStatus.valueOf( distributionManagement.getStatus() );
-            }
-
-            checkStatusAndUpdate( projectArtifact, status, file, remoteArtifactRepositories, localRepository );
-
-            // TODO: this is gross. Would like to give it the whole model, but maven-artifact shouldn't depend on that
-            // Can a maven-core implementation of the Artifact interface store it, and be used in the exceptions?
-            if ( downloadUrl != null )
-            {
-                projectArtifact.setDownloadUrl( downloadUrl );
-            }
-            else
-            {
-                projectArtifact.setDownloadUrl( legacy_model.getUrl() );
-            }
-        }
-        catch ( ArtifactResolutionException e )
-        {
-            throw new ProjectBuildingException( projectId, "Error getting POM for '" + projectId + "' from the repository: " + e.getMessage(), e );
-        }
-        catch ( ArtifactNotFoundException e )
-        {
-            throw new ProjectBuildingException( projectId, "POM '" + projectId + "' not found in repository: " + e.getMessage(), e );
-        }
-
-        return legacy_model;
-    }
-
-    private List normalizeToArtifactRepositories( List remoteArtifactRepositories,
-                                                  String projectId )
-        throws ProjectBuildingException
-    {
-        List normalized = new ArrayList( remoteArtifactRepositories.size() );
-
-        boolean normalizationNeeded = false;
-        for ( Iterator it = remoteArtifactRepositories.iterator(); it.hasNext(); )
-        {
-            Object item = it.next();
-
-            if ( item instanceof ArtifactRepository )
-            {
-                normalized.add( item );
-            }
-            else if ( item instanceof Repository )
-            {
-                Repository repo = (Repository) item;
-                try
-                {
-                    item = mavenTools.buildArtifactRepository( repo );
-
-                    normalized.add( item );
-                    normalizationNeeded = true;
-                }
-                catch ( InvalidRepositoryException e )
-                {
-                    throw new ProjectBuildingException( projectId, "Error building artifact repository for id: " + repo.getId(), e );
-                }
-            }
-            else
-            {
-                throw new ProjectBuildingException( projectId, "Error building artifact repository from non-repository information item: " + item );
-            }
-        }
-
-        if ( normalizationNeeded )
-        {
-            return normalized;
-        }
-        else
-        {
-            return remoteArtifactRepositories;
-        }
-    }
-
-    private void checkStatusAndUpdate( Artifact projectArtifact,
-                                       ArtifactStatus status,
-                                       File file,
-                                       List remoteArtifactRepositories,
-                                       ArtifactRepository localRepository )
-        throws ArtifactNotFoundException
-    {
-        // TODO: configurable actions dependant on status
-        if ( !projectArtifact.isSnapshot() && ( status.compareTo( ArtifactStatus.DEPLOYED ) < 0 ) )
-        {
-            // use default policy (enabled, daily update, warn on bad checksum)
-            ArtifactRepositoryPolicy policy = new ArtifactRepositoryPolicy();
-            // TODO: re-enable [MNG-798/865]
-            policy.setUpdatePolicy( ArtifactRepositoryPolicy.UPDATE_POLICY_NEVER );
-
-            if ( policy.checkOutOfDate( new Date( file.lastModified() ) ) )
-            {
-                getLogger().info(
-                    projectArtifact.getArtifactId() + ": updating metadata due to status of '" + status + "'" );
-                try
-                {
-                    projectArtifact.setResolved( false );
-                    artifactResolver.resolveAlways( projectArtifact, remoteArtifactRepositories, localRepository );
-                }
-                catch ( ArtifactResolutionException e )
-                {
-                    getLogger().warn( "Error updating POM - using existing version" );
-                    getLogger().debug( "Cause", e );
-                }
-                catch ( ArtifactNotFoundException e )
-                {
-                    getLogger().warn( "Error updating POM - not found. Removing local copy." );
-                    getLogger().debug( "Cause", e );
-                    file.delete();
-                    throw e;
-                }
-            }
-        }
     }
 
     // jvz:note
@@ -575,9 +409,8 @@ public class DefaultMavenProjectBuilder
                                         boolean fromSourceTree )
         throws ProjectBuildingException
     {
-        Model superModel = getSuperModel();
 
-        MavenProject superProject = new MavenProject( superModel, artifactFactory );
+        MavenProject superProject = new MavenProject( getSuperModel(), artifactFactory );
 
         String projectId = safeVersionlessKey( model.getGroupId(), model.getArtifactId() );
 
@@ -605,13 +438,13 @@ public class DefaultMavenProjectBuilder
         }
 
         LinkedHashSet activeInSuperPom = new LinkedHashSet();
-        List activated = profileAdvisor.applyActivatedProfiles( superModel, projectDescriptor, isReactorProject, profileActivationContext );
+        List activated = profileAdvisor.applyActivatedProfiles( getSuperModel(), projectDescriptor, isReactorProject, profileActivationContext );
         if ( !activated.isEmpty() )
         {
             activeInSuperPom.addAll( activated );
         }
 
-        activated = profileAdvisor.applyActivatedExternalProfiles( superModel, projectDescriptor, externalProfileManager );
+        activated = profileAdvisor.applyActivatedExternalProfiles( getSuperModel(), projectDescriptor, externalProfileManager );
         if ( !activated.isEmpty() )
         {
             activeInSuperPom.addAll( activated );
@@ -622,7 +455,7 @@ public class DefaultMavenProjectBuilder
         //noinspection CollectionDeclaredAsConcreteClass
         LinkedList lineage = new LinkedList();
 
-        LinkedHashSet aggregatedRemoteWagonRepositories = collectInitialRepositories( model, superModel,
+        LinkedHashSet aggregatedRemoteWagonRepositories = repositoryHelper.collectInitialRepositories( model, getSuperModel(),
             parentSearchRepositories,
             projectDescriptor,
             isReactorProject,
@@ -676,7 +509,7 @@ public class DefaultMavenProjectBuilder
         // only add the super repository if it wasn't overridden by a profile or project
         List repositories = new ArrayList( aggregatedRemoteWagonRepositories );
 
-        List superRepositories = buildArtifactRepositories( superModel );
+        List superRepositories = repositoryHelper.buildArtifactRepositories( getSuperModel() );
 
         for ( Iterator i = superRepositories.iterator(); i.hasNext(); )
         {
@@ -693,7 +526,7 @@ public class DefaultMavenProjectBuilder
 
         try
         {
-            project = processProjectLogic( project, projectDescriptor, config, repositories, strict, false );
+            project = processProjectLogic( project, projectDescriptor, config);
         }
         catch ( ModelInterpolationException e )
         {
@@ -726,67 +559,6 @@ public class DefaultMavenProjectBuilder
         return project;
     }
 
-    /*
-     * Order is:
-     *
-     * 1. model profile repositories
-     * 2. model repositories
-     * 3. superModel profile repositories
-     * 4. superModel repositories
-     * 5. parentSearchRepositories
-     */
-    private LinkedHashSet collectInitialRepositories( Model model,
-                                                      Model superModel,
-                                                      List parentSearchRepositories,
-                                                      File pomFile,
-                                                      boolean validProfilesXmlLocation,
-                                                      ProfileActivationContext profileActivationContext )
-        throws ProjectBuildingException
-    {
-        LinkedHashSet collected = new LinkedHashSet();
-
-        collectInitialRepositoriesFromModel( collected, model, pomFile, validProfilesXmlLocation, profileActivationContext );
-
-        collectInitialRepositoriesFromModel( collected, superModel, null, validProfilesXmlLocation, profileActivationContext );
-
-        if ( ( parentSearchRepositories != null ) && !parentSearchRepositories.isEmpty() )
-        {
-            collected.addAll( parentSearchRepositories );
-        }
-
-        return collected;
-    }
-
-    private void collectInitialRepositoriesFromModel( LinkedHashSet collected,
-                                                      Model model,
-                                                      File pomFile,
-                                                      boolean validProfilesXmlLocation,
-                                                      ProfileActivationContext profileActivationContext )
-        throws ProjectBuildingException
-    {
-        Set reposFromProfiles = profileAdvisor.getArtifactRepositoriesFromActiveProfiles( model, pomFile, validProfilesXmlLocation, profileActivationContext );
-
-        if ( ( reposFromProfiles != null ) && !reposFromProfiles.isEmpty() )
-        {
-            collected.addAll( reposFromProfiles );
-        }
-
-        List modelRepos = model.getRepositories();
-
-        if ( ( modelRepos != null ) && !modelRepos.isEmpty() )
-        {
-            try
-            {
-                collected.addAll( mavenTools.buildArtifactRepositories( modelRepos ) );
-            }
-            catch ( InvalidRepositoryException e )
-            {
-                throw new ProjectBuildingException( safeVersionlessKey( model.getGroupId(), model.getArtifactId() ),
-                    "Failed to construct ArtifactRepository instances for repositories declared in: " +
-                     model.getId(), e );
-            }
-        }
-    }
 
     private String safeVersionlessKey( String groupId,
                                        String artifactId )
@@ -808,21 +580,6 @@ public class DefaultMavenProjectBuilder
         return ArtifactUtils.versionlessKey( gid, aid );
     }
 
-    private List buildArtifactRepositories( Model model )
-        throws ProjectBuildingException
-    {
-        try
-        {
-            return mavenTools.buildArtifactRepositories( model.getRepositories() );
-        }
-        catch ( InvalidRepositoryException e )
-        {
-            String projectId = safeVersionlessKey( model.getGroupId(), model.getArtifactId() );
-
-            throw new ProjectBuildingException( projectId, e.getMessage(), e );
-        }
-    }
-
     /**
      * @todo can this take in a model instead of a project and still be successful?
      * @todo In fact, does project REALLY need a MavenProject as a parent? Couldn't it have just a wrapper around a
@@ -830,12 +587,10 @@ public class DefaultMavenProjectBuilder
      * the resolved source roots, etc for the parent - that occurs for the parent when it is constructed independently
      * and projects are not cached or reused
      */
-    private MavenProject processProjectLogic( MavenProject project,
-                                              File pomFile,
-                                              ProjectBuilderConfiguration config,
-                                              List remoteRepositories,
-                                              boolean strict,
-                                              boolean isSuperPom )
+    private MavenProject processProjectLogic(MavenProject project,
+                                             File pomFile,
+                                             ProjectBuilderConfiguration config
+    )
         throws ProjectBuildingException, ModelInterpolationException, InvalidRepositoryException
     {
         Model model = project.getModel();
@@ -878,8 +633,6 @@ public class DefaultMavenProjectBuilder
         Artifact projectArtifact = artifactFactory.createBuildArtifact( project.getGroupId(), project.getArtifactId(),
             project.getVersion(), project.getPackaging() );
         project.setArtifact( projectArtifact );
-
-//        project.setPluginArtifactRepositories( mavenTools.buildArtifactRepositories( model.getPluginRepositories() ) );
 
         DistributionManagement dm = model.getDistributionManagement();
 
@@ -1082,48 +835,6 @@ public class DefaultMavenProjectBuilder
     }
 
 
-    private Model readModelLegacy( String projectId,
-                             File file,
-                             boolean strict )
-        throws ProjectBuildingException
-    {
-        Reader reader = null;
-        try
-        {
-            reader = ReaderFactory.newXmlReader( file );
-
-            String modelSource = IOUtil.toString( reader );
-
-            checkModelVersion( modelSource, projectId, file );
-
-            StringReader sReader = new StringReader( modelSource );
-
-            try
-            {
-                return modelReader.read( sReader, strict );
-            }
-            catch ( XmlPullParserException e )
-            {
-                throw new InvalidProjectModelException( projectId, "Parse error reading POM. Reason: " + e.getMessage(),
-                                                        file, e );
-            }
-        }
-        catch ( FileNotFoundException e )
-        {
-            throw new ProjectBuildingException( projectId,
-                "Could not find the model file '" + file.getAbsolutePath() + "'.", file, e );
-        }
-        catch ( IOException e )
-        {
-            throw new ProjectBuildingException( projectId, "Failed to build model from file '" +
-                file.getAbsolutePath() + "'.\nError: \'" + e.getLocalizedMessage() + "\'", file, e );
-        }
-        finally
-        {
-            IOUtil.close( reader );
-        }
-    }
-
     private void checkModelVersion( String modelSource,
                                     String projectId,
                                     File file )
@@ -1133,22 +844,6 @@ public class DefaultMavenProjectBuilder
         {
             throw new InvalidProjectModelException( projectId, "Not a v" + MAVEN_MODEL_VERSION + " POM.", file );
         }
-    }
-
-    /**
-     * @deprecated use {@link #createReportArtifacts(String, List, File)}
-     * @param projectId
-     * @param reports
-     * @param pomLocation absolute path of pom file
-     * @return
-     * @throws ProjectBuildingException
-     */
-    @Deprecated
-    protected Set createReportArtifacts( String projectId,
-                                         List reports, String pomLocation )
-        throws ProjectBuildingException
-    {
-        return createReportArtifacts( projectId, reports, new File( pomLocation ) );
     }
 
     // TODO: share with createPluginArtifacts?
@@ -1193,22 +888,6 @@ public class DefaultMavenProjectBuilder
         }
 
         return pluginArtifacts;
-    }
-
-    /**
-     * @deprecated use {@link #createExtensionArtifacts(String, List, File)}
-     * @param projectId
-     * @param extensions
-     * @param pomLocation absolute path of pom file
-     * @return
-     * @throws ProjectBuildingException
-     */
-    @Deprecated
-    protected Set createExtensionArtifacts( String projectId,
-                                            List extensions, String pomLocation )
-        throws ProjectBuildingException
-    {
-        return createExtensionArtifacts( projectId, extensions, new File( pomLocation ) );
     }
 
     // TODO: share with createPluginArtifacts?
@@ -1286,7 +965,8 @@ public class DefaultMavenProjectBuilder
 
             StringReader sReader = new StringReader( modelSource );
 
-            return modelReader.read( sReader, STRICT_MODEL_PARSING );
+            superModel = modelReader.read( sReader, STRICT_MODEL_PARSING );
+            return superModel;
         }
         catch ( XmlPullParserException e )
         {
