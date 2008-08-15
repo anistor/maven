@@ -1262,6 +1262,43 @@ public class MavenProject
 
     public Set getExtensionArtifacts()
     {
+        Set extensionArtifacts = new HashSet();
+        List extensions = getBuildExtensions();
+        if ( extensions != null )
+        {
+            for ( Iterator i = extensions.iterator(); i.hasNext(); )
+            {
+                Extension ext = (Extension) i.next();
+
+                String version;
+                if ( StringUtils.isEmpty( ext.getVersion() ) )
+                {
+                    version = "RELEASE";
+                }
+                else
+                {
+                    version = ext.getVersion();
+                }
+
+                Artifact artifact = null;
+                try
+                {
+                    VersionRange versionRange = VersionRange.createFromVersionSpec( version );
+                    artifact =
+                        artifactFactory.createExtensionArtifact( ext.getGroupId(), ext.getArtifactId(), versionRange );
+                }
+                catch ( InvalidVersionSpecificationException e )
+                {
+
+                }
+
+                if ( artifact != null )
+                {
+                    extensionArtifacts.add( artifact );
+                }
+            }
+        }
+        extensionArtifactMap = null;
         return extensionArtifacts;
     }
 

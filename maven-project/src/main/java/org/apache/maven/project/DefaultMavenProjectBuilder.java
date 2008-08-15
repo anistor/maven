@@ -678,12 +678,6 @@ public class DefaultMavenProjectBuilder
             e.printStackTrace();
         }
 
-        String projectId = safeVersionlessKey( model.getGroupId(), model.getArtifactId() );
-
-        project.setReportArtifacts( createReportArtifacts( projectId, project.getReportPlugins(), pomFile ) );
-
-        project.setExtensionArtifacts( createExtensionArtifacts( projectId, project.getBuildExtensions(), pomFile ) );
-
         return project;
     }
 
@@ -844,97 +838,6 @@ public class DefaultMavenProjectBuilder
         {
             throw new InvalidProjectModelException( projectId, "Not a v" + MAVEN_MODEL_VERSION + " POM.", file );
         }
-    }
-
-    // TODO: share with createPluginArtifacts?
-    protected Set createReportArtifacts( String projectId,
-                                         List reports, File pomLocation )
-        throws ProjectBuildingException
-    {
-        Set pluginArtifacts = new HashSet();
-
-        if ( reports != null )
-        {
-            for ( Iterator i = reports.iterator(); i.hasNext(); )
-            {
-                ReportPlugin p = (ReportPlugin) i.next();
-
-                String version;
-                if ( StringUtils.isEmpty( p.getVersion() ) )
-                {
-                    version = "RELEASE";
-                }
-                else
-                {
-                    version = p.getVersion();
-                }
-
-                Artifact artifact;
-                try
-                {
-                    artifact = artifactFactory.createPluginArtifact( p.getGroupId(), p.getArtifactId(),
-                        VersionRange.createFromVersionSpec( version ) );
-                }
-                catch ( InvalidVersionSpecificationException e )
-                {
-                    throw new InvalidProjectVersionException( projectId, "Report plugin: " + p.getKey(), version, pomLocation, e );
-                }
-
-                if ( artifact != null )
-                {
-                    pluginArtifacts.add( artifact );
-                }
-            }
-        }
-
-        return pluginArtifacts;
-    }
-
-    // TODO: share with createPluginArtifacts?
-    protected Set createExtensionArtifacts( String projectId,
-                                            List extensions, File pomFile )
-        throws ProjectBuildingException
-    {
-        Set extensionArtifacts = new HashSet();
-
-        if ( extensions != null )
-        {
-            for ( Iterator i = extensions.iterator(); i.hasNext(); )
-            {
-                Extension ext = (Extension) i.next();
-
-                String version;
-                if ( StringUtils.isEmpty( ext.getVersion() ) )
-                {
-                    version = "RELEASE";
-                }
-                else
-                {
-                    version = ext.getVersion();
-                }
-
-                Artifact artifact;
-                try
-                {
-                    VersionRange versionRange = VersionRange.createFromVersionSpec( version );
-                    artifact =
-                        artifactFactory.createExtensionArtifact( ext.getGroupId(), ext.getArtifactId(), versionRange );
-                }
-                catch ( InvalidVersionSpecificationException e )
-                {
-                    String key = ArtifactUtils.versionlessKey( ext.getGroupId(), ext.getArtifactId() );
-                    throw new InvalidProjectVersionException( projectId, "Extension: " + key,
-                                                              version, pomFile, e );
-                }
-
-                if ( artifact != null )
-                {
-                    extensionArtifacts.add( artifact );
-                }
-            }
-        }
-
-        return extensionArtifacts;
     }
 
     // ----------------------------------------------------------------------
