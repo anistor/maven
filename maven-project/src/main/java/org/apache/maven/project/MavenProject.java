@@ -1204,6 +1204,42 @@ public class MavenProject
 
     public Set getReportArtifacts()
     {
+        Set pluginArtifacts = new HashSet();
+        List reports = getReportPlugins();
+        if ( reports != null )
+        {
+            for ( Iterator i = reports.iterator(); i.hasNext(); )
+            {
+                ReportPlugin p = (ReportPlugin) i.next();
+
+                String version;
+                if ( StringUtils.isEmpty( p.getVersion() ) )
+                {
+                    version = "RELEASE";
+                }
+                else
+                {
+                    version = p.getVersion();
+                }
+
+                Artifact artifact = null;
+                try
+                {
+                    artifact = artifactFactory.createPluginArtifact( p.getGroupId(), p.getArtifactId(),
+                        VersionRange.createFromVersionSpec( version ) );
+                }
+                catch ( InvalidVersionSpecificationException e )
+                {
+                    //throw new InvalidProjectVersionException( projectId, "Report plugin: " + p.getKey(), version, pomLocation, e );
+                }
+
+                if ( artifact != null )
+                {
+                    pluginArtifacts.add( artifact );
+                }
+            }
+        }
+        reportArtifactMap = null;
         return reportArtifacts;
     }
 
