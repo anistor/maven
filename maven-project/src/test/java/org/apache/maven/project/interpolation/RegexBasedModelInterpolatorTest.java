@@ -33,7 +33,10 @@ import org.codehaus.plexus.personality.plexus.lifecycle.phase.InitializationExce
 
 import java.io.File;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -57,6 +60,34 @@ public class RegexBasedModelInterpolatorTest
         super.setUp();
 
         context = Collections.singletonMap( "basedir", "myBasedir" );
+    }
+    
+    public void testDefaultBuildTimestampFormatShouldParseTimeIn24HourFormat()
+    {
+        Calendar cal = Calendar.getInstance();
+        cal.set( Calendar.HOUR, 12 );
+        cal.set( Calendar.AM_PM, Calendar.AM );
+        
+        // just to make sure all the bases are covered...
+        cal.set( Calendar.HOUR_OF_DAY, 0 );
+        cal.set( Calendar.MINUTE, 16 );
+        cal.set( Calendar.YEAR, 1976 );
+        cal.set( Calendar.MONTH, Calendar.NOVEMBER );
+        cal.set( Calendar.DATE, 11 );
+        
+        Date firstTestDate = cal.getTime();
+        
+        cal.set( Calendar.HOUR, 11 );
+        cal.set( Calendar.AM_PM, Calendar.PM );
+        
+        // just to make sure all the bases are covered...
+        cal.set( Calendar.HOUR_OF_DAY, 23 );
+        
+        Date secondTestDate = cal.getTime();
+        
+        SimpleDateFormat format = new SimpleDateFormat( ModelInterpolator.DEFAULT_BUILD_TIMESTAMP_FORMAT );
+        assertEquals( "19761111-0016", format.format( firstTestDate ) );
+        assertEquals( "19761111-2316", format.format( secondTestDate ) );
     }
 
     public void testShouldNotThrowExceptionOnReferenceToNonExistentValue()
