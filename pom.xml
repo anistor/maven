@@ -244,7 +244,7 @@
   </modules>
 
   <properties>
-    <mavenVersion>2.0.10-RC7</mavenVersion>
+    <mavenVersion>2.0.10-RC8-SNAPSHOT</mavenVersion>
     <wagonVersion>1.0-beta-4</wagonVersion>
   </properties>
 

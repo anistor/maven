@@ -567,10 +567,10 @@ public class DefaultLifecycleExecutor
 
             calculateConcreteState( project, session );
             
-            boolean usesAllProjects = false;
-            
             PlexusConfiguration configuration = mojoDescriptor.getMojoConfiguration();
-            if ( usesSessionOrReactorProjects( configuration ) )
+            boolean usesAllProjects = mojoDescriptor.isAggregator() || usesSessionOrReactorProjects( configuration );
+            
+            if ( usesAllProjects )
             {
                 calculateAllConcreteStates( session );
             }
@@ -599,14 +599,13 @@ public class DefaultLifecycleExecutor
                         hasFork = true;
                     }
                 }
-                
             }
             
             if ( hasFork )
             {
                 createExecutionProject( project, session );
                 
-                if ( mojoDescriptor.isAggregator() )
+                if ( usesAllProjects )
                 {
                     List reactorProjects = session.getSortedProjects();
                     for ( Iterator it = reactorProjects.iterator(); it.hasNext(); )
@@ -656,12 +655,13 @@ public class DefaultLifecycleExecutor
                 // TODO: Would be nice to find a way to cause the execution project to stay in a concrete state...
                 calculateConcreteState( project.getExecutionProject(), session );
                 
-                if ( mojoDescriptor.isAggregator() )
+                if ( usesAllProjects )
                 {
                     List reactorProjects = session.getSortedProjects();
                     for ( Iterator it = reactorProjects.iterator(); it.hasNext(); )
                     {
                         MavenProject reactorProject = (MavenProject) it.next();
+                        calculateConcreteState( reactorProject, session );
                         calculateConcreteState( reactorProject.getExecutionProject(), session );
                     }
                 }
@@ -705,7 +705,7 @@ public class DefaultLifecycleExecutor
             {
                 project.setExecutionProject( null );
                 
-                if ( mojoDescriptor.isAggregator() )
+                if ( usesAllProjects )
                 {
                     List reactorProjects = session.getSortedProjects();
                     for ( Iterator it = reactorProjects.iterator(); it.hasNext(); )
@@ -737,30 +737,13 @@ public class DefaultLifecycleExecutor
 
     private boolean usesSessionOrReactorProjects( PlexusConfiguration configuration )
     {
-        String value = null;
-        try
-        {
-            value = configuration.getValue();
-        }
-        catch ( PlexusConfigurationException e )
-        {
-            // ignore it.
-        }
+        String value = configuration != null ? String.valueOf( configuration ) : null;
         
         if ( value != null )
         {
-            if ( value.startsWith( "${session" ) || value.equals( "${reactorProjects}" ) )
+            if ( value.indexOf( "${session" ) > -1 || value.indexOf( "${reactorProjects}" ) > -1 )
             {
                 return true;
-            }
-        }
-        
-        PlexusConfiguration[] children = configuration.getChildren();
-        if ( children != null )
-        {
-            for ( int i = 0; i < children.length; i++ )
-            {
-                return usesSessionOrReactorProjects( children[i] );
             }
         }
         
