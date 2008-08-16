@@ -139,7 +139,6 @@ public class DefaultMavenProjectBuilder
 
     private Logger logger;
 
-
     //DO NOT USE, it is here only for backward compatibility reasons. The existing
     // maven-assembly-plugin (2.2-beta-1) is accessing it via reflection.
 
@@ -169,7 +168,7 @@ public class DefaultMavenProjectBuilder
     public MavenProject build(File projectDescriptor,
                               ProjectBuilderConfiguration config)
             throws ProjectBuildingException {
-                MavenProject project = null;//projectWorkspace.getProject( projectDescriptor );
+        MavenProject project = null;//projectWorkspace.getProject( projectDescriptor );
 
         if (project == null) {
             Model model = readModelFromLocalPath("unknown", projectDescriptor, new PomArtifactResolver(config.getLocalRepository(),
@@ -261,7 +260,15 @@ public class DefaultMavenProjectBuilder
             }
         }
 
-        MavenProject project = new MavenProject(superModel, artifactFactory);
+        MavenProject project;
+        try {
+            project = new MavenProject(superModel, artifactFactory, mavenTools, repositoryHelper);
+        } catch (InvalidRepositoryException e) {
+            throw new ProjectBuildingException(STANDALONE_SUPERPOM_GROUPID + ":"
+                    + STANDALONE_SUPERPOM_ARTIFACTID,
+                    "Maven super-POM contains an invalid repository!",
+                    e);
+        }
 
         getLogger().debug("Activated the following profiles for standalone super-pom: " + activeProfiles);
         project.setActiveProfiles(activeProfiles);
@@ -365,7 +372,8 @@ public class DefaultMavenProjectBuilder
 
         return new MavenProjectBuildingResult(project, result);
     }
-        public void calculateConcreteState(MavenProject project, ProjectBuilderConfiguration config)
+
+    public void calculateConcreteState(MavenProject project, ProjectBuilderConfiguration config)
             throws ModelInterpolationException {
         new MavenProjectRestorer(pathTranslator, modelInterpolator, getLogger()).calculateConcreteState(project, config);
     }
@@ -396,7 +404,15 @@ public class DefaultMavenProjectBuilder
                                        boolean fromSourceTree)
             throws ProjectBuildingException {
 
-        MavenProject superProject = new MavenProject(getSuperModel(), artifactFactory);
+        MavenProject superProject = null;
+        try {
+            superProject = new MavenProject(getSuperModel(), artifactFactory, mavenTools, repositoryHelper);
+        } catch (InvalidRepositoryException e) {
+            throw new ProjectBuildingException(STANDALONE_SUPERPOM_GROUPID + ":"
+                    + STANDALONE_SUPERPOM_ARTIFACTID,
+                    "Maven super-POM contains an invalid repository!",
+                    e);
+        }
 
         String projectId = safeVersionlessKey(model.getGroupId(), model.getArtifactId());
 
@@ -480,22 +496,6 @@ public class DefaultMavenProjectBuilder
             previousProject = currentProject;
         }
 
-        // only add the super repository if it wasn't overridden by a profile or project
-        List repositories = new ArrayList(aggregatedRemoteWagonRepositories);
-
-        List superRepositories = repositoryHelper.buildArtifactRepositories(getSuperModel());
-
-        for (Iterator i = superRepositories.iterator(); i.hasNext();) {
-            ArtifactRepository repository = (ArtifactRepository) i.next();
-
-            if (!repositories.contains(repository)) {
-                repositories.add(repository);
-            }
-        }
-
-        // merge any duplicated plugin definitions together, using the first appearance as the dominant one.
-        ModelUtils.mergeDuplicatePluginDefinitions(project.getModel().getBuild());
-
         try {
             project = processProjectLogic(project, projectDescriptor, config);
         }
@@ -567,7 +567,7 @@ public class DefaultMavenProjectBuilder
         Artifact parentArtifact = project.getParentArtifact();
 
         // We will return a different project object using the new model (hence the need to return a project, not just modify the parameter)
-        project = new MavenProject(model, artifactFactory);
+        project = new MavenProject(model, artifactFactory, mavenTools, repositoryHelper);
 
         project.setOriginalModel(originalModel);
 
@@ -578,19 +578,6 @@ public class DefaultMavenProjectBuilder
         Artifact projectArtifact = artifactFactory.createBuildArtifact(project.getGroupId(), project.getArtifactId(),
                 project.getVersion(), project.getPackaging());
         project.setArtifact(projectArtifact);
-
-        DistributionManagement dm = model.getDistributionManagement();
-
-        if (dm != null) {
-            ArtifactRepository repo = mavenTools.buildDeploymentArtifactRepository(dm.getRepository());
-            project.setReleaseArtifactRepository(repo);
-
-            if (dm.getSnapshotRepository() != null) {
-                repo = mavenTools.buildDeploymentArtifactRepository(dm.getSnapshotRepository());
-                project.setSnapshotArtifactRepository(repo);
-            }
-        }
-
         project.setParent(parentProject);
 
         if (parentProject != null) {
@@ -598,24 +585,6 @@ public class DefaultMavenProjectBuilder
         }
 
         validateModel(model, pomFile);
-
-        try {
-            LinkedHashSet repoSet = new LinkedHashSet();
-            if ((model.getRepositories() != null) && !model.getRepositories().isEmpty()) {
-                repoSet.addAll(model.getRepositories());
-            }
-
-            if ((model.getPluginRepositories() != null) && !model.getPluginRepositories().isEmpty()) {
-                repoSet.addAll(model.getPluginRepositories());
-            }
-
-            project.setRemoteArtifactRepositories(
-                    mavenTools.buildArtifactRepositories(new ArrayList(repoSet)));
-        }
-        catch (Exception e) {
-            e.printStackTrace();
-        }
-
         return project;
     }
 
@@ -702,7 +671,7 @@ public class DefaultMavenProjectBuilder
 
             File currentPom = it.getPOMFile();
 
-            MavenProject project = new MavenProject(currentModel, artifactFactory);
+            MavenProject project = new MavenProject(currentModel, artifactFactory, mavenTools, repositoryHelper);
             project.setFile(currentPom);
 
             if (lastProject != null) {
@@ -818,7 +787,7 @@ public class DefaultMavenProjectBuilder
     }
 
     private static String safeVersionlessKey(String groupId,
-                                      String artifactId) {
+                                             String artifactId) {
         String gid = groupId;
 
         if (StringUtils.isEmpty(gid)) {

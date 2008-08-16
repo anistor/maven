@@ -22,6 +22,7 @@ package org.apache.maven.project;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.ArtifactUtils;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
+import org.apache.maven.artifact.InvalidRepositoryException;
 import org.apache.maven.artifact.factory.ArtifactFactory;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.artifact.resolver.filter.ArtifactFilter;
@@ -34,6 +35,7 @@ import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
 import org.apache.maven.project.artifact.ActiveProjectArtifact;
 import org.apache.maven.project.artifact.InvalidDependencyVersionException;
 import org.apache.maven.project.artifact.MavenMetadataSource;
+import org.apache.maven.MavenTools;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 import org.codehaus.plexus.util.StringUtils;
 
@@ -131,6 +133,10 @@ public class MavenProject
 
     private ArtifactFactory artifactFactory;
 
+    private MavenTools mavenTools;
+
+    private RepositoryHelper repositoryHelper;
+
     public MavenProject()
     {
         Model model = new Model();
@@ -147,9 +153,41 @@ public class MavenProject
         setModel( model );
     }
 
-    public MavenProject(Model model, ArtifactFactory artifactFactory) {
+    public MavenProject(Model model, ArtifactFactory artifactFactory, MavenTools mavenTools, RepositoryHelper repositoryHelper) 
+            throws InvalidRepositoryException {
         setModel( model );
         this.artifactFactory = artifactFactory;
+        this.mavenTools = mavenTools;
+        this.repositoryHelper = repositoryHelper;
+
+        DistributionManagement dm = model.getDistributionManagement();
+
+        if (dm != null) {
+            ArtifactRepository repo = mavenTools.buildDeploymentArtifactRepository(dm.getRepository());
+            setReleaseArtifactRepository(repo);
+
+            if (dm.getSnapshotRepository() != null) {
+                repo = mavenTools.buildDeploymentArtifactRepository(dm.getSnapshotRepository());
+                setSnapshotArtifactRepository(repo);
+            }
+        }
+
+        try {
+            LinkedHashSet repoSet = new LinkedHashSet();
+            if ((model.getRepositories() != null) && !model.getRepositories().isEmpty()) {
+                repoSet.addAll(model.getRepositories());
+            }
+
+            if ((model.getPluginRepositories() != null) && !model.getPluginRepositories().isEmpty()) {
+                repoSet.addAll(model.getPluginRepositories());
+            }
+
+            setRemoteArtifactRepositories(
+                    mavenTools.buildArtifactRepositories(new ArrayList(repoSet)));
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     /**

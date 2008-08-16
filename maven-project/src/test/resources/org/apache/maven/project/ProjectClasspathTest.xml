@@ -104,6 +104,12 @@ under the License.
             <requirement>
                 <role>org.apache.maven.artifact.factory.ArtifactFactory</role>
             </requirement>
+            <requirement>
+              <role>org.apache.maven.MavenTools</role>
+            </requirement>
+            <requirement>
+                 <role>org.apache.maven.project.RepositoryHelper</role>
+            </requirement>             
         </requirements>
     </component>
     <component>
@@ -113,7 +119,7 @@ under the License.
       <requirements>
         <requirement>
              <role>org.apache.maven.project.RepositoryHelper</role>
-        </requirement>          
+        </requirement>
         <requirement>
              <role>org.apache.maven.project.builder.ProjectBuilder</role>
         </requirement>

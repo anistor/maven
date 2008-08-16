@@ -20,10 +20,12 @@ package org.apache.maven.project.builder.impl;
  */
 
 import org.apache.maven.artifact.Artifact;
+import org.apache.maven.artifact.InvalidRepositoryException;
 import org.apache.maven.artifact.factory.ArtifactFactory;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.Parent;
 import org.apache.maven.project.MavenProject;
+import org.apache.maven.project.RepositoryHelper;
 import org.apache.maven.project.builder.ArtifactModelContainerFactory;
 import org.apache.maven.project.builder.IdModelContainerFactory;
 import org.apache.maven.project.builder.PomArtifactResolver;
@@ -36,6 +38,7 @@ import org.apache.maven.shared.model.DomainModel;
 import org.apache.maven.shared.model.InterpolatorProperty;
 import org.apache.maven.shared.model.ModelTransformerContext;
 import org.apache.maven.shared.model.ImportModel;
+import org.apache.maven.MavenTools;
 import org.codehaus.plexus.logging.LogEnabled;
 import org.codehaus.plexus.logging.Logger;
 
@@ -64,6 +67,10 @@ public final class DefaultProjectBuilder
     private Logger logger;
 
     private ModelValidator validator;
+
+    private MavenTools mavenTools;
+
+    private RepositoryHelper repositoryHelper;
 
     /**
      * Default constructor
@@ -158,9 +165,12 @@ public final class DefaultProjectBuilder
         PomClassicDomainModel transformedDomainModel =
             ( (PomClassicDomainModel) ctx.transform( domainModels, transformer, transformer, importModels, properties ) );
 
-
         Model model = transformedDomainModel.getModel();
-        return new MavenProject( model, artifactFactory );
+        try {
+            return new MavenProject( model, artifactFactory, mavenTools, repositoryHelper);
+        } catch (InvalidRepositoryException e) {
+            throw new IOException(e.getMessage());
+        }
     }
 
     private boolean isParentLocal( Parent parent, File projectDirectory )
