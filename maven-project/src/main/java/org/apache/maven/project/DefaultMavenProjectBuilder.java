@@ -26,6 +26,7 @@ import org.apache.maven.artifact.InvalidRepositoryException;
 import org.apache.maven.artifact.factory.ArtifactFactory;
 import org.apache.maven.artifact.metadata.ArtifactMetadataSource;
 import org.apache.maven.artifact.repository.ArtifactRepository;
+import org.apache.maven.artifact.repository.layout.ArtifactRepositoryLayout;
 import org.apache.maven.artifact.resolver.ArtifactResolutionRequest;
 import org.apache.maven.artifact.resolver.ArtifactResolutionResult;
 import org.apache.maven.artifact.resolver.ArtifactResolver;
@@ -137,6 +138,8 @@ public class DefaultMavenProjectBuilder
 
     private RepositoryHelper repositoryHelper;
 
+    private ArtifactRepositoryLayout artifactRepositoryLayout;
+
     private Logger logger;
 
     //DO NOT USE, it is here only for backward compatibility reasons. The existing
@@ -159,6 +162,10 @@ public class DefaultMavenProjectBuilder
                               ArtifactRepository localRepository,
                               ProfileManager profileManager)
             throws ProjectBuildingException {
+
+        if (projectDescriptor == null) {
+            throw new IllegalArgumentException("projectDescriptor: null");
+        }
         ProjectBuilderConfiguration config = new DefaultProjectBuilderConfiguration().setLocalRepository(localRepository)
                 .setGlobalProfileManager(profileManager);
 
@@ -168,11 +175,18 @@ public class DefaultMavenProjectBuilder
     public MavenProject build(File projectDescriptor,
                               ProjectBuilderConfiguration config)
             throws ProjectBuildingException {
-        MavenProject project = null;//projectWorkspace.getProject( projectDescriptor );
 
-        if (project == null) {
+        if (projectDescriptor == null) {
+            throw new IllegalArgumentException("projectDescriptor: null");
+        }
+
+        return readMavenProjectFromLocalPath("unknown", projectDescriptor, new PomArtifactResolver(config.getLocalRepository(),
+                repositoryHelper.buildArtifactRepositories(getSuperModel()), artifactResolver));
+
+        /*
             Model model = readModelFromLocalPath("unknown", projectDescriptor, new PomArtifactResolver(config.getLocalRepository(),
                     repositoryHelper.buildArtifactRepositories(getSuperModel()), artifactResolver));
+
             project = buildInternal(model,
                     config,
                     repositoryHelper.buildArtifactRepositories(getSuperModel()),
@@ -180,8 +194,7 @@ public class DefaultMavenProjectBuilder
                     STRICT_MODEL_PARSING,
                     true,
                     true);
-        }
-        return project;
+                    */
     }
 
     /**
@@ -195,6 +208,9 @@ public class DefaultMavenProjectBuilder
             throws ProjectBuildingException
 
     {
+        if (artifact.getFile() == null) {
+            artifact.setFile(new File(localRepository.getBasedir(), localRepository.pathOf(artifact)));
+        }
         return buildFromRepository(artifact, remoteArtifactRepositories, localRepository);
     }
 
@@ -203,6 +219,18 @@ public class DefaultMavenProjectBuilder
                                             List remoteArtifactRepositories,
                                             ArtifactRepository localRepository)
             throws ProjectBuildingException {
+
+        if (artifact.getFile() == null) {
+            artifact.setFile(new File(localRepository.getBasedir(), localRepository.pathOf(artifact)));
+        }
+
+        if (!artifact.getFile().exists()) {
+            throw new IllegalArgumentException("artifact.file does not exist: File = " + artifact.getFile().getAbsolutePath());
+        }
+
+        return readMavenProjectFromLocalPath("unknown", artifact.getFile(), new PomArtifactResolver(localRepository,
+                repositoryHelper.buildArtifactRepositories(getSuperModel()), artifactResolver));
+        /*
         MavenProject project = null;
         if (!Artifact.LATEST_VERSION.equals(artifact.getVersion()) && !Artifact.RELEASE_VERSION.equals(artifact.getVersion())) {
             project = projectWorkspace.getProject(artifact.getGroupId(), artifact.getArtifactId(), artifact.getVersion());
@@ -218,6 +246,7 @@ public class DefaultMavenProjectBuilder
         }
 
         return project;
+        */
     }
 
     // what is using this externally? jvz.
@@ -274,7 +303,7 @@ public class DefaultMavenProjectBuilder
         project.setActiveProfiles(activeProfiles);
 
         try {
-            processProjectLogic(project, null, config);
+            // processProjectLogic(project, null, config);
 
             project.setRemoteArtifactRepositories(mavenTools.buildArtifactRepositories(superModel.getRepositories()));
             project.setPluginArtifactRepositories(mavenTools.buildArtifactRepositories(superModel.getRepositories()));
@@ -287,6 +316,7 @@ public class DefaultMavenProjectBuilder
                     "Maven super-POM contains an invalid repository!",
                     e);
         }
+        /*
         catch (ModelInterpolationException e) {
             // we shouldn't be swallowing exceptions, no matter how unlikely.
             // or, if we do, we should pay attention to the one coming from getSuperModel()...
@@ -295,7 +325,7 @@ public class DefaultMavenProjectBuilder
                     "Maven super-POM contains an invalid expressions!",
                     e);
         }
-
+        */
         project.setOriginalModel(superModel);
 
         project.setExecutionRoot(true);
@@ -329,7 +359,18 @@ public class DefaultMavenProjectBuilder
     public MavenProjectBuildingResult buildProjectWithDependencies(File projectDescriptor,
                                                                    ProjectBuilderConfiguration config)
             throws ProjectBuildingException {
+        if (projectDescriptor == null) {
+            throw new IllegalArgumentException("projectDescriptor: null");
+        }
+        System.out.println(projectDescriptor.getAbsolutePath());
+        if (!projectDescriptor.exists()) {
+            throw new IllegalArgumentException("projectDescriptor does not exist: File = "
+                    + projectDescriptor.getAbsolutePath());
+        }
+
+
         MavenProject project = build(projectDescriptor, config);
+        String projectId = safeVersionlessKey(project.getGroupId(), project.getArtifactId());
 
         // ----------------------------------------------------------------------
         // Typically when the project builder is being used from maven proper
@@ -342,10 +383,10 @@ public class DefaultMavenProjectBuilder
         // dependencies resolved for whatever reason: this is why we keep
         // this snippet of code here.
         // ----------------------------------------------------------------------
-
-        Artifact projectArtifact = project.getArtifact();
-
-        String projectId = safeVersionlessKey(project.getGroupId(), project.getArtifactId());
+        Artifact projectArtifact = artifactFactory.createBuildArtifact(project.getGroupId(), project.getArtifactId(),
+                project.getVersion(), project.getPackaging());
+        project.setFile(projectDescriptor);
+        project.setArtifact(projectArtifact);
 
         Map managedVersions = project.getManagedVersionMap();
 
@@ -391,10 +432,118 @@ public class DefaultMavenProjectBuilder
         return logger;
     }
 
+    private Model superModel;
+
+    private Model getSuperModel()
+            throws ProjectBuildingException {
+        if (superModel != null) {
+            return superModel;
+        }
+
+        URL url = DefaultMavenProjectBuilder.class.getResource("pom-" + MAVEN_MODEL_VERSION + ".xml");
+
+        String projectId = safeVersionlessKey(STANDALONE_SUPERPOM_GROUPID, STANDALONE_SUPERPOM_ARTIFACTID);
+
+        Reader reader = null;
+        try {
+            reader = ReaderFactory.newXmlReader(url.openStream());
+            String modelSource = IOUtil.toString(reader);
+
+            if (modelSource.indexOf("<modelVersion>" + MAVEN_MODEL_VERSION) < 0) {
+                throw new InvalidProjectModelException(projectId, "Not a v" + MAVEN_MODEL_VERSION + " POM.", new File("."));
+            }
+
+            StringReader sReader = new StringReader(modelSource);
+
+            superModel = modelReader.read(sReader, STRICT_MODEL_PARSING);
+            return superModel;
+        }
+        catch (XmlPullParserException e) {
+            throw new InvalidProjectModelException(projectId, "Parse error reading POM. Reason: " + e.getMessage(), e);
+        }
+        catch (IOException e) {
+            throw new ProjectBuildingException(projectId, "Failed build model from URL \'" + url.toExternalForm() +
+                    "\'\nError: \'" + e.getLocalizedMessage() + "\'", e);
+        }
+        finally {
+            IOUtil.close(reader);
+        }
+    }
+
+    private Model readModelFromLocalPath(String projectId,
+                                         File projectDescriptor,
+                                         PomArtifactResolver resolver)
+            throws ProjectBuildingException {
+
+        return readMavenProjectFromLocalPath(projectId, projectDescriptor, resolver).getModel();
+
+    }
+
+    private MavenProject readMavenProjectFromLocalPath(String projectId,
+                                                       File projectDescriptor,
+                                                       PomArtifactResolver resolver)
+            throws ProjectBuildingException {
+        if (projectDescriptor == null) {
+            throw new IllegalArgumentException("projectDescriptor: null, Project Id =" + projectId);
+        }
+
+        if(!projectDescriptor.exists()) {
+            throw new IllegalArgumentException("projectDescriptor does not exist, Project Id =" + projectId + ", File = " +
+            projectDescriptor.getAbsolutePath());
+        }
+
+        if (projectBuilder == null) {
+            throw new IllegalArgumentException("projectBuilder: not initialized");
+        }
+
+        MavenProject mavenProject;
+        try {
+            mavenProject = projectBuilder.buildFromLocalPath(new FileInputStream(projectDescriptor),
+                    Arrays.asList(getSuperModel()), null, null, resolver,
+                    projectDescriptor.getParentFile());
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new ProjectBuildingException(projectId, "File = " + projectDescriptor.getAbsolutePath(), e);
+        }
+
+        return mavenProject;
+    }
+
+    private void validateModel(Model model,
+                               File pomFile)
+            throws InvalidProjectModelException {
+        // Must validate before artifact construction to make sure dependencies are good
+        ModelValidationResult validationResult = validator.validate(model);
+
+        String projectId = safeVersionlessKey(model.getGroupId(), model.getArtifactId());
+
+        if (validationResult.getMessageCount() > 0) {
+            throw new InvalidProjectModelException(projectId, "Failed to validate POM", pomFile,
+                    validationResult);
+        }
+    }
+
+    private static String safeVersionlessKey(String groupId,
+                                             String artifactId) {
+        String gid = groupId;
+
+        if (StringUtils.isEmpty(gid)) {
+            gid = "unknown";
+        }
+
+        String aid = artifactId;
+
+        if (StringUtils.isEmpty(aid)) {
+            aid = "unknown";
+        }
+
+        return ArtifactUtils.versionlessKey(gid, aid);
+    }
 
     // jvz:note
     // We've got a mixture of things going in the USD and from the repository, sometimes the descriptor
     // is a real file and sometimes null which makes things confusing.
+    /*
     private MavenProject buildInternal(Model model,
                                        ProjectBuilderConfiguration config,
                                        List parentSearchRepositories,
@@ -434,17 +583,7 @@ public class DefaultMavenProjectBuilder
             profileActivationContext = new DefaultProfileActivationContext(config.getExecutionProperties(), false);
         }
 
-        LinkedHashSet activeInSuperPom = new LinkedHashSet();
         List activated = profileAdvisor.applyActivatedProfiles(getSuperModel(), projectDescriptor, isReactorProject, profileActivationContext);
-        if (!activated.isEmpty()) {
-            activeInSuperPom.addAll(activated);
-        }
-
-        activated = profileAdvisor.applyActivatedExternalProfiles(getSuperModel(), projectDescriptor, externalProfileManager);
-        if (!activated.isEmpty()) {
-            activeInSuperPom.addAll(activated);
-        }
-
         superProject.setActiveProfiles(activated);
 
         //noinspection CollectionDeclaredAsConcreteClass
@@ -507,26 +646,11 @@ public class DefaultMavenProjectBuilder
         }
 
         if (fromSourceTree) {
-            Build build = project.getBuild();
-
-            // NOTE: setting this script-source root before path translation, because
-            // the plugin tools compose basedir and scriptSourceRoot into a single file.
-            project.addScriptSourceRoot(build.getScriptSourceDirectory());
-
-            project.addCompileSourceRoot(build.getSourceDirectory());
-
-            project.addTestCompileSourceRoot(build.getTestSourceDirectory());
-
-            // Only track the file of a POM in the source tree
             project.setFile(projectDescriptor);
         }
-
-        projectWorkspace.storeProjectByCoordinate(project);
-        projectWorkspace.storeProjectByFile(project);
-
         return project;
     }
-
+    */
     /**
      * @todo can this take in a model instead of a project and still be successful?
      * @todo In fact, does project REALLY need a MavenProject as a parent? Couldn't it have just a wrapper around a
@@ -534,6 +658,7 @@ public class DefaultMavenProjectBuilder
      * the resolved source roots, etc for the parent - that occurs for the parent when it is constructed independently
      * and projects are not cached or reused
      */
+    /*
     private MavenProject processProjectLogic(MavenProject project,
                                              File pomFile,
                                              ProjectBuilderConfiguration config
@@ -635,12 +760,7 @@ public class DefaultMavenProjectBuilder
         }
     }
 
-    /**
-     * @param isReactorProject
-     * @noinspection CollectionDeclaredAsConcreteClass
-     * @todo We need to find an effective way to unit test parts of this method!
-     * @todo Refactor this into smaller methods with discrete purposes.
-     */
+
     private MavenProject assembleLineage(Model model,
                                          LinkedList lineage,
                                          ProjectBuilderConfiguration config,
@@ -695,111 +815,11 @@ public class DefaultMavenProjectBuilder
         MavenProject result = (MavenProject) lineage.getLast();
 
         if (externalProfileManager != null) {
-            LinkedHashSet active = new LinkedHashSet();
-
-            List existingActiveProfiles = result.getActiveProfiles();
-            if ((existingActiveProfiles != null) && !existingActiveProfiles.isEmpty()) {
-                active.addAll(existingActiveProfiles);
-            }
-
             profileAdvisor.applyActivatedExternalProfiles(result.getModel(), pomFile, externalProfileManager);
         }
 
         return result;
     }
+   */
 
-    private Model superModel;
-
-    private Model getSuperModel()
-            throws ProjectBuildingException {
-        if (superModel != null) {
-            return superModel;
-        }
-
-        URL url = DefaultMavenProjectBuilder.class.getResource("pom-" + MAVEN_MODEL_VERSION + ".xml");
-
-        String projectId = safeVersionlessKey(STANDALONE_SUPERPOM_GROUPID, STANDALONE_SUPERPOM_ARTIFACTID);
-
-        Reader reader = null;
-        try {
-            reader = ReaderFactory.newXmlReader(url.openStream());
-            String modelSource = IOUtil.toString(reader);
-
-            if (modelSource.indexOf("<modelVersion>" + MAVEN_MODEL_VERSION) < 0) {
-                throw new InvalidProjectModelException(projectId, "Not a v" + MAVEN_MODEL_VERSION + " POM.", new File("."));
-            }
-
-            StringReader sReader = new StringReader(modelSource);
-
-            superModel = modelReader.read(sReader, STRICT_MODEL_PARSING);
-            return superModel;
-        }
-        catch (XmlPullParserException e) {
-            throw new InvalidProjectModelException(projectId, "Parse error reading POM. Reason: " + e.getMessage(), e);
-        }
-        catch (IOException e) {
-            throw new ProjectBuildingException(projectId, "Failed build model from URL \'" + url.toExternalForm() +
-                    "\'\nError: \'" + e.getLocalizedMessage() + "\'", e);
-        }
-        finally {
-            IOUtil.close(reader);
-        }
-    }
-
-    private Model readModelFromLocalPath(String projectId,
-                                         File projectDescriptor,
-                                         PomArtifactResolver resolver)
-            throws ProjectBuildingException {
-        if (projectDescriptor == null) {
-            throw new IllegalArgumentException("projectDescriptor: null, Project Id =" + projectId);
-        }
-
-        if (projectBuilder == null) {
-            throw new IllegalArgumentException("projectBuilder: not initialized");
-        }
-
-        MavenProject mavenProject;
-        try {
-            mavenProject = projectBuilder.buildFromLocalPath(new FileInputStream(projectDescriptor),
-                    null, null, null, resolver,
-                    projectDescriptor.getParentFile());
-        } catch (IOException e) {
-            e.printStackTrace();
-            throw new ProjectBuildingException(projectId, "File = " + projectDescriptor.getAbsolutePath(), e);
-        }
-
-        return mavenProject.getModel();
-
-    }
-
-    private void validateModel(Model model,
-                               File pomFile)
-            throws InvalidProjectModelException {
-        // Must validate before artifact construction to make sure dependencies are good
-        ModelValidationResult validationResult = validator.validate(model);
-
-        String projectId = safeVersionlessKey(model.getGroupId(), model.getArtifactId());
-
-        if (validationResult.getMessageCount() > 0) {
-            throw new InvalidProjectModelException(projectId, "Failed to validate POM", pomFile,
-                    validationResult);
-        }
-    }
-
-    private static String safeVersionlessKey(String groupId,
-                                             String artifactId) {
-        String gid = groupId;
-
-        if (StringUtils.isEmpty(gid)) {
-            gid = "unknown";
-        }
-
-        String aid = artifactId;
-
-        if (StringUtils.isEmpty(aid)) {
-            aid = "unknown";
-        }
-
-        return ArtifactUtils.versionlessKey(gid, aid);
-    }
 }

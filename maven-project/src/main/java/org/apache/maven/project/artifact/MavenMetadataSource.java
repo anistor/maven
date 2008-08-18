@@ -96,6 +96,10 @@ public class MavenMetadataSource
                                                List<ArtifactRepository> remoteRepositories )
         throws ArtifactMetadataRetrievalException
     {
+        if(artifact == null) {
+            throw new IllegalArgumentException("artifact: null");
+        }
+
         if ( artifact instanceof ActiveProjectArtifact )
         {
             return artifact;
@@ -109,6 +113,9 @@ public class MavenMetadataSource
         }
         
         MavenProject project = rel.project;
+        if(project != null && project.getArtifact() == null) {
+            throw new ArtifactMetadataRetrievalException("project.artifact: null");
+        }
         if ( project == null || getRelocationKey( artifact ).equals( getRelocationKey( project.getArtifact() ) ) )
         {
             return artifact;

@@ -133,7 +133,10 @@ under the License.
       <requirements>
         <requirement>
              <role>org.apache.maven.project.RepositoryHelper</role>
-        </requirement>             
+        </requirement>
+        <requirement>
+             <role>org.apache.maven.artifact.repository.layout.ArtifactRepositoryLayout</role>
+        </requirement>                 
         <requirement>
              <role>org.apache.maven.project.builder.ProjectBuilder</role>
         </requirement>

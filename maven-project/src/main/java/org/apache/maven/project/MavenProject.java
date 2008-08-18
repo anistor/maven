@@ -155,6 +155,14 @@ public class MavenProject
 
     public MavenProject(Model model, ArtifactFactory artifactFactory, MavenTools mavenTools, RepositoryHelper repositoryHelper) 
             throws InvalidRepositoryException {
+        if(model == null)
+        {
+            throw new IllegalArgumentException("model: null");
+        }
+        if(model.getBuild() == null)
+        {
+            throw new IllegalArgumentException("model.build: null");    
+        }
         setModel( model );
         this.artifactFactory = artifactFactory;
         this.mavenTools = mavenTools;
@@ -188,6 +196,10 @@ public class MavenProject
         catch (Exception e) {
             e.printStackTrace();
         }
+        Build build = model.getBuild();
+        addTestCompileSourceRoot(model.getBuild().getTestSourceDirectory());
+        addCompileSourceRoot(model.getBuild().getSourceDirectory());
+        addScriptSourceRoot(model.getBuild().getScriptSourceDirectory());
     }
 
     /**
@@ -1745,7 +1757,7 @@ public class MavenProject
                     }
                     catch ( InvalidVersionSpecificationException e )
                     {
-                        map = Collections.EMPTY_MAP;
+                      //  map = Collections.EMPTY_MAP;
                     }
                 }
             }
