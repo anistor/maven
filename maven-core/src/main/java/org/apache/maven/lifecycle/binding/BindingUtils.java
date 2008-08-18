@@ -14,7 +14,6 @@ import org.apache.maven.model.ReportSet;
 import org.apache.maven.model.Reporting;
 import org.apache.maven.plugin.descriptor.PluginDescriptor;
 import org.apache.maven.project.MavenProject;
-import org.apache.maven.project.ModelUtils;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 
 import java.util.HashMap;

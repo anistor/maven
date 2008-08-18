@@ -24,7 +24,6 @@ import org.apache.maven.artifact.ArtifactUtils;
 import org.apache.maven.plugin.descriptor.PluginDescriptor;
 import org.apache.maven.project.DuplicateProjectException;
 import org.apache.maven.project.MavenProject;
-import org.apache.maven.project.ProjectSorter;
 import org.codehaus.plexus.util.dag.CycleDetectedException;
 
 import java.util.ArrayList;

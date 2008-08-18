@@ -21,8 +21,8 @@ package org.apache.maven.project.builder;
 
 import org.apache.maven.model.Model;
 import org.apache.maven.project.MavenProject;
-import org.apache.maven.shared.model.InterpolatorProperty;
 import org.apache.maven.shared.model.ImportModel;
+import org.apache.maven.shared.model.InterpolatorProperty;
 
 import java.io.File;
 import java.io.IOException;

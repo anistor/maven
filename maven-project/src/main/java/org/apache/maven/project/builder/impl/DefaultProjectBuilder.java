@@ -19,26 +19,20 @@ package org.apache.maven.project.builder.impl;
  * under the License.
  */
 
+import org.apache.maven.MavenTools;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.InvalidRepositoryException;
 import org.apache.maven.artifact.factory.ArtifactFactory;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.Parent;
 import org.apache.maven.project.MavenProject;
-import org.apache.maven.project.RepositoryHelper;
-import org.apache.maven.project.builder.ArtifactModelContainerFactory;
-import org.apache.maven.project.builder.IdModelContainerFactory;
-import org.apache.maven.project.builder.PomArtifactResolver;
-import org.apache.maven.project.builder.PomClassicDomainModel;
-import org.apache.maven.project.builder.PomClassicTransformer;
-import org.apache.maven.project.builder.ProjectBuilder;
+import org.apache.maven.project.builder.*;
 import org.apache.maven.project.validation.ModelValidationResult;
 import org.apache.maven.project.validation.ModelValidator;
 import org.apache.maven.shared.model.DomainModel;
+import org.apache.maven.shared.model.ImportModel;
 import org.apache.maven.shared.model.InterpolatorProperty;
 import org.apache.maven.shared.model.ModelTransformerContext;
-import org.apache.maven.shared.model.ImportModel;
-import org.apache.maven.MavenTools;
 import org.codehaus.plexus.logging.LogEnabled;
 import org.codehaus.plexus.logging.Logger;
 
@@ -46,11 +40,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 /**
  * Default implementation of the project builder.
@@ -69,8 +59,6 @@ public final class DefaultProjectBuilder
     private ModelValidator validator;
 
     private MavenTools mavenTools;
-
-    private RepositoryHelper repositoryHelper;
 
     /**
      * Default constructor
@@ -167,7 +155,7 @@ public final class DefaultProjectBuilder
 
         Model model = transformedDomainModel.getModel();
         try {
-            return new MavenProject( model, artifactFactory, mavenTools, repositoryHelper);
+            return new MavenProject( model, artifactFactory, mavenTools);
         } catch (InvalidRepositoryException e) {
             throw new IOException(e.getMessage());
         }

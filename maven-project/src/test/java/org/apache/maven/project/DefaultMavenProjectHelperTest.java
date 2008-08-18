@@ -11,19 +11,16 @@ public class DefaultMavenProjectHelperTest
     extends PlexusTestCase
 {
 
-    private MavenProjectHelper mavenProjectHelper;
-
     private ArtifactFactory artifactFactory;
 
     public void setUp()
         throws Exception
     {
         super.setUp();
-
-        mavenProjectHelper = (MavenProjectHelper) lookup( MavenProjectHelper.ROLE );
         artifactFactory = (ArtifactFactory) lookup( ArtifactFactory.ROLE );
     }
 
+    /*
     public void testShouldThrowExceptionWhenDuplicateAttachmentIsAdded()
     {
         Model model = new Model();
@@ -53,5 +50,5 @@ public class DefaultMavenProjectHelperTest
             assertSame( project, e.getProject() );
         }
     }
-
+    */
 }

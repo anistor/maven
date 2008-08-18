@@ -20,16 +20,7 @@ package org.apache.maven.project.validation;
  */
 
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.model.Build;
-import org.apache.maven.model.Dependency;
-import org.apache.maven.model.DependencyManagement;
-import org.apache.maven.model.Model;
-import org.apache.maven.model.Parent;
-import org.apache.maven.model.Plugin;
-import org.apache.maven.model.ReportPlugin;
-import org.apache.maven.model.Reporting;
-import org.apache.maven.model.Repository;
-import org.apache.maven.model.Resource;
+import org.apache.maven.model.*;
 import org.codehaus.plexus.util.StringUtils;
 
 import java.io.File;

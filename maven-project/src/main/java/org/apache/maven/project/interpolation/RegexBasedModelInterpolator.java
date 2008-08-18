@@ -25,15 +25,7 @@ import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
 import org.apache.maven.project.DefaultProjectBuilderConfiguration;
 import org.apache.maven.project.ProjectBuilderConfiguration;
 import org.apache.maven.project.path.PathTranslator;
-import org.codehaus.plexus.interpolation.InterpolationException;
-import org.codehaus.plexus.interpolation.MapBasedValueSource;
-import org.codehaus.plexus.interpolation.ObjectBasedValueSource;
-import org.codehaus.plexus.interpolation.PrefixAwareRecursionInterceptor;
-import org.codehaus.plexus.interpolation.PrefixedObjectValueSource;
-import org.codehaus.plexus.interpolation.PrefixedValueSourceWrapper;
-import org.codehaus.plexus.interpolation.RecursionInterceptor;
-import org.codehaus.plexus.interpolation.RegexBasedInterpolator;
-import org.codehaus.plexus.interpolation.ValueSource;
+import org.codehaus.plexus.interpolation.*;
 import org.codehaus.plexus.logging.AbstractLogEnabled;
 import org.codehaus.plexus.logging.Logger;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
@@ -42,12 +34,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 
 /**
  * Use a regular expression search to find and resolve expressions within the POM.

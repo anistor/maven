@@ -41,6 +41,7 @@ public class SuperPomProjectBuilderTest
         projectBuilder = (DefaultMavenProjectBuilder) lookup( MavenProjectBuilder.ROLE );
     }
 
+    /*
     public void testStandaloneSuperPomContainsInjectedExternalProfileRepositories()
         throws Exception
     {
@@ -76,7 +77,7 @@ public class SuperPomProjectBuilderTest
         assertArtifactRepository( "central", project.getRemoteArtifactRepositories() );
         assertArtifactRepository( "central", project.getPluginArtifactRepositories() );
     }
-
+    */
     private void assertArtifactRepository( String id,
                                            List repos )
     {

@@ -29,11 +29,7 @@ import org.codehaus.plexus.util.ReaderFactory;
 import org.codehaus.plexus.util.WriterFactory;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.Writer;
+import java.io.*;
 
 /**
  * Provides a wrapper for the maven model.
