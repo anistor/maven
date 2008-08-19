@@ -19,83 +19,6 @@ under the License.
 
 <plexus>
   <components>
-<!--Eliminate this component after Mercury Integration-->
-    <component>
-      <role>org.apache.maven.project.RepositoryHelper</role>
-      <implementation>org.apache.maven.project.DefaultRepositoryHelper</implementation>
-      <requirements>
-        <requirement>
-          <role>org.apache.maven.profiles.build.ProfileAdvisor</role>
-          <role-hint>default</role-hint>
-        </requirement>
-        <requirement>
-          <role>org.apache.maven.artifact.factory.ArtifactFactory</role>
-        </requirement>
-        <requirement>
-          <role>org.apache.maven.artifact.resolver.ArtifactResolver</role>
-          <role-hint>default</role-hint>
-        </requirement>
-        <requirement>
-          <role>org.apache.maven.MavenTools</role>
-        </requirement>
-      </requirements>
-    </component>       
-    <!-- Due to PLX-108, have to work around it...
-    <component>
-      <role>org.apache.maven.artifact.ArtifactResolver</role>
-      <implementation>org.apache.maven.project.TestArtifactResolvertion>
-      <requirements>
-        <requirement>
-          <role>org.apache.maven.artifact.manager.WagonManager</role>
-        </requirement>
-        <requirement>
-          <role>org.apache.maven.artifact.factory.ArtifactFactory</role>
-        </requirement>
-      </requirements>
-    </component>
-    -->
-    <component>
-      <role>org.apache.maven.profiles.injection.ProfileInjector</role>
-      <role-hint>test</role-hint>
-      <implementation>org.apache.maven.project.injection.TestProfileInjector</implementation>
-    </component>
-    <component>
-      <role>org.apache.maven.profiles.build.ProfileAdvisor</role>
-      <role-hint>default</role-hint>
-      <implementation>org.apache.maven.profiles.build.DefaultProfileAdvisor</implementation>
-      <requirements>
-        <requirement>
-          <role>org.apache.maven.MavenTools</role>
-        </requirement>
-        <requirement>
-          <role>org.apache.maven.profiles.MavenProfilesBuilder</role>
-        </requirement>
-        <requirement>
-          <role>org.apache.maven.profiles.injection.ProfileInjector</role>
-          <role-hint>test</role-hint>
-        </requirement>
-      </requirements>
-    </component>
-    <component>
-      <role>org.apache.maven.project.TestArtifactResolver</role>
-      <implementation>org.apache.maven.project.TestArtifactResolver</implementation>
-      <requirements>
-        <!--
-        <requirement>
-          <role>org.apache.maven.artifact.manager.ArtifactManager</role>
-        </requirement>
-        -->
-        <requirement>
-          <role>org.apache.maven.artifact.factory.ArtifactFactory</role>
-        </requirement>
-        <requirement>
-          <role>org.apache.maven.artifact.repository.ArtifactRepositoryFactory</role>
-        </requirement>
-        <requirement>
-          <role>org.apache.maven.artifact.resolver.ArtifactCollector</role>
-        </requirement>
-      </requirements>
-    </component>
     <component>
         <role>org.apache.maven.project.builder.ProjectBuilder</role>
         <role-hint>default</role-hint>
@@ -107,9 +30,6 @@ under the License.
             <requirement>
               <role>org.apache.maven.MavenTools</role>
             </requirement>
-            <requirement>
-                 <role>org.apache.maven.project.RepositoryHelper</role>
-            </requirement>             
         </requirements>
     </component>
     <component>
@@ -118,36 +38,10 @@ under the License.
       <implementation>org.apache.maven.project.TestProjectBuilder</implementation>
       <requirements>
         <requirement>
-             <role>org.apache.maven.project.RepositoryHelper</role>
-        </requirement>
-        <requirement>
              <role>org.apache.maven.artifact.repository.layout.ArtifactRepositoryLayout</role>
         </requirement>                 
         <requirement>
              <role>org.apache.maven.project.builder.ProjectBuilder</role>
-        </requirement>
-        <requirement>
-          <role>org.apache.maven.project.workspace.ProjectWorkspace</role>
-        </requirement>
-        <requirement>
-          <role>org.apache.maven.project.build.model.ModelLineageBuilder</role>
-          <role-hint>default</role-hint>
-        </requirement>
-        <requirement>
-          <role>org.apache.maven.profiles.build.ProfileAdvisor</role>
-          <role-hint>default</role-hint>
-        </requirement>
-        <requirement>
-          <role>org.apache.maven.profiles.MavenProfilesBuilder</role>
-        </requirement>
-        <requirement>
-          <role>org.apache.maven.project.injection.ModelDefaultsInjector</role>
-        </requirement>
-        <requirement>
-          <role>org.apache.maven.project.interpolation.ModelInterpolator</role>
-        </requirement>
-        <requirement>
-          <role>org.apache.maven.project.inheritance.ModelInheritanceAssembler</role>
         </requirement>
         <requirement>
           <role>org.apache.maven.project.validation.ModelValidator</role>
@@ -157,9 +51,6 @@ under the License.
         </requirement>
         <requirement>
           <role>org.apache.maven.artifact.factory.ArtifactFactory</role>
-        </requirement>
-        <requirement>
-          <role>org.apache.maven.artifact.resolver.ArtifactResolver</role>
         </requirement>
         <requirement>
           <role>org.apache.maven.MavenTools</role>
