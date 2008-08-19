@@ -1,6 +1,7 @@
 package org.apache.maven.project;
 
 import org.apache.maven.artifact.repository.ArtifactRepository;
+import org.apache.maven.profiles.ProfileManager;
 
 import java.util.Date;
 import java.util.Properties;
@@ -8,6 +9,8 @@ import java.util.Properties;
 public class DefaultProjectBuilderConfiguration
     implements ProjectBuilderConfiguration
 {
+
+    private ProfileManager globalProfileManager;
 
     private ArtifactRepository localRepository;
 
@@ -19,6 +22,17 @@ public class DefaultProjectBuilderConfiguration
 
     public DefaultProjectBuilderConfiguration()
     {
+    }
+
+    public ProjectBuilderConfiguration setGlobalProfileManager( ProfileManager globalProfileManager )
+    {
+        this.globalProfileManager = globalProfileManager;
+        return this;
+    }
+
+    public ProfileManager getGlobalProfileManager()
+    {
+        return globalProfileManager;
     }
 
     public ProjectBuilderConfiguration setLocalRepository( ArtifactRepository localRepository )

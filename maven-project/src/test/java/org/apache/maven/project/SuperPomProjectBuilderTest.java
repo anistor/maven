@@ -1,7 +1,11 @@
 package org.apache.maven.project;
 
 import org.apache.maven.artifact.repository.ArtifactRepository;
+import org.apache.maven.model.Profile;
 import org.apache.maven.model.Repository;
+import org.apache.maven.profiles.DefaultProfileManager;
+import org.apache.maven.profiles.ProfileManager;
+import org.apache.maven.profiles.activation.DefaultProfileActivationContext;
 
 import java.util.Iterator;
 import java.util.List;
@@ -37,7 +41,6 @@ public class SuperPomProjectBuilderTest
         projectBuilder = (DefaultMavenProjectBuilder) lookup( MavenProjectBuilder.ROLE );
     }
 
-    /*
     public void testStandaloneSuperPomContainsInjectedExternalProfileRepositories()
         throws Exception
     {
@@ -73,7 +76,7 @@ public class SuperPomProjectBuilderTest
         assertArtifactRepository( "central", project.getRemoteArtifactRepositories() );
         assertArtifactRepository( "central", project.getPluginArtifactRepositories() );
     }
-    */
+
     private void assertArtifactRepository( String id,
                                            List repos )
     {

@@ -4,6 +4,8 @@ import org.apache.maven.artifact.InvalidRepositoryException;
 import org.apache.maven.artifact.resolver.ArtifactNotFoundException;
 import org.apache.maven.artifact.resolver.ArtifactResolutionException;
 import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException;
+import org.apache.maven.profiles.activation.ProfileActivationException;
+import org.apache.maven.project.artifact.InvalidDependencyVersionException;
 import org.apache.maven.project.interpolation.ModelInterpolationException;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
@@ -84,6 +86,26 @@ public class ProjectBuildingException
         this.projectId = projectId;
         this.pomFile = pomFile;
     }
+
+    /**
+     * @deprecated use {@link File} constructor for pomLocation
+     */
+    public ProjectBuildingException( String projectId, String message, String pomLocation,
+                                     ProfileActivationException cause )
+    {
+        super( message, cause );
+        this.projectId = projectId;
+        pomFile = new File( pomLocation );
+    }
+
+    public ProjectBuildingException( String projectId, String message, File pomFile,
+                                     ProfileActivationException cause )
+    {
+        super( message, cause );
+        this.projectId = projectId;
+        this.pomFile = pomFile;
+    }
+
     /**
      * @deprecated use {@link File} constructor for pomLocation
      */
@@ -212,6 +234,24 @@ public class ProjectBuildingException
         pomFile = new File( pomLocation );
     }
 
+    public ProjectBuildingException( String projectId, String message, File pomFile,
+                                     InvalidDependencyVersionException cause )
+    {
+        super( message, cause );
+        this.projectId = projectId;
+        this.pomFile = pomFile;
+    }
+
+    /**
+     * @deprecated use {@link File} constructor for pomLocation
+     */
+    public ProjectBuildingException( String projectId, String message, String pomLocation,
+                                     InvalidDependencyVersionException cause )
+    {
+        super( message, cause );
+        this.projectId = projectId;
+        pomFile = new File( pomLocation );
+    }
 
     protected ProjectBuildingException( String projectId, String message, File pomFile,
                                         ModelInterpolationException cause )

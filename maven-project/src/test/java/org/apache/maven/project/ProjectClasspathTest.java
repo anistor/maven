@@ -40,10 +40,10 @@ public class ProjectClasspathTest
 //        assertEquals( TestArtifactResolver.class, getContainer().lookup( ArtifactResolver.ROLE ).getClass() );
         TestProjectBuilder builder = (TestProjectBuilder) getContainer().lookup( MavenProjectBuilder.ROLE, "test" );
         
-      //  TestArtifactResolver testArtifactResolver = (TestArtifactResolver) getContainer().lookup( TestArtifactResolver.class.getName() );
+        TestArtifactResolver testArtifactResolver = (TestArtifactResolver) getContainer().lookup( TestArtifactResolver.class.getName() );
         
-       // builder.setArtifactResolver( testArtifactResolver );
-        //builder.setArtifactMetadataSource( testArtifactResolver.source() );
+        builder.setArtifactResolver( testArtifactResolver );
+        builder.setArtifactMetadataSource( testArtifactResolver.source() );
         
         MavenProject project = getProjectWithDependencies( f );
 

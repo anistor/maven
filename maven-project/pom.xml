@@ -78,7 +78,6 @@ under the License.
       <artifactId>maven-shared-model</artifactId>
     </dependency> 
   </dependencies>
-    <!--
   <build>
     <plugins>
       <plugin>
@@ -96,5 +95,4 @@ under the License.
       </plugin>
     </plugins>
   </build>
-  -->
 </project>

@@ -29,7 +29,11 @@ import org.codehaus.plexus.util.ReaderFactory;
 import org.codehaus.plexus.util.WriterFactory;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.Writer;
 
 /**
  * Provides a wrapper for the maven model.
@@ -136,11 +140,10 @@ public final class PomClassicDomainModel
                     return "";
                 }
             }
-            String groupId = ( model.getGroupId() == null && model.getParent() != null)
-                    ? model.getParent().getGroupId() : model.getGroupId();
+            String groupId = ( model.getGroupId() == null ) ? model.getParent().getGroupId() : model.getGroupId();
             String artifactId =
-                ( model.getArtifactId() == null && model.getParent() != null ) ? model.getParent().getArtifactId() : model.getArtifactId();
-            String version = ( model.getVersion() == null && model.getParent() != null) ? model.getParent().getVersion() : model.getVersion();
+                ( model.getArtifactId() == null ) ? model.getParent().getArtifactId() : model.getArtifactId();
+            String version = ( model.getVersion() == null ) ? model.getParent().getVersion() : model.getVersion();
 
             id = groupId + ":" + artifactId + ":" + version;
         }

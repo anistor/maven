@@ -45,6 +45,7 @@ import org.apache.maven.profiles.activation.ProfileActivationException;
 import org.apache.maven.profiles.activation.ProfileActivator;
 import org.apache.maven.project.DuplicateProjectException;
 import org.apache.maven.project.InvalidProjectModelException;
+import org.apache.maven.project.InvalidProjectVersionException;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.ProjectBuildingException;
 import org.apache.maven.project.artifact.InvalidDependencyVersionException;

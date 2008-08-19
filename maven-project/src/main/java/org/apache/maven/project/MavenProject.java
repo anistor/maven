@@ -19,21 +19,25 @@ package org.apache.maven.project;
  * under the License.
  */
 
-import org.apache.maven.MavenTools;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.ArtifactUtils;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.artifact.InvalidRepositoryException;
 import org.apache.maven.artifact.factory.ArtifactFactory;
 import org.apache.maven.artifact.repository.ArtifactRepository;
+import org.apache.maven.artifact.resolver.filter.ArtifactFilter;
 import org.apache.maven.artifact.resolver.filter.ExcludesArtifactFilter;
-import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException;
 import org.apache.maven.artifact.versioning.ManagedVersionMap;
 import org.apache.maven.artifact.versioning.VersionRange;
+import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException;
 import org.apache.maven.model.*;
 import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
-import org.codehaus.plexus.util.StringUtils;
+import org.apache.maven.project.artifact.ActiveProjectArtifact;
+import org.apache.maven.project.artifact.InvalidDependencyVersionException;
+import org.apache.maven.project.artifact.MavenMetadataSource;
+import org.apache.maven.MavenTools;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
+import org.codehaus.plexus.util.StringUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -131,6 +135,8 @@ public class MavenProject
 
     private MavenTools mavenTools;
 
+    private RepositoryHelper repositoryHelper;
+
     public MavenProject()
     {
         Model model = new Model();
@@ -147,19 +153,12 @@ public class MavenProject
         setModel( model );
     }
 
-    public MavenProject(Model model, ArtifactFactory artifactFactory, MavenTools mavenTools)
+    public MavenProject(Model model, ArtifactFactory artifactFactory, MavenTools mavenTools, RepositoryHelper repositoryHelper) 
             throws InvalidRepositoryException {
-        if(model == null)
-        {
-            throw new IllegalArgumentException("model: null");
-        }
-        if(model.getBuild() == null)
-        {
-            throw new IllegalArgumentException("model.build: null");    
-        }
         setModel( model );
         this.artifactFactory = artifactFactory;
         this.mavenTools = mavenTools;
+        this.repositoryHelper = repositoryHelper;
 
         DistributionManagement dm = model.getDistributionManagement();
 
@@ -189,10 +188,6 @@ public class MavenProject
         catch (Exception e) {
             e.printStackTrace();
         }
-        Build build = model.getBuild();
-        addTestCompileSourceRoot(model.getBuild().getTestSourceDirectory());
-        addCompileSourceRoot(model.getBuild().getSourceDirectory());
-        addScriptSourceRoot(model.getBuild().getScriptSourceDirectory());
     }
 
     /**
@@ -281,11 +276,11 @@ public class MavenProject
             setScriptSourceRoots( ( new ArrayList( project.getScriptSourceRoots() ) ) );
         }
 
-    //    setModel( ( ModelUtils.cloneModel( project.getModel() ) ) );
+        setModel( ( ModelUtils.cloneModel( project.getModel() ) ) );
 
         if ( project.getOriginalModel() != null )
         {
-           // setOriginalModel( ( ModelUtils.cloneModel( project.getOriginalModel() ) ) );
+            setOriginalModel( ( ModelUtils.cloneModel( project.getOriginalModel() ) ) );
         }
 
         setExecutionRoot( project.isExecutionRoot() );
@@ -312,8 +307,8 @@ public class MavenProject
 
         if ( project.isConcrete() )
         {
-           // setDynamicBuild( ModelUtils.cloneBuild( project.getDynamicBuild() ) );
-          //  setOriginalInterpolatedBuild( ModelUtils.cloneBuild( project.getOriginalInterpolatedBuild() ) );
+            setDynamicBuild( ModelUtils.cloneBuild( project.getDynamicBuild() ) );
+            setOriginalInterpolatedBuild( ModelUtils.cloneBuild( project.getOriginalInterpolatedBuild() ) );
 
             List dynamicRoots = project.getDynamicCompileSourceRoots();
             if ( dynamicRoots != null )
@@ -1453,7 +1448,7 @@ public class MavenProject
             {
                 Plugin pmPlugin = (Plugin) pmByKey.get( pluginKey );
 
-                //ModelUtils.mergePluginDefinitions( plugin, pmPlugin, false );
+                ModelUtils.mergePluginDefinitions( plugin, pmPlugin, false );
             }
         }
     }
@@ -1750,7 +1745,7 @@ public class MavenProject
                     }
                     catch ( InvalidVersionSpecificationException e )
                     {
-                      //  map = Collections.EMPTY_MAP;
+                        map = Collections.EMPTY_MAP;
                     }
                 }
             }
@@ -1799,6 +1794,18 @@ public class MavenProject
         {
             return build.getExtensions();
         }
+    }
+
+    /**
+     * @todo the lazy initialisation of this makes me uneasy.
+     * @return {@link Set} &lt; {@link Artifact} >
+     */
+    public Set createArtifacts( ArtifactFactory artifactFactory, String inheritedScope,
+                                ArtifactFilter dependencyFilter )
+        throws InvalidDependencyVersionException
+    {
+        return MavenMetadataSource.createArtifacts( artifactFactory, getDependencies(), inheritedScope,
+                                                    dependencyFilter, this );
     }
 
     public void addProjectReference( MavenProject project )
@@ -1883,6 +1890,92 @@ public class MavenProject
     protected ArtifactRepository getSnapshotArtifactRepository()
     {
         return snapshotArtifactRepository;
+    }
+
+    public Artifact replaceWithActiveArtifact( Artifact pluginArtifact )
+    {
+        if ( ( getProjectReferences() != null ) && !getProjectReferences().isEmpty() )
+        {
+            String refId = getProjectReferenceId( pluginArtifact.getGroupId(), pluginArtifact.getArtifactId(), pluginArtifact.getVersion() );
+            MavenProject ref = (MavenProject) getProjectReferences().get( refId );
+            if ( ( ref != null ) && ( ref.getArtifact() != null ) )
+            {
+                // TODO: if not matching, we should get the correct artifact from that project (attached)
+                if ( ref.getArtifact().getDependencyConflictId().equals( pluginArtifact.getDependencyConflictId() ) )
+                {
+                    // if the project artifact doesn't exist, don't use it. We haven't built that far.
+                    if ( ( ref.getArtifact().getFile() != null ) && ref.getArtifact().getFile().exists() )
+                    {
+                        // FIXME: Why aren't we using project.getArtifact() for the second parameter here??
+                        pluginArtifact = new ActiveProjectArtifact( ref, pluginArtifact );
+                        return pluginArtifact;
+                    }
+                    else
+                    {
+/* TODO...
+                        logger.warn( "Artifact found in the reactor has not been built when it's use was " +
+                            "attempted - resolving from the repository instead" );
+*/
+                    }
+                }
+
+                Iterator itr = ref.getAttachedArtifacts().iterator();
+                while(itr.hasNext()) {
+                    Artifact attached = (Artifact) itr.next();
+                    if( attached.getDependencyConflictId().equals(pluginArtifact.getDependencyConflictId()) ) {
+                        /* TODO: if I use the original, I get an exception below:
+                            java.lang.UnsupportedOperationException: Cannot change the download information for an attached artifact. It is derived from the main artifact.
+                            at org.apache.maven.project.artifact.AttachedArtifact.setDownloadUrl(AttachedArtifact.java:89)
+                            at org.apache.maven.project.artifact.MavenMetadataSource.retrieve(MavenMetadataSource.java:205)
+                            at org.apache.maven.artifact.resolver.DefaultArtifactCollector.recurse(DefaultArtifactCollector.java:275)
+                            at org.apache.maven.artifact.resolver.DefaultArtifactCollector.collect(DefaultArtifactCollector.java:67)
+                            at org.apache.maven.artifact.resolver.DefaultArtifactResolver.resolveTransitively(DefaultArtifactResolver.java:223)
+                            at org.apache.maven.artifact.resolver.DefaultArtifactResolver.resolveTransitively(DefaultArtifactResolver.java:211)
+                            at org.apache.maven.artifact.resolver.DefaultArtifactResolver.resolveTransitively(DefaultArtifactResolver.java:182)
+                            at org.apache.maven.plugin.DefaultPluginManager.resolveTransitiveDependencies(DefaultPluginManager.java:1117)
+                            at org.apache.maven.plugin.DefaultPluginManager.executeMojo(DefaultPluginManager.java:366)
+                            at org.apache.maven.lifecycle.DefaultLifecycleExecutor.executeGoals(DefaultLifecycleExecutor.java:534)
+                            at org.apache.maven.lifecycle.DefaultLifecycleExecutor.executeGoalWithLifecycle(DefaultLifecycleExecutor.java:475)
+                            at org.apache.maven.lifecycle.DefaultLifecycleExecutor.executeGoal(DefaultLifecycleExecutor.java:454)
+                            at org.apache.maven.lifecycle.DefaultLifecycleExecutor.executeGoalAndHandleFailures(DefaultLifecycleExecutor.java:306)
+                            at org.apache.maven.lifecycle.DefaultLifecycleExecutor.executeTaskSegments(DefaultLifecycleExecutor.java:273)
+                            at org.apache.maven.lifecycle.DefaultLifecycleExecutor.execute(DefaultLifecycleExecutor.java:140)
+                            at org.apache.maven.DefaultMaven.doExecute(DefaultMaven.java:322)
+                            at org.apache.maven.DefaultMaven.execute(DefaultMaven.java:115)
+                            at org.apache.maven.cli.MavenCli.main(MavenCli.java:256)
+                        */
+                        Artifact resultArtifact=ArtifactUtils.copyArtifact(attached);
+                        resultArtifact.setScope(pluginArtifact.getScope());
+                        return resultArtifact;
+                    }
+                }
+
+                /**
+                 * Patch/workaround for: MNG-2871
+                 *
+                 * We want to use orginal artifact (packaging:ejb) when we are
+                 * resolving ejb-client package and we didn't manage to find
+                 * attached to project one.
+                 *
+                 * The scenario is such that somebody run "mvn test" in composity project,
+                 * and ejb-client.jar will not be attached to ejb.jar (because it is done in package phase)
+                 *
+                 * We prefer in such a case use orginal sources (of ejb.jar) instead of failure
+                 */
+                if ( ( ref.getArtifactId().equals( pluginArtifact.getArtifactId() ) ) &&
+                    ( ref.getGroupId().equals( pluginArtifact.getGroupId() ) ) &&
+                    ( ref.getArtifact().getType().equals( "ejb" ) ) &&
+                    ( pluginArtifact.getType().equals( "ejb-client" ) ) &&
+                    ( ( ref.getArtifact().getFile() != null ) && ref.getArtifact().getFile().exists() ) )
+                {
+                    pluginArtifact = new ActiveProjectArtifact(
+                        ref,
+                        pluginArtifact );
+                    return pluginArtifact;
+                }
+            }
+        }
+        return pluginArtifact;
     }
 
 	private void addArtifactPath(Artifact a, List list) throws DependencyResolutionRequiredException

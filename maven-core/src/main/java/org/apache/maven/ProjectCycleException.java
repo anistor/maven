@@ -1,6 +1,7 @@
 package org.apache.maven;
 
 import org.apache.maven.execution.ReactorManager;
+import org.apache.maven.project.ProjectSorter;
 import org.codehaus.plexus.util.dag.CycleDetectedException;
 
 import java.util.List;
