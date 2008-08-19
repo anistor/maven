@@ -30,7 +30,10 @@ import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author <a href="mailto:jason@maven.org">Jason van Zyl</a>
@@ -279,6 +282,37 @@ public class PluginDescriptorBuilder
             parameter.setImplementation( d.getChild( "implementation" ).getValue() );
 
             parameters.add( parameter );
+        }
+        
+        PlexusConfiguration[] parameterConfigs = c.getChild( "configuration" ).getChildren();
+        if ( parameterConfigs != null && parameterConfigs.length > 0 )
+        {
+            Map configMap = new HashMap( parameterConfigs.length );
+            for ( int i = 0; i < parameterConfigs.length; i++ )
+            {
+                configMap.put( parameterConfigs[i].getName(), parameterConfigs[i] );
+            }
+            
+            for ( Iterator it = parameters.iterator(); it.hasNext(); )
+            {
+                Parameter param = (Parameter) it.next();
+                PlexusConfiguration paramConfig = (PlexusConfiguration) configMap.get( param.getName() );
+                
+                if ( paramConfig != null )
+                {
+                    String expr = paramConfig.getValue();
+                    if ( expr != null && expr.trim().length() > 0 )
+                    {
+                        param.setExpression( expr );
+                    }
+                    
+                    String defaultValue = paramConfig.getAttribute( "default-value" );
+                    if ( defaultValue != null && defaultValue.trim().length() > 0 )
+                    {
+                        param.setDefaultValue( defaultValue );
+                    }
+                }
+            }
         }
 
         mojo.setParameters( parameters );
