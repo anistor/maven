@@ -154,24 +154,6 @@ public class DefaultMavenProjectBuilder
                     */
     }
 
-    /**
-     * @deprecated
-     */
-    @Deprecated
-    public MavenProject buildFromRepository(Artifact artifact,
-                                            List remoteArtifactRepositories,
-                                            ArtifactRepository localRepository,
-                                            boolean allowStub)
-            throws ProjectBuildingException
-
-    {
-        if (artifact.getFile() == null) {
-            artifact.setFile(new File(localRepository.getBasedir(), localRepository.pathOf(artifact)));
-        }
-        return buildFromRepository(artifact, remoteArtifactRepositories, localRepository);
-    }
-
-
     public MavenProject buildFromRepository(Artifact artifact,
                                             List remoteArtifactRepositories,
                                             ArtifactRepository localRepository)

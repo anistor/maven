@@ -1,11 +1,7 @@
 package org.apache.maven.project;
 
 import org.apache.maven.artifact.repository.ArtifactRepository;
-import org.apache.maven.model.Profile;
 import org.apache.maven.model.Repository;
-import org.apache.maven.profiles.DefaultProfileManager;
-import org.apache.maven.profiles.ProfileManager;
-import org.apache.maven.profiles.activation.DefaultProfileActivationContext;
 
 import java.util.Iterator;
 import java.util.List;
