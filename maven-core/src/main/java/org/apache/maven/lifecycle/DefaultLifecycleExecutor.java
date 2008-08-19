@@ -58,7 +58,6 @@ import org.apache.maven.plugin.PluginManager;
 import org.apache.maven.plugin.PluginManagerException;
 import org.apache.maven.plugin.PluginNotFoundException;
 import org.apache.maven.plugin.descriptor.MojoDescriptor;
-import org.apache.maven.plugin.descriptor.Parameter;
 import org.apache.maven.plugin.descriptor.PluginDescriptor;
 import org.apache.maven.plugin.lifecycle.Execution;
 import org.apache.maven.plugin.lifecycle.Phase;
@@ -568,7 +567,8 @@ public class DefaultLifecycleExecutor
 
             calculateConcreteState( project, session );
             
-            boolean usesAllProjects = mojoDescriptor.isAggregator() || usesSessionOrReactorProjects( mojoDescriptor );
+            PlexusConfiguration configuration = mojoDescriptor.getMojoConfiguration();
+            boolean usesAllProjects = mojoDescriptor.isAggregator() || usesSessionOrReactorProjects( configuration );
             
             if ( usesAllProjects )
             {
@@ -735,27 +735,15 @@ public class DefaultLifecycleExecutor
         project.setExecutionProject( executionProject );
     }
 
-    private boolean usesSessionOrReactorProjects( MojoDescriptor mojoDescriptor )
+    private boolean usesSessionOrReactorProjects( PlexusConfiguration configuration )
     {
-        List params = mojoDescriptor.getParameters();
-        if ( params != null )
+        String value = configuration != null ? String.valueOf( configuration ) : null;
+        
+        if ( value != null )
         {
-            for ( Iterator it = params.iterator(); it.hasNext(); )
+            if ( value.indexOf( "${session" ) > -1 || value.indexOf( "${reactorProjects}" ) > -1 )
             {
-                Parameter param = (Parameter) it.next();
-                String value = param.getExpression();
-                if ( value != null && value.trim().length() > 0
-                    && ( value.indexOf( "${session" ) > -1 || value.indexOf( "${reactorProjects}" ) > -1 ) )
-                {
-                    return true;
-                }
-                
-                value = param.getDefaultValue();
-                if ( value != null && value.trim().length() > 0
-                    && ( value.indexOf( "${session" ) > -1 || value.indexOf( "${reactorProjects}" ) > -1 ) )
-                {
-                    return true;
-                }
+                return true;
             }
         }
         
@@ -1279,7 +1267,7 @@ public class DefaultLifecycleExecutor
                 if ( lifecycleForkers.contains( execution.getMojoDescriptor() ) )
                 {
                     taskIterator.remove();
-                    getLogger().warn( "Removing: " + execution.getMojoDescriptor().getFullGoalName()
+                    getLogger().warn( "Removing: " + execution.getMojoDescriptor().getGoal()
                                       + " from forked lifecycle, to prevent recursive invocation." );
                 }
             }
