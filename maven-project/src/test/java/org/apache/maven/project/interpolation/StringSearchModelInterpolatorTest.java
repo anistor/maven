@@ -19,40 +19,30 @@ package org.apache.maven.project.interpolation;
  * under the License.
  */
 
-import java.io.IOException;
-import java.util.Properties;
-
 import org.apache.maven.project.path.PathTranslator;
-import org.codehaus.plexus.interpolation.Interpolator;
-import org.codehaus.plexus.interpolation.RegexBasedInterpolator;
 
 /**
- * Use a regular expression search to find and resolve expressions within the POM.
- *
- * @author jdcasey Created on Feb 3, 2005
- * @version $Id$
- * @todo Consolidate this logic with the PluginParameterExpressionEvaluator, minus deprecations/bans.
+ * @author jdcasey
+ * @version $Id: RegexBasedModelInterpolatorTest.java 686268 2008-08-15 16:01:30Z jdcasey $
  */
-public class RegexBasedModelInterpolator
-    extends AbstractStringBasedModelInterpolator
+public class StringSearchModelInterpolatorTest
+    extends AbstractModelInterpolatorTest
 {
+    protected ModelInterpolator createInterpolator( PathTranslator translator )
+        throws Exception
+    {
+        StringSearchModelInterpolator interpolator = new StringSearchModelInterpolator( translator );
+        interpolator.initialize();
 
-    public RegexBasedModelInterpolator()
-        throws IOException
-    {
-    }
-    
-    public RegexBasedModelInterpolator( PathTranslator pathTranslator )
-    {
-        super( pathTranslator );
+        return interpolator;
     }
 
-    public RegexBasedModelInterpolator( Properties envars )
+    protected ModelInterpolator createInterpolator()
+        throws Exception
     {
-    }
+        StringSearchModelInterpolator interpolator = new StringSearchModelInterpolator();
+        interpolator.initialize();
 
-    protected Interpolator createInterpolator()
-    {
-        return new RegexBasedInterpolator( true );
+        return interpolator;
     }
 }
