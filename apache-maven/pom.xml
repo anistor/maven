@@ -52,30 +52,31 @@
                 </excludes>
               </artifactSet>
               <relocations>
-                                <!-- For slide webdav wagon -->
+                <!-- for jackrabbit webdav wagon -->
                 <relocation>
-                  <pattern>org.jdom</pattern>
+                  <pattern>org.apache.jackrabbit</pattern>
                 </relocation>
                 <relocation>
-                  <pattern>de.zeigermann.xml</pattern>
+                  <pattern>org.slf4j</pattern>
                 </relocation>
-                <relocation>
-                  <pattern>org.apache.webdav</pattern>
-                </relocation>
-                                <!-- For http/webdav wagons -->
+                
+                <!-- For http/webdav wagons -->
                 <relocation>
                   <pattern>org.apache.commons.httpclient</pattern>
                 </relocation>
                 <relocation>
                   <pattern>org.apache.commons.logging</pattern>
                 </relocation>
+                <relocation>
+                  <pattern>org.apache.commons.codec</pattern>
+                </relocation>
 
-                                <!-- For jsch wagon -->
+                <!-- For jsch wagon -->
                 <relocation>
                   <pattern>com.jcraft</pattern>
                 </relocation>
 
-                                <!-- For wagon API -->
+                <!-- For wagon API -->
                 <relocation>
                   <pattern>org.cyberneko</pattern>
                 </relocation>
