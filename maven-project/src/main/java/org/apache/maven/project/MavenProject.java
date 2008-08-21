@@ -137,6 +137,8 @@ public class MavenProject
 
     private RepositoryHelper repositoryHelper;
 
+    private MavenProjectBuilder mavenProjectBuilder;
+
     public MavenProject()
     {
         Model model = new Model();
@@ -153,13 +155,15 @@ public class MavenProject
         setModel( model );
     }
 
-    public MavenProject(Model model, ArtifactFactory artifactFactory, MavenTools mavenTools, RepositoryHelper repositoryHelper) 
+    public MavenProject(Model model, ArtifactFactory artifactFactory, MavenTools mavenTools,
+                        RepositoryHelper repositoryHelper, MavenProjectBuilder mavenProjectBuilder)
             throws InvalidRepositoryException {
         setModel( model );
         this.artifactFactory = artifactFactory;
         this.mavenTools = mavenTools;
         this.repositoryHelper = repositoryHelper;
-
+        this.mavenProjectBuilder = mavenProjectBuilder;
+        originalModel = ModelUtils.cloneModel( getOriginalModel() );
         DistributionManagement dm = model.getDistributionManagement();
 
         if (dm != null) {

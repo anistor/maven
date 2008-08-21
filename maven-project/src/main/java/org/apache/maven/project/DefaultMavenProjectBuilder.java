@@ -262,7 +262,7 @@ public class DefaultMavenProjectBuilder
 
         MavenProject project;
         try {
-            project = new MavenProject(superModel, artifactFactory, mavenTools, repositoryHelper);
+            project = new MavenProject(superModel, artifactFactory, mavenTools, repositoryHelper, this);
         } catch (InvalidRepositoryException e) {
             throw new ProjectBuildingException(STANDALONE_SUPERPOM_GROUPID + ":"
                     + STANDALONE_SUPERPOM_ARTIFACTID,
@@ -271,32 +271,28 @@ public class DefaultMavenProjectBuilder
         }
 
         getLogger().debug("Activated the following profiles for standalone super-pom: " + activeProfiles);
-        project.setActiveProfiles(activeProfiles);
+        //project.setActiveProfiles(activeProfiles);
 
         try {
-            processProjectLogic(project, null, config);
+            interpolateModelAndInjectDefault(project.getModel(), null, config, activeProfiles);
 
             project.setRemoteArtifactRepositories(mavenTools.buildArtifactRepositories(superModel.getRepositories()));
             project.setPluginArtifactRepositories(mavenTools.buildArtifactRepositories(superModel.getRepositories()));
         }
         catch (InvalidRepositoryException e) {
-            // we shouldn't be swallowing exceptions, no matter how unlikely.
-            // or, if we do, we should pay attention to the one coming from getSuperModel()...
             throw new ProjectBuildingException(STANDALONE_SUPERPOM_GROUPID + ":"
                     + STANDALONE_SUPERPOM_ARTIFACTID,
                     "Maven super-POM contains an invalid repository!",
                     e);
         }
         catch (ModelInterpolationException e) {
-            // we shouldn't be swallowing exceptions, no matter how unlikely.
-            // or, if we do, we should pay attention to the one coming from getSuperModel()...
             throw new ProjectBuildingException(STANDALONE_SUPERPOM_GROUPID + ":"
                     + STANDALONE_SUPERPOM_ARTIFACTID,
                     "Maven super-POM contains an invalid expressions!",
                     e);
         }
 
-        project.setOriginalModel(superModel);
+     //   project.setOriginalModel(superModel);
 
         project.setExecutionRoot(true);
 
@@ -330,19 +326,6 @@ public class DefaultMavenProjectBuilder
                                                                    ProjectBuilderConfiguration config)
             throws ProjectBuildingException {
         MavenProject project = build(projectDescriptor, config);
-
-        // ----------------------------------------------------------------------
-        // Typically when the project builder is being used from maven proper
-        // the transitive dependencies will not be resolved here because this
-        // requires a lot of work when we may only be interested in running
-        // something simple like 'm2 clean'. So the artifact collector is used
-        // in the dependency resolution phase if it is required by any of the
-        // goals being executed. But when used as a component in another piece
-        // of code people may just want to build maven projects and have the
-        // dependencies resolved for whatever reason: this is why we keep
-        // this snippet of code here.
-        // ----------------------------------------------------------------------
-
         Artifact projectArtifact = project.getArtifact();
 
         String projectId = safeVersionlessKey(project.getGroupId(), project.getArtifactId());
@@ -391,10 +374,6 @@ public class DefaultMavenProjectBuilder
         return logger;
     }
 
-
-    // jvz:note
-    // We've got a mixture of things going in the USD and from the repository, sometimes the descriptor
-    // is a real file and sometimes null which makes things confusing.
     private MavenProject buildInternal(Model model,
                                        ProjectBuilderConfiguration config,
                                        List parentSearchRepositories,
@@ -404,9 +383,9 @@ public class DefaultMavenProjectBuilder
                                        boolean fromSourceTree)
             throws ProjectBuildingException {
 
-        MavenProject superProject = null;
+        MavenProject superProject;
         try {
-            superProject = new MavenProject(getSuperModel(), artifactFactory, mavenTools, repositoryHelper);
+            superProject = new MavenProject(getSuperModel(), artifactFactory, mavenTools, repositoryHelper, this);
         } catch (InvalidRepositoryException e) {
             throw new ProjectBuildingException(STANDALONE_SUPERPOM_GROUPID + ":"
                     + STANDALONE_SUPERPOM_ARTIFACTID,
@@ -447,57 +426,9 @@ public class DefaultMavenProjectBuilder
 
         superProject.setActiveProfiles(activated);
 
-        //noinspection CollectionDeclaredAsConcreteClass
-        LinkedList lineage = new LinkedList();
-
-        LinkedHashSet aggregatedRemoteWagonRepositories = repositoryHelper.collectInitialRepositories(model, getSuperModel(),
-                parentSearchRepositories,
-                projectDescriptor,
-                isReactorProject,
-                profileActivationContext);
-
-        Model originalModel = ModelUtils.cloneModel(model);
-
         MavenProject project;
-
         try {
-            project = assembleLineage(model, lineage, config, projectDescriptor, aggregatedRemoteWagonRepositories, strict, isReactorProject);
-        }
-        catch (InvalidRepositoryException e) {
-            throw new ProjectBuildingException(projectId, e.getMessage(), e);
-        }
-
-        project.setOriginalModel(originalModel);
-
-        // we don't have to force the collision exception for superModel here, it's already been done in getSuperModel()
-        MavenProject previousProject = superProject;
-
-        Model previous = superProject.getModel();
-
-        for (Iterator i = lineage.iterator(); i.hasNext();) {
-            MavenProject currentProject = (MavenProject) i.next();
-
-            Model current = currentProject.getModel();
-
-            String pathAdjustment = null;
-
-            try {
-                pathAdjustment = previousProject.getModulePathAdjustment(currentProject);
-            }
-            catch (IOException e) {
-                getLogger().debug(
-                        "Cannot determine whether " + currentProject.getId() + " is a module of " + previousProject.getId() + ". Reason: " + e.getMessage(),
-                        e);
-            }
-
-            modelInheritanceAssembler.assembleModelInheritance(current, previous, pathAdjustment);
-
-            previous = current;
-            previousProject = currentProject;
-        }
-
-        try {
-            project = processProjectLogic(project, projectDescriptor, config);
+            project = interpolateModelAndInjectDefault(model, projectDescriptor, config, activated);
         }
         catch (ModelInterpolationException e) {
             throw new InvalidProjectModelException(projectId, e.getMessage(), projectDescriptor, e);
@@ -527,24 +458,13 @@ public class DefaultMavenProjectBuilder
         return project;
     }
 
-    /**
-     * @todo can this take in a model instead of a project and still be successful?
-     * @todo In fact, does project REALLY need a MavenProject as a parent? Couldn't it have just a wrapper around a
-     * model that supported parents which were also the wrapper so that inheritence was assembled. We don't really need
-     * the resolved source roots, etc for the parent - that occurs for the parent when it is constructed independently
-     * and projects are not cached or reused
-     */
-    private MavenProject processProjectLogic(MavenProject project,
+    private MavenProject interpolateModelAndInjectDefault(Model model,
                                              File pomFile,
-                                             ProjectBuilderConfiguration config
+                                             ProjectBuilderConfiguration config,
+                                             List activeProfiles
     )
             throws ProjectBuildingException, ModelInterpolationException, InvalidRepositoryException {
-        Model model = project.getModel();
-
-        List activeProfiles = project.getActiveProfiles();
-
         File projectDir = null;
-
         if (pomFile != null) {
             projectDir = pomFile.getAbsoluteFile().getParentFile();
         }
@@ -560,29 +480,13 @@ public class DefaultMavenProjectBuilder
         // interpolation is before injection, because interpolation is off-limits in the injected variables
         modelDefaultsInjector.injectDefaults(model);
 
-        MavenProject parentProject = project.getParent();
-
-        Model originalModel = project.getOriginalModel();
-
-        Artifact parentArtifact = project.getParentArtifact();
-
         // We will return a different project object using the new model (hence the need to return a project, not just modify the parameter)
-        project = new MavenProject(model, artifactFactory, mavenTools, repositoryHelper);
-
-        project.setOriginalModel(originalModel);
-
+        MavenProject project = new MavenProject(model, artifactFactory, mavenTools, repositoryHelper, this);
         project.setActiveProfiles(activeProfiles);
 
-        // TODO: such a call in MavenMetadataSource too - packaging not really the intention of type
-        // TODO: maybe not strictly correct, while we should enfore that packaging has a type handler of the same id, we don't
         Artifact projectArtifact = artifactFactory.createBuildArtifact(project.getGroupId(), project.getArtifactId(),
                 project.getVersion(), project.getPackaging());
         project.setArtifact(projectArtifact);
-        project.setParent(parentProject);
-
-        if (parentProject != null) {
-            project.setParentArtifact(parentArtifact);
-        }
 
         validateModel(model, pomFile);
         return project;
@@ -641,6 +545,7 @@ public class DefaultMavenProjectBuilder
      * @todo We need to find an effective way to unit test parts of this method!
      * @todo Refactor this into smaller methods with discrete purposes.
      */
+    /*
     private MavenProject assembleLineage(Model model,
                                          LinkedList lineage,
                                          ProjectBuilderConfiguration config,
@@ -671,7 +576,7 @@ public class DefaultMavenProjectBuilder
 
             File currentPom = it.getPOMFile();
 
-            MavenProject project = new MavenProject(currentModel, artifactFactory, mavenTools, repositoryHelper);
+            MavenProject project = new MavenProject(currentModel, artifactFactory, mavenTools, repositoryHelper, this);
             project.setFile(currentPom);
 
             if (lastProject != null) {
@@ -707,7 +612,7 @@ public class DefaultMavenProjectBuilder
 
         return result;
     }
-
+    */
     private Model superModel;
 
     private Model getSuperModel()

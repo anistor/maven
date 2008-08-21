@@ -34,10 +34,7 @@ import org.apache.maven.project.builder.PomClassicTransformer;
 import org.apache.maven.project.builder.ProjectBuilder;
 import org.apache.maven.project.validation.ModelValidationResult;
 import org.apache.maven.project.validation.ModelValidator;
-import org.apache.maven.shared.model.DomainModel;
-import org.apache.maven.shared.model.InterpolatorProperty;
-import org.apache.maven.shared.model.ModelTransformerContext;
-import org.apache.maven.shared.model.ImportModel;
+import org.apache.maven.shared.model.*;
 import org.apache.maven.MavenTools;
 import org.codehaus.plexus.logging.LogEnabled;
 import org.codehaus.plexus.logging.Logger;
@@ -141,16 +138,27 @@ public final class DefaultProjectBuilder
         List<DomainModel> domainModels = new ArrayList<DomainModel>();
         domainModels.add( domainModel );
 
+        MavenProject mavenParent = null;
+
         if ( domainModel.getModel().getParent() != null )
         {
+            List<DomainModel> mavenParents;
             if ( isParentLocal( domainModel.getModel().getParent(), projectDirectory ) )
             {
-                domainModels.addAll( getDomainModelParentsFromLocalPath( domainModel, resolver, projectDirectory ) );
+                mavenParents = getDomainModelParentsFromLocalPath( domainModel, resolver, projectDirectory );
             }
             else
             {
-                domainModels.addAll( getDomainModelParentsFromRepository( domainModel, resolver ) );
+                mavenParents =  getDomainModelParentsFromRepository( domainModel, resolver ) ;
             }
+
+            if(mavenParents.size() > 0) {
+
+                mavenParent = buildFromLocalPath( ((InputStreamDomainModel) mavenParents.get(0)).getInputStream(), inheritedModels,
+                        importModels, interpolatorProperties, resolver, projectDirectory);
+            }
+            
+            domainModels.addAll(mavenParents);
         }
 
         for ( Model model : inheritedModels )
@@ -167,7 +175,9 @@ public final class DefaultProjectBuilder
 
         Model model = transformedDomainModel.getModel();
         try {
-            return new MavenProject( model, artifactFactory, mavenTools, repositoryHelper);
+            MavenProject mavenProject = new MavenProject( model, artifactFactory, mavenTools, repositoryHelper, null);
+            mavenProject.setParent(mavenParent);
+            return mavenProject;
         } catch (InvalidRepositoryException e) {
             throw new IOException(e.getMessage());
         }
