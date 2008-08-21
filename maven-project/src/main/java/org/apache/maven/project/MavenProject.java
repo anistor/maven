@@ -163,7 +163,7 @@ public class MavenProject
         this.mavenTools = mavenTools;
         this.repositoryHelper = repositoryHelper;
         this.mavenProjectBuilder = mavenProjectBuilder;
-        originalModel = ModelUtils.cloneModel( getOriginalModel() );
+        originalModel = ModelUtils.cloneModel( model );
         DistributionManagement dm = model.getDistributionManagement();
 
         if (dm != null) {
