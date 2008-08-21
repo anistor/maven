@@ -564,13 +564,13 @@ public class DefaultLifecycleExecutor
             MojoExecution mojoExecution = (MojoExecution) i.next();
 
             MojoDescriptor mojoDescriptor = mojoExecution.getMojoDescriptor();
-
+            
             calculateConcreteState( project, session );
             
             PlexusConfiguration configuration = mojoDescriptor.getMojoConfiguration();
-            boolean usesAllProjects = mojoDescriptor.isAggregator() || usesSessionOrReactorProjects( configuration );
+            boolean usesReactorProjects = mojoDescriptor.isAggregator() || usesSessionOrReactorProjects( configuration );
             
-            if ( usesAllProjects )
+            if ( usesReactorProjects )
             {
                 calculateAllConcreteStates( session );
             }
@@ -605,7 +605,7 @@ public class DefaultLifecycleExecutor
             {
                 createExecutionProject( project, session );
                 
-                if ( usesAllProjects )
+                if ( usesReactorProjects )
                 {
                     List reactorProjects = session.getSortedProjects();
                     for ( Iterator it = reactorProjects.iterator(); it.hasNext(); )
@@ -655,7 +655,7 @@ public class DefaultLifecycleExecutor
                 // TODO: Would be nice to find a way to cause the execution project to stay in a concrete state...
                 calculateConcreteState( project.getExecutionProject(), session );
                 
-                if ( usesAllProjects )
+                if ( usesReactorProjects )
                 {
                     List reactorProjects = session.getSortedProjects();
                     for ( Iterator it = reactorProjects.iterator(); it.hasNext(); )
@@ -701,24 +701,24 @@ public class DefaultLifecycleExecutor
                 throw new LifecycleExecutionException( e.getMessage(), e );
             }
             
-            if ( hasFork )
-            {
-                project.setExecutionProject( null );
-                
-                if ( usesAllProjects )
-                {
-                    List reactorProjects = session.getSortedProjects();
-                    for ( Iterator it = reactorProjects.iterator(); it.hasNext(); )
-                    {
-                        MavenProject reactorProject = (MavenProject) it.next();
-                        reactorProject.setExecutionProject( null );
-                    }
-                }
-            }
+//            if ( hasFork )
+//            {
+//                project.setExecutionProject( null );
+//                
+//                if ( usesReactorProjects )
+//                {
+//                    List reactorProjects = session.getSortedProjects();
+//                    for ( Iterator it = reactorProjects.iterator(); it.hasNext(); )
+//                    {
+//                        MavenProject reactorProject = (MavenProject) it.next();
+//                        reactorProject.setExecutionProject( null );
+//                    }
+//                }
+//            }
             
             restoreDynamicState( project, session );
             
-            if ( usesAllProjects )
+            if ( usesReactorProjects )
             {
                 restoreAllDynamicStates( session );
             }
@@ -728,11 +728,14 @@ public class DefaultLifecycleExecutor
     private void createExecutionProject( MavenProject project, MavenSession session )
         throws LifecycleExecutionException
     {
-        MavenProject executionProject = new MavenProject( project );
-        
-        calculateConcreteState( executionProject, session );
-        
-        project.setExecutionProject( executionProject );
+        if ( project.getExecutionProject() == null )
+        {
+            MavenProject executionProject = new MavenProject( project );
+            
+            calculateConcreteState( executionProject, session );
+            
+            project.setExecutionProject( executionProject );
+        }
     }
 
     private boolean usesSessionOrReactorProjects( PlexusConfiguration configuration )
@@ -820,7 +823,7 @@ public class DefaultLifecycleExecutor
     private void calculateConcreteState( MavenProject project, MavenSession session )
         throws LifecycleExecutionException
     {
-        if ( mavenProjectBuilder != null && project != null && !project.isConcrete() )
+        if ( mavenProjectBuilder != null && project != null )
         {
             try
             {

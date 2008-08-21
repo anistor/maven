@@ -25,6 +25,7 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +38,7 @@ import org.apache.maven.project.DefaultProjectBuilderConfiguration;
 import org.apache.maven.project.ProjectBuilderConfiguration;
 import org.apache.maven.project.path.PathTranslator;
 import org.codehaus.plexus.interpolation.InterpolationException;
+import org.codehaus.plexus.interpolation.InterpolationPostProcessor;
 import org.codehaus.plexus.interpolation.Interpolator;
 import org.codehaus.plexus.interpolation.MapBasedValueSource;
 import org.codehaus.plexus.interpolation.ObjectBasedValueSource;
@@ -199,8 +201,14 @@ public abstract class AbstractStringBasedModelInterpolator
                                boolean debug )
         throws ModelInterpolationException
     {
-        Logger logger = getLogger();
-
+        List valueSources = createValueSources( model, projectDir, config );
+        List postProcessors = createPostProcessors( model, projectDir, config );
+        
+        return interpolateInternal( src, valueSources, postProcessors, debug );
+    }
+    
+    protected List createValueSources( final Model model, final File projectDir, final ProjectBuilderConfiguration config )
+    {
         String timestampFormat = DEFAULT_BUILD_TIMESTAMP_FORMAT;
 
         Properties modelProperties = model.getProperties();
@@ -224,23 +232,34 @@ public abstract class AbstractStringBasedModelInterpolator
             }
         },
         PROJECT_PREFIXES, true );
-
-        PathTranslatingPostProcessor pathTranslatingPostProcessor =
-            new PathTranslatingPostProcessor( TRANSLATED_PATH_EXPRESSIONS, projectDir, pathTranslator );
         
+        List valueSources = new ArrayList( 7 );
+        
+        // NOTE: Order counts here!
+        valueSources.add( basedirValueSource );
+        valueSources.add( new BuildTimestampValueSource( config.getBuildStartTime(), timestampFormat ) );
+        valueSources.add( new MapBasedValueSource( config.getExecutionProperties() ) );
+        valueSources.add( modelValueSource1 );
+        valueSources.add( new PrefixedValueSourceWrapper( new MapBasedValueSource( modelProperties ), PROJECT_PREFIXES, true ) );
+        valueSources.add( modelValueSource2 );
+        valueSources.add( new MapBasedValueSource( config.getUserProperties() ) );
+        
+        return valueSources;
+    }
+    
+    protected List createPostProcessors( final Model model, final File projectDir, final ProjectBuilderConfiguration config )
+    {
+        return Collections.singletonList( new PathTranslatingPostProcessor( TRANSLATED_PATH_EXPRESSIONS, projectDir, pathTranslator ) );
+    }
+    
+    protected String interpolateInternal( String src, List valueSources, List postProcessors, boolean debug )
+        throws ModelInterpolationException
+    {
+        Logger logger = getLogger();
+
         String result = src;
         synchronized( this )
         {
-            List valueSources = new ArrayList( 7 );
-            
-            // NOTE: Order counts here!
-            valueSources.add( basedirValueSource );
-            valueSources.add( new BuildTimestampValueSource( config.getBuildStartTime(), timestampFormat ) );
-            valueSources.add( new MapBasedValueSource( config.getExecutionProperties() ) );
-            valueSources.add( modelValueSource1 );
-            valueSources.add( new PrefixedValueSourceWrapper( new MapBasedValueSource( modelProperties ), PROJECT_PREFIXES, true ) );
-            valueSources.add( modelValueSource2 );
-            valueSources.add( new MapBasedValueSource( config.getUserProperties() ) );
             
             for ( Iterator it = valueSources.iterator(); it.hasNext(); )
             {
@@ -248,7 +267,12 @@ public abstract class AbstractStringBasedModelInterpolator
                 interpolator.addValueSource( vs );
             }
             
-            interpolator.addPostProcessor( pathTranslatingPostProcessor );
+            for ( Iterator it = postProcessors.iterator(); it.hasNext(); )
+            {
+                InterpolationPostProcessor postProcessor = (InterpolationPostProcessor) it.next();
+                
+                interpolator.addPostProcessor( postProcessor );
+            }
 
             try
             {
@@ -302,7 +326,7 @@ public abstract class AbstractStringBasedModelInterpolator
                     }
                 }
 
-                interpolator.clearFeedback();
+//                interpolator.clearFeedback();
             }
             finally
             {
@@ -312,7 +336,11 @@ public abstract class AbstractStringBasedModelInterpolator
                     interpolator.removeValuesSource( vs );
                 }
                 
-                interpolator.removePostProcessor( pathTranslatingPostProcessor );
+                for ( Iterator iterator = postProcessors.iterator(); iterator.hasNext(); )
+                {
+                    InterpolationPostProcessor postProcessor = (InterpolationPostProcessor) iterator.next();
+                    interpolator.removePostProcessor( postProcessor );
+                }
             }
         }
 

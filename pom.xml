@@ -244,6 +244,9 @@
   </modules>
 
   <properties>
+    <!--
+    <mavenHintDynamicBuild>true</mavenHintDynamicBuild>
+    -->
     <mavenVersion>2.0.10-RC10-SNAPSHOT</mavenVersion>
     <wagonVersion>1.0-beta-4</wagonVersion>
   </properties>

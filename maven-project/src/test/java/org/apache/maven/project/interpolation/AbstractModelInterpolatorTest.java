@@ -279,7 +279,7 @@ public abstract class AbstractModelInterpolatorTest
         
         Model out = interpolator.interpolate( model, context );
         
-        assertEquals( out.getProperties().getProperty( "outputDirectory" ), "/path/to/home" );
+        assertEquals( "/path/to/home", out.getProperties().getProperty( "outputDirectory" ) );
     }
 
     public void testEnvarExpressionThatEvaluatesToNullReturnsTheLiteralString()

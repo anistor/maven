@@ -98,6 +98,7 @@ import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.TreeMap;
 
@@ -999,7 +1000,7 @@ public class DefaultMavenProjectBuilder
         mergeDeterministicBuildElements( model.getBuild(), dynamicBuild );
 
         model.setBuild( dynamicBuild );
-
+        
         // MNG-3482: Make sure depMgmt is interpolated before merging.
         if ( !isSuperPom )
         {
@@ -1017,7 +1018,7 @@ public class DefaultMavenProjectBuilder
         project = new MavenProject( model );
 
         project.setOriginalModel( originalModel );
-
+        
         project.setActiveProfiles( activeProfiles );
 
         // TODO: maybe not strictly correct, while we should enfore that packaging has a type handler of the same id, we don't
@@ -1094,7 +1095,7 @@ public class DefaultMavenProjectBuilder
         project.setReportArtifacts( createReportArtifacts( projectId, project.getReportPlugins() ) );
 
         project.setExtensionArtifacts( createExtensionArtifacts( projectId, project.getBuildExtensions() ) );
-
+        
         return project;
     }
 
@@ -1810,66 +1811,67 @@ public class DefaultMavenProjectBuilder
     public void calculateConcreteState( MavenProject project, ProjectBuilderConfiguration config )
         throws ModelInterpolationException
     {
-        if ( project.isConcrete() )
+        if ( !project.isConcrete() )
         {
-            return;
-        }
+            Build build = project.getBuild();
+            if ( build != null )
+            {
+                initResourceMergeIds( build.getResources() );
+                initResourceMergeIds( build.getTestResources() );
+            }
 
-        Build build = project.getBuild();
-        if ( build != null )
-        {
-            initResourceMergeIds( build.getResources() );
-            initResourceMergeIds( build.getTestResources() );
-        }
+            // NOTE: Since interpolation makes a copy through serialization, we don't need this.
+            // See note below.
+            //
+            // Model model = ModelUtils.cloneModel( project.getModel() );
 
-        // NOTE: Since interpolation makes a copy through serialization, we don't need this.
-        // See note below.
-        //
-        // Model model = ModelUtils.cloneModel( project.getModel() );
+            File basedir = project.getBasedir();
 
-        File basedir = project.getBasedir();
+            // NOTE: If we ever get past serialization/deserialization for interpolation, we'll need to copy the model here!
+            Model model = ModelUtils.cloneModel( project.getModel() );
+            model = modelInterpolator.interpolate( model, project.getBasedir(), config, getLogger().isDebugEnabled() );
 
-        // NOTE: If we ever get past serialization/deserialization for interpolation, we'll need to copy the model here!
-        Model model = modelInterpolator.interpolate( project.getModel(), project.getBasedir(), config, getLogger().isDebugEnabled() );
-
-        List originalInterpolatedCompileSourceRoots = interpolateListOfStrings( project.getCompileSourceRoots(),
-                                                                           model,
-                                                                           project.getBasedir(),
-                                                                           config,
-                                                                           getLogger().isDebugEnabled() );
-
-        project.preserveCompileSourceRoots( originalInterpolatedCompileSourceRoots );
-
-        project.setCompileSourceRoots( originalInterpolatedCompileSourceRoots == null ? null
-                        : translateListOfPaths( originalInterpolatedCompileSourceRoots, basedir ) );
-
-        List originalInterpolatedTestCompileSourceRoots = interpolateListOfStrings( project.getTestCompileSourceRoots(),
+            List originalInterpolatedCompileSourceRoots = interpolateListOfStrings( project.getCompileSourceRoots(),
                                                                                model,
                                                                                project.getBasedir(),
                                                                                config,
                                                                                getLogger().isDebugEnabled() );
 
-        project.preserveTestCompileSourceRoots( originalInterpolatedTestCompileSourceRoots );
-        project.setTestCompileSourceRoots( originalInterpolatedTestCompileSourceRoots == null ? null
-                        : translateListOfPaths( originalInterpolatedTestCompileSourceRoots, basedir ) );
+            project.preserveCompileSourceRoots( originalInterpolatedCompileSourceRoots );
 
-        List originalInterpolatedScriptSourceRoots = interpolateListOfStrings( project.getScriptSourceRoots(),
-                                                                          model,
-                                                                          project.getBasedir(),
-                                                                          config,
-                                                                          getLogger().isDebugEnabled() );
+            project.setCompileSourceRoots( originalInterpolatedCompileSourceRoots == null ? null
+                            : translateListOfPaths( originalInterpolatedCompileSourceRoots, basedir ) );
 
-        project.preserveScriptSourceRoots( originalInterpolatedScriptSourceRoots );
-        project.setScriptSourceRoots( originalInterpolatedScriptSourceRoots == null ? null
-                        : translateListOfPaths( originalInterpolatedScriptSourceRoots, basedir ) );
+            List originalInterpolatedTestCompileSourceRoots = interpolateListOfStrings( project.getTestCompileSourceRoots(),
+                                                                                   model,
+                                                                                   project.getBasedir(),
+                                                                                   config,
+                                                                                   getLogger().isDebugEnabled() );
 
-        if ( basedir != null )
-        {
-            pathTranslator.alignToBaseDirectory( model, basedir );
+            project.preserveTestCompileSourceRoots( originalInterpolatedTestCompileSourceRoots );
+            project.setTestCompileSourceRoots( originalInterpolatedTestCompileSourceRoots == null ? null
+                            : translateListOfPaths( originalInterpolatedTestCompileSourceRoots, basedir ) );
+
+            List originalInterpolatedScriptSourceRoots = interpolateListOfStrings( project.getScriptSourceRoots(),
+                                                                              model,
+                                                                              project.getBasedir(),
+                                                                              config,
+                                                                              getLogger().isDebugEnabled() );
+
+            project.preserveScriptSourceRoots( originalInterpolatedScriptSourceRoots );
+            project.setScriptSourceRoots( originalInterpolatedScriptSourceRoots == null ? null
+                            : translateListOfPaths( originalInterpolatedScriptSourceRoots, basedir ) );
+
+            if ( basedir != null )
+            {
+                pathTranslator.alignToBaseDirectory( model, basedir );
+            }
+
+            project.preserveBuild( ModelUtils.cloneBuild( model.getBuild() ) );
+            project.preserveProperties();
+            project.preserveBasedir();
+            project.setBuild( model.getBuild() );
         }
-
-        project.preserveBuild( ModelUtils.cloneBuild( model.getBuild() ) );
-        project.setBuild( model.getBuild() );
 
         calculateConcreteProjectReferences( project, config );
 
@@ -1939,7 +1941,7 @@ public class DefaultMavenProjectBuilder
     public void restoreDynamicState( MavenProject project, ProjectBuilderConfiguration config )
         throws ModelInterpolationException
     {
-        if ( !project.isConcrete() )
+        if ( !project.isConcrete() || !projectWasChanged( project ) )
         {
             return;
         }
@@ -1955,6 +1957,54 @@ public class DefaultMavenProjectBuilder
         }
 
         project.setConcrete( false );
+    }
+
+    private boolean projectWasChanged( MavenProject project )
+    {
+        if ( !objectEquals( project.getBasedir(), project.getPreservedBasedir() ) )
+        {
+            return true;
+        }
+        
+        if ( !objectEquals( project.getProperties(), project.getPreservedProperties() ) )
+        {
+            return true;
+        }
+        
+        Build oBuild = project.getOriginalInterpolatedBuild();
+        Build build = project.getBuild();
+        
+        if ( !objectEquals( oBuild.getDirectory(), build.getDirectory() ) )
+        {
+            return true;
+        }
+        
+        if ( !objectEquals( oBuild.getOutputDirectory(), build.getOutputDirectory() ) )
+        {
+            return true;
+        }
+        
+        if ( !objectEquals( oBuild.getSourceDirectory(), build.getSourceDirectory() ) )
+        {
+            return true;
+        }
+        
+        if ( !objectEquals( oBuild.getTestSourceDirectory(), build.getTestSourceDirectory() ) )
+        {
+            return true;
+        }
+        
+        if ( !objectEquals( oBuild.getScriptSourceDirectory(), build.getScriptSourceDirectory() ) )
+        {
+            return true;
+        }
+        
+        return false;
+    }
+
+    private boolean objectEquals( Object obj1, Object obj2 )
+    {
+        return obj1 == null ? obj2 == null : obj1 == obj2 || obj1.equals( obj2 );
     }
 
     private void propagateNewPlugins( MavenProject project )
