@@ -470,7 +470,10 @@ public class DefaultMavenProjectBuilder
         }
 
         Build dynamicBuild = model.getBuild();
-        model.setBuild(ModelUtils.cloneBuild(dynamicBuild));
+        if(dynamicBuild != null) {
+            model.setBuild(ModelUtils.cloneBuild(dynamicBuild));    
+        }
+
 
         model = modelInterpolator.interpolate(model, projectDir, config, getLogger().isDebugEnabled());
 
@@ -666,7 +669,7 @@ public class DefaultMavenProjectBuilder
         MavenProject mavenProject;
         try {
             mavenProject = projectBuilder.buildFromLocalPath(new FileInputStream(projectDescriptor),
-                    null, null, null, resolver,
+                    Arrays.asList(getSuperModel()), null, null, resolver,
                     projectDescriptor.getParentFile());
         } catch (IOException e) {
             e.printStackTrace();

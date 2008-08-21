@@ -140,10 +140,10 @@ public final class PomClassicDomainModel
                     return "";
                 }
             }
-            String groupId = ( model.getGroupId() == null ) ? model.getParent().getGroupId() : model.getGroupId();
+            String groupId = ( model.getGroupId() == null && model.getParent() != null) ? model.getParent().getGroupId() : model.getGroupId();
             String artifactId =
-                ( model.getArtifactId() == null ) ? model.getParent().getArtifactId() : model.getArtifactId();
-            String version = ( model.getVersion() == null ) ? model.getParent().getVersion() : model.getVersion();
+                ( model.getArtifactId() == null && model.getParent() != null ) ? model.getParent().getArtifactId() : model.getArtifactId();
+            String version = ( model.getVersion() == null && model.getParent() != null) ? model.getParent().getVersion() : model.getVersion();
 
             id = groupId + ":" + artifactId + ":" + version;
         }

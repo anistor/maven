@@ -153,7 +153,6 @@ public final class DefaultProjectBuilder
             }
 
             if(mavenParents.size() > 0) {
-
                 mavenParent = buildFromLocalPath( ((InputStreamDomainModel) mavenParents.get(0)).getInputStream(), inheritedModels,
                         importModels, interpolatorProperties, resolver, projectDirectory);
             }
