@@ -42,14 +42,14 @@ public class MavenProjectDynamismTest
     extends PlexusTestCase
 {
 
-    private MavenProjectBuilder projectBuilder;
+    private DefaultMavenProjectBuilder projectBuilder;
 
     public void setUp()
         throws Exception
     {
         super.setUp();
 
-        projectBuilder = (MavenProjectBuilder) lookup( MavenProjectBuilder.class.getName() );
+        projectBuilder = (DefaultMavenProjectBuilder) lookup( MavenProjectBuilder.class.getName() );
     }
 
     public void testBuildSectionGroupIdInterpolation()
@@ -90,6 +90,8 @@ public class MavenProjectDynamismTest
                 + " should have a an interpolated POM groupId as its value.", children[i].getValue(),
                           project.getGroupId() );
         }
+        
+        project.getProperties().setProperty( "foo", "bar" );
 
         projectBuilder.restoreDynamicState( project, new DefaultProjectBuilderConfiguration() );
 
@@ -219,6 +221,9 @@ public class MavenProjectDynamismTest
 
         assertEquals( "Concrete build directory should be absolute.", new File( baseDir, "target" ).getAbsolutePath(),
                       new File( build.getDirectory() ).getAbsolutePath() );
+        
+        // Next, we have to change something to ensure the project is restored to its dynamic state.
+        project.getProperties().setProperty( "restoreTrigger", "true" );
 
         // --------------------------------------------------------------------
         // NOW, RESTORE THE DYNAMIC STATE FOR THE BUILD SECTION AND
@@ -320,6 +325,9 @@ public class MavenProjectDynamismTest
                                resources );
         assertResourcePresent( "concrete resources", "myDir", resources );
 
+        // Next, we have to change something to ensure the project is restored to its dynamic state.
+        project.getProperties().setProperty( "restoreTrigger", "true" );
+
         projectBuilder.restoreDynamicState( project, config );
 
         build = project.getBuild();
@@ -352,6 +360,9 @@ public class MavenProjectDynamismTest
                              filters );
 
         assertFilterPresent( "concrete filters", "myDir/filters.properties", filters );
+
+        // Next, we have to change something to ensure the project is restored to its dynamic state.
+        project.getProperties().setProperty( "restoreTrigger", "true" );
 
         projectBuilder.restoreDynamicState( project, config );
 
@@ -443,6 +454,9 @@ public class MavenProjectDynamismTest
             new File( project.getBuild().getDirectory(), "generated-sources/modello" ).getAbsolutePath();
 
         project.addCompileSourceRoot( newSourceRoot );
+
+        // Next, we have to change something to ensure the project is restored to its dynamic state.
+        project.getProperties().setProperty( "restoreTrigger", "true" );
 
         projectBuilder.restoreDynamicState( project, config );
 

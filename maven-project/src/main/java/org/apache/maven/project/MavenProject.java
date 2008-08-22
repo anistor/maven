@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -149,7 +150,7 @@ public class MavenProject
     private Map moduleAdjustments;
 
     private File basedir;
-
+    
     public MavenProject()
     {
         Model model = new Model();
@@ -307,6 +308,8 @@ public class MavenProject
             }
         }
 
+        preservedProperties = project.preservedProperties;
+        preservedBasedir = project.preservedBasedir;
         setConcrete( project.isConcrete() );
     }
     
@@ -1826,7 +1829,7 @@ public class MavenProject
 // ----------------------------------------------------------------------------
 // CODE BELOW IS USED TO PRESERVE DYNAMISM IN THE BUILD SECTION OF THE POM.
 // ----------------------------------------------------------------------------
-
+    
     private Build dynamicBuild;
 
     private Build originalInterpolatedBuild;
@@ -1976,6 +1979,39 @@ public class MavenProject
     protected void setOriginalInterpolatedScriptSourceRoots( List originalInterpolatedScriptSourceRoots )
     {
         this.originalInterpolatedScriptSourceRoots = originalInterpolatedScriptSourceRoots;
+    }
+    
+    private Properties preservedProperties;
+    
+    public Properties getPreservedProperties()
+    {
+        return preservedProperties;
+    }
+
+    public void preserveProperties()
+    {
+        Properties p = getProperties();
+        if ( p != null )
+        {
+            preservedProperties = new Properties();
+            for( Enumeration e = p.propertyNames(); e.hasMoreElements(); )
+            {
+                String key = (String) e.nextElement();
+                preservedProperties.setProperty( key, p.getProperty( key ) );
+            }
+        }
+    }
+    
+    private File preservedBasedir;
+    
+    public File getPreservedBasedir()
+    {
+        return preservedBasedir;
+    }
+
+    public void preserveBasedir()
+    {
+        this.preservedBasedir = getBasedir();
     }
 
 }

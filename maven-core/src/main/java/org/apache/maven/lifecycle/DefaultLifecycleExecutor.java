@@ -32,6 +32,8 @@ import java.util.Stack;
 import java.util.StringTokenizer;
 
 import org.apache.maven.BuildFailureException;
+import org.apache.maven.ConfigurationInterpolationException;
+import org.apache.maven.ConfigurationInterpolator;
 import org.apache.maven.artifact.handler.ArtifactHandler;
 import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.artifact.repository.ArtifactRepository;
@@ -58,7 +60,6 @@ import org.apache.maven.plugin.PluginManager;
 import org.apache.maven.plugin.PluginManagerException;
 import org.apache.maven.plugin.PluginNotFoundException;
 import org.apache.maven.plugin.descriptor.MojoDescriptor;
-import org.apache.maven.plugin.descriptor.Parameter;
 import org.apache.maven.plugin.descriptor.PluginDescriptor;
 import org.apache.maven.plugin.lifecycle.Execution;
 import org.apache.maven.plugin.lifecycle.Phase;
@@ -121,6 +122,8 @@ public class DefaultLifecycleExecutor
     private MavenProjectBuilder mavenProjectBuilder;
 
     private ModelInterpolator modelInterpolator;
+    
+    private ConfigurationInterpolator configInterpolator;
 
     // ----------------------------------------------------------------------
     //
@@ -565,14 +568,17 @@ public class DefaultLifecycleExecutor
             MojoExecution mojoExecution = (MojoExecution) i.next();
 
             MojoDescriptor mojoDescriptor = mojoExecution.getMojoDescriptor();
-
-            calculateConcreteState( project, session );
             
-            boolean usesAllProjects = mojoDescriptor.isAggregator() || usesSessionOrReactorProjects( mojoDescriptor );
+            PlexusConfiguration configuration = mojoDescriptor.getMojoConfiguration();
+            boolean usesReactorProjects = mojoDescriptor.isAggregator() || usesSessionOrReactorProjects( configuration );
             
-            if ( usesAllProjects )
+            if ( usesReactorProjects )
             {
                 calculateAllConcreteStates( session );
+            }
+            else
+            {
+                calculateConcreteState( project, session, true );
             }
             
             calculateConcreteConfiguration( mojoExecution, project, session );
@@ -603,9 +609,7 @@ public class DefaultLifecycleExecutor
             
             if ( hasFork )
             {
-                createExecutionProject( project, session );
-                
-                if ( usesAllProjects )
+                if ( usesReactorProjects )
                 {
                     List reactorProjects = session.getSortedProjects();
                     for ( Iterator it = reactorProjects.iterator(); it.hasNext(); )
@@ -613,9 +617,13 @@ public class DefaultLifecycleExecutor
                         MavenProject reactorProject = (MavenProject) it.next();
                         if ( reactorProject.getExecutionProject() == null )
                         {
-                            createExecutionProject( reactorProject, session );
+                            createExecutionProject( reactorProject, session, false );
                         }
                     }
+                }
+                else
+                {
+                    createExecutionProject( project, session, true );
                 }
             }
 
@@ -653,17 +661,19 @@ public class DefaultLifecycleExecutor
             if ( hasFork )
             {
                 // TODO: Would be nice to find a way to cause the execution project to stay in a concrete state...
-                calculateConcreteState( project.getExecutionProject(), session );
-                
-                if ( usesAllProjects )
+                if ( usesReactorProjects )
                 {
+                    calculateAllConcreteStates( session );
                     List reactorProjects = session.getSortedProjects();
                     for ( Iterator it = reactorProjects.iterator(); it.hasNext(); )
                     {
                         MavenProject reactorProject = (MavenProject) it.next();
-                        calculateConcreteState( reactorProject, session );
-                        calculateConcreteState( reactorProject.getExecutionProject(), session );
+                        calculateConcreteState( reactorProject.getExecutionProject(), session, false );
                     }
+                }
+                else
+                {
+                    calculateConcreteState( project.getExecutionProject(), session, true );
                 }
             }
 
@@ -701,61 +711,54 @@ public class DefaultLifecycleExecutor
                 throw new LifecycleExecutionException( e.getMessage(), e );
             }
             
-            if ( hasFork )
-            {
-                project.setExecutionProject( null );
-                
-                if ( usesAllProjects )
-                {
-                    List reactorProjects = session.getSortedProjects();
-                    for ( Iterator it = reactorProjects.iterator(); it.hasNext(); )
-                    {
-                        MavenProject reactorProject = (MavenProject) it.next();
-                        reactorProject.setExecutionProject( null );
-                    }
-                }
-            }
+//            if ( hasFork )
+//            {
+//                project.setExecutionProject( null );
+//                
+//                if ( usesReactorProjects )
+//                {
+//                    List reactorProjects = session.getSortedProjects();
+//                    for ( Iterator it = reactorProjects.iterator(); it.hasNext(); )
+//                    {
+//                        MavenProject reactorProject = (MavenProject) it.next();
+//                        reactorProject.setExecutionProject( null );
+//                    }
+//                }
+//            }
             
-            restoreDynamicState( project, session );
-            
-            if ( usesAllProjects )
-            {
-                restoreAllDynamicStates( session );
-            }
+//            if ( usesReactorProjects )
+//            {
+//                restoreAllDynamicStates( session );
+//            }
+//            else
+//            {
+//                restoreDynamicState( project, session, true );
+//            }
         }
     }
     
-    private void createExecutionProject( MavenProject project, MavenSession session )
+    private void createExecutionProject( MavenProject project, MavenSession session, boolean processProjectReferences )
         throws LifecycleExecutionException
     {
-        MavenProject executionProject = new MavenProject( project );
-        
-        calculateConcreteState( executionProject, session );
-        
-        project.setExecutionProject( executionProject );
+        if ( project.getExecutionProject() == null )
+        {
+            MavenProject executionProject = new MavenProject( project );
+            
+            calculateConcreteState( executionProject, session, processProjectReferences );
+            
+            project.setExecutionProject( executionProject );
+        }
     }
 
-    private boolean usesSessionOrReactorProjects( MojoDescriptor mojoDescriptor )
+    private boolean usesSessionOrReactorProjects( PlexusConfiguration configuration )
     {
-        List params = mojoDescriptor.getParameters();
-        if ( params != null )
+        String value = configuration != null ? String.valueOf( configuration ) : null;
+        
+        if ( value != null )
         {
-            for ( Iterator it = params.iterator(); it.hasNext(); )
+            if ( value.indexOf( "${session" ) > -1 || value.indexOf( "${reactorProjects}" ) > -1 )
             {
-                Parameter param = (Parameter) it.next();
-                String value = param.getExpression();
-                if ( value != null && value.trim().length() > 0
-                    && ( value.indexOf( "${session" ) > -1 || value.indexOf( "${reactorProjects}" ) > -1 ) )
-                {
-                    return true;
-                }
-                
-                value = param.getDefaultValue();
-                if ( value != null && value.trim().length() > 0
-                    && ( value.indexOf( "${session" ) > -1 || value.indexOf( "${reactorProjects}" ) > -1 ) )
-                {
-                    return true;
-                }
+                return true;
             }
         }
         
@@ -770,49 +773,17 @@ public class DefaultLifecycleExecutor
             return;
         }
         
-        StringWriter writer = new StringWriter();
-        Xpp3DomWriter.write( writer, mojoExecution.getConfiguration() );
-        
-        String domStr = writer.toString();
-        
-        if ( project == null )
-        {
-            try
-            {
-                project = mavenProjectBuilder.buildStandaloneSuperProject( session.getProjectBuilderConfiguration() );
-            }
-            catch ( ProjectBuildingException e )
-            {
-                throw new LifecycleExecutionException( "Error building super-POM to interpolate configuration for: '" + mojoExecution.getMojoDescriptor().getRoleHint() +
-                                                       "' (execution: '" + mojoExecution.getExecutionId() + "')", e );
-            }
-        }
-        
         try
         {
-            domStr =
-                modelInterpolator.interpolate( domStr, project.getModel(), project.getBasedir(),
-                                               session.getProjectBuilderConfiguration(), getLogger().isDebugEnabled() );
+            mojoExecution.setConfiguration( (Xpp3Dom) configInterpolator.interpolate(
+                                                                                      mojoExecution.getConfiguration(),
+                                                                                      project,
+                                                                                      session.getProjectBuilderConfiguration() ) );
         }
-        catch ( ModelInterpolationException e )
+        catch ( ConfigurationInterpolationException e )
         {
             throw new LifecycleExecutionException( "Error interpolating configuration for: '" + mojoExecution.getMojoDescriptor().getRoleHint() +
-                                              "' (execution: '" + mojoExecution.getExecutionId() + "')", e );
-        }
-        
-        try
-        {
-            mojoExecution.setConfiguration( Xpp3DomBuilder.build( new StringReader( domStr ) ) );
-        }
-        catch ( XmlPullParserException e )
-        {
-            throw new LifecycleExecutionException( "Error reading interpolated configuration for: '" + mojoExecution.getMojoDescriptor().getRoleHint() +
-                                              "' (execution: '" + mojoExecution.getExecutionId() + "')", e );
-        }
-        catch ( IOException e )
-        {
-            throw new LifecycleExecutionException( "Error reading interpolated configuration for: '" + mojoExecution.getMojoDescriptor().getRoleHint() +
-                                              "' (execution: '" + mojoExecution.getExecutionId() + "')", e );
+                                                   "' (execution: '" + mojoExecution.getExecutionId() + "')", e );
         }
     }
     
@@ -824,19 +795,19 @@ public class DefaultLifecycleExecutor
         {
             for ( Iterator it = projects.iterator(); it.hasNext(); )
             {
-                calculateConcreteState( (MavenProject) it.next(), session );
+                calculateConcreteState( (MavenProject) it.next(), session, false );
             }
         }
     }
 
-    private void calculateConcreteState( MavenProject project, MavenSession session )
+    private void calculateConcreteState( MavenProject project, MavenSession session, boolean processReferences )
         throws LifecycleExecutionException
     {
-        if ( mavenProjectBuilder != null && project != null && !project.isConcrete() )
+        if ( mavenProjectBuilder != null && project != null )
         {
             try
             {
-                mavenProjectBuilder.calculateConcreteState( project, session.getProjectBuilderConfiguration() );
+                mavenProjectBuilder.calculateConcreteState( project, session.getProjectBuilderConfiguration(), processReferences );
             }
             catch ( ModelInterpolationException e )
             {
@@ -845,32 +816,33 @@ public class DefaultLifecycleExecutor
             }
         }
     }
-    private void restoreAllDynamicStates( MavenSession session )
-        throws LifecycleExecutionException
-    {
-        List reactorProjects = session.getSortedProjects();
-        if ( reactorProjects != null )
-        {
-            for ( Iterator it = reactorProjects.iterator(); it.hasNext(); )
-            {
-                MavenProject project = (MavenProject) it.next();
-                restoreDynamicState( project, session );
-            }
-        }
-    }
-
-    private void restoreDynamicState( MavenProject project, MavenSession session )
-        throws LifecycleExecutionException
-    {
-        try
-        {
-            mavenProjectBuilder.restoreDynamicState( project, session.getProjectBuilderConfiguration() );
-        }
-        catch ( ModelInterpolationException e )
-        {
-            throw new LifecycleExecutionException( "Failed to restore dynamic state for project: " + project, e );
-        }
-    }
+    
+//    private void restoreAllDynamicStates( MavenSession session )
+//        throws LifecycleExecutionException
+//    {
+//        List reactorProjects = session.getSortedProjects();
+//        if ( reactorProjects != null )
+//        {
+//            for ( Iterator it = reactorProjects.iterator(); it.hasNext(); )
+//            {
+//                MavenProject project = (MavenProject) it.next();
+//                restoreDynamicState( project, session, false );
+//            }
+//        }
+//    }
+//
+//    private void restoreDynamicState( MavenProject project, MavenSession session, boolean processReferences )
+//        throws LifecycleExecutionException
+//    {
+//        try
+//        {
+//            mavenProjectBuilder.restoreDynamicState( project, session.getProjectBuilderConfiguration(), processReferences );
+//        }
+//        catch ( ModelInterpolationException e )
+//        {
+//            throw new LifecycleExecutionException( "Failed to restore dynamic state for project: " + project, e );
+//        }
+//    }
 
     private List getReportExecutions( MavenProject project, Stack forkEntryPoints, MojoExecution mojoExecution, MavenSession session )
         throws LifecycleExecutionException, PluginNotFoundException
@@ -1279,7 +1251,7 @@ public class DefaultLifecycleExecutor
                 if ( lifecycleForkers.contains( execution.getMojoDescriptor() ) )
                 {
                     taskIterator.remove();
-                    getLogger().warn( "Removing: " + execution.getMojoDescriptor().getFullGoalName()
+                    getLogger().warn( "Removing: " + execution.getMojoDescriptor().getGoal()
                                       + " from forked lifecycle, to prevent recursive invocation." );
                 }
             }
