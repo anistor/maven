@@ -1833,6 +1833,8 @@ public class DefaultMavenProjectBuilder
     private void calculateConcreteStateInternal( MavenProject project, ProjectBuilderConfiguration config, boolean processProjectReferences, Set processedProjects )
         throws ModelInterpolationException
     {
+        restoreDynamicState( project, config, false );
+        
         if ( !project.isConcrete() )
         {
             if ( project.getParent() != null )

@@ -726,14 +726,14 @@ public class DefaultLifecycleExecutor
 //                }
 //            }
             
-            if ( usesReactorProjects )
-            {
-                restoreAllDynamicStates( session );
-            }
-            else
-            {
-                restoreDynamicState( project, session, true );
-            }
+//            if ( usesReactorProjects )
+//            {
+//                restoreAllDynamicStates( session );
+//            }
+//            else
+//            {
+//                restoreDynamicState( project, session, true );
+//            }
         }
     }
     
@@ -816,32 +816,33 @@ public class DefaultLifecycleExecutor
             }
         }
     }
-    private void restoreAllDynamicStates( MavenSession session )
-        throws LifecycleExecutionException
-    {
-        List reactorProjects = session.getSortedProjects();
-        if ( reactorProjects != null )
-        {
-            for ( Iterator it = reactorProjects.iterator(); it.hasNext(); )
-            {
-                MavenProject project = (MavenProject) it.next();
-                restoreDynamicState( project, session, false );
-            }
-        }
-    }
-
-    private void restoreDynamicState( MavenProject project, MavenSession session, boolean processReferences )
-        throws LifecycleExecutionException
-    {
-        try
-        {
-            mavenProjectBuilder.restoreDynamicState( project, session.getProjectBuilderConfiguration(), processReferences );
-        }
-        catch ( ModelInterpolationException e )
-        {
-            throw new LifecycleExecutionException( "Failed to restore dynamic state for project: " + project, e );
-        }
-    }
+    
+//    private void restoreAllDynamicStates( MavenSession session )
+//        throws LifecycleExecutionException
+//    {
+//        List reactorProjects = session.getSortedProjects();
+//        if ( reactorProjects != null )
+//        {
+//            for ( Iterator it = reactorProjects.iterator(); it.hasNext(); )
+//            {
+//                MavenProject project = (MavenProject) it.next();
+//                restoreDynamicState( project, session, false );
+//            }
+//        }
+//    }
+//
+//    private void restoreDynamicState( MavenProject project, MavenSession session, boolean processReferences )
+//        throws LifecycleExecutionException
+//    {
+//        try
+//        {
+//            mavenProjectBuilder.restoreDynamicState( project, session.getProjectBuilderConfiguration(), processReferences );
+//        }
+//        catch ( ModelInterpolationException e )
+//        {
+//            throw new LifecycleExecutionException( "Failed to restore dynamic state for project: " + project, e );
+//        }
+//    }
 
     private List getReportExecutions( MavenProject project, Stack forkEntryPoints, MojoExecution mojoExecution, MavenSession session )
         throws LifecycleExecutionException, PluginNotFoundException

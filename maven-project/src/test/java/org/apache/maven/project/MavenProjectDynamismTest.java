@@ -42,14 +42,14 @@ public class MavenProjectDynamismTest
     extends PlexusTestCase
 {
 
-    private MavenProjectBuilder projectBuilder;
+    private DefaultMavenProjectBuilder projectBuilder;
 
     public void setUp()
         throws Exception
     {
         super.setUp();
 
-        projectBuilder = (MavenProjectBuilder) lookup( MavenProjectBuilder.class.getName() );
+        projectBuilder = (DefaultMavenProjectBuilder) lookup( MavenProjectBuilder.class.getName() );
     }
 
     public void testBuildSectionGroupIdInterpolation()
