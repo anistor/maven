@@ -1806,9 +1806,31 @@ public class DefaultMavenProjectBuilder
         container = (PlexusContainer) context.get( PlexusConstants.PLEXUS_KEY );
     }
 
-    // NOTE: This is a code hotspot, PLEASE be careful about the performance of logic inside or
-    // called from this method. 
+    /**
+     * {@inheritDoc}
+     */
     public void calculateConcreteState( MavenProject project, ProjectBuilderConfiguration config )
+        throws ModelInterpolationException
+    {
+        calculateConcreteStateInternal( project, config, true, new HashSet() );
+    }
+    
+    /**
+     * {@inheritDoc}
+     */
+    public void calculateConcreteState( MavenProject project, ProjectBuilderConfiguration config, boolean processProjectReferences )
+        throws ModelInterpolationException
+    {
+        calculateConcreteStateInternal( project, config, processProjectReferences, ( processProjectReferences ? new HashSet() : null ) );
+    }
+    
+    /*
+     * NOTE: This is a code hotspot, PLEASE be careful about the performance of logic inside or
+     * called from this method. 
+     * 
+     * NOTE: If processProjectReferences == false, processedProjects MUST NOT BE USED. It will be null.
+     */
+    private void calculateConcreteStateInternal( MavenProject project, ProjectBuilderConfiguration config, boolean processProjectReferences, Set processedProjects )
         throws ModelInterpolationException
     {
         if ( !project.isConcrete() )
@@ -1873,11 +1895,15 @@ public class DefaultMavenProjectBuilder
             project.setBuild( model.getBuild() );
         }
 
-        calculateConcreteProjectReferences( project, config );
+        if ( processProjectReferences )
+        {
+            processedProjects.add( project.getId() );
+            calculateConcreteProjectReferences( project, config, processedProjects );
+        }
 
         if ( project.getExecutionProject() != null )
         {
-            calculateConcreteState( project.getExecutionProject(), config );
+            calculateConcreteStateInternal( project.getExecutionProject(), config, processProjectReferences, processedProjects );
         }
 
         project.setConcrete( true );
@@ -1897,7 +1923,8 @@ public class DefaultMavenProjectBuilder
     }
 
     private void calculateConcreteProjectReferences( MavenProject project,
-                                                     ProjectBuilderConfiguration config )
+                                                     ProjectBuilderConfiguration config,
+                                                     Set processedProjects )
         throws ModelInterpolationException
     {
         Map projectRefs = project.getProjectReferences();
@@ -1907,7 +1934,10 @@ public class DefaultMavenProjectBuilder
             for ( Iterator it = projectRefs.values().iterator(); it.hasNext(); )
             {
                 MavenProject reference = (MavenProject) it.next();
-                calculateConcreteState( reference, config );
+                if ( !processedProjects.contains( reference.getId() ) )
+                {
+                    calculateConcreteStateInternal( reference, config, true, processedProjects );
+                }
             }
         }
     }
@@ -1936,9 +1966,31 @@ public class DefaultMavenProjectBuilder
         return result;
     }
 
-    // NOTE: This is a code hotspot, PLEASE be careful about the performance of logic inside or
-    // called from this method. 
+    /**
+     * {@inheritDoc}
+     */
     public void restoreDynamicState( MavenProject project, ProjectBuilderConfiguration config )
+        throws ModelInterpolationException
+    {
+        restoreDynamicStateInternal( project, config, true, new HashSet() );
+    }
+    
+    /**
+     * {@inheritDoc}
+     */
+    public void restoreDynamicState( MavenProject project, ProjectBuilderConfiguration config, boolean processProjectReferences )
+        throws ModelInterpolationException
+    {
+        restoreDynamicStateInternal( project, config, processProjectReferences, ( processProjectReferences ? new HashSet() : null ) );
+    }
+    
+    /*
+     * NOTE: This is a code hotspot, PLEASE be careful about the performance of logic inside or
+     * called from this method. 
+     * 
+     * NOTE: If processProjectReferences == false, processedProjects MUST NOT BE USED. It will be null.
+     */
+    private void restoreDynamicStateInternal( MavenProject project, ProjectBuilderConfiguration config, boolean processProjectReferences, Set processedProjects )
         throws ModelInterpolationException
     {
         if ( !project.isConcrete() || !projectWasChanged( project ) )
@@ -1949,11 +2001,15 @@ public class DefaultMavenProjectBuilder
         restoreBuildRoots( project, config, getLogger().isDebugEnabled() );
         restoreModelBuildSection( project, config, getLogger().isDebugEnabled() );
         
-        restoreDynamicProjectReferences( project, config );
+        if ( processProjectReferences )
+        {
+            processedProjects.add( project.getId() );
+            restoreDynamicProjectReferences( project, config, processedProjects );
+        }
         
         if ( project.getExecutionProject() != null )
         {
-            restoreDynamicState( project.getExecutionProject(), config );
+            restoreDynamicStateInternal( project.getExecutionProject(), config, processProjectReferences, processedProjects );
         }
 
         project.setConcrete( false );
@@ -2004,7 +2060,7 @@ public class DefaultMavenProjectBuilder
 
     private boolean objectEquals( Object obj1, Object obj2 )
     {
-        return obj1 == null ? obj2 == null : obj1 == obj2 || obj1.equals( obj2 );
+        return obj1 == null ? obj2 == null : obj2 != null && ( obj1 == obj2 || obj1.equals( obj2 ) );
     }
 
     private void propagateNewPlugins( MavenProject project )
@@ -2038,7 +2094,8 @@ public class DefaultMavenProjectBuilder
     }
 
     private void restoreDynamicProjectReferences( MavenProject project,
-                                                  ProjectBuilderConfiguration config )
+                                                  ProjectBuilderConfiguration config,
+                                                  Set processedProjects )
         throws ModelInterpolationException
     {
         Map projectRefs = project.getProjectReferences();
@@ -2047,7 +2104,10 @@ public class DefaultMavenProjectBuilder
             for ( Iterator it = projectRefs.values().iterator(); it.hasNext(); )
             {
                 MavenProject projectRef = (MavenProject) it.next();
-                restoreDynamicState( projectRef, config );
+                if ( !processedProjects.contains( projectRef.getId() ) )
+                {
+                    restoreDynamicStateInternal( projectRef, config, true, processedProjects );
+                }
             }
         }
     }
