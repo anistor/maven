@@ -241,12 +241,19 @@ public abstract class AbstractStringBasedModelInterpolator
         },
         PROJECT_PREFIXES, true );
         
-        List valueSources = new ArrayList( 7 );
+        List valueSources = new ArrayList( 8 );
         
         // NOTE: Order counts here!
         valueSources.add( basedirValueSource );
         valueSources.add( new BuildTimestampValueSource( config.getBuildStartTime(), timestampFormat ) );
         valueSources.add( new MapBasedValueSource( config.getExecutionProperties() ) );
+        valueSources.add( new AbstractValueSource( false )
+        {
+            public Object getValue( String expression )
+            {
+                return config.getExecutionProperties().getProperty( "env." + expression );
+            }
+        } );
         valueSources.add( modelValueSource1 );
         valueSources.add( new PrefixedValueSourceWrapper( new MapBasedValueSource( modelProperties ), PROJECT_PREFIXES, true ) );
         valueSources.add( modelValueSource2 );
