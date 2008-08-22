@@ -244,9 +244,6 @@
   </modules>
 
   <properties>
-    <!--
-    <mavenHintDynamicBuild>true</mavenHintDynamicBuild>
-    -->
     <mavenVersion>2.0.10-RC10-SNAPSHOT</mavenVersion>
     <wagonVersion>1.0-beta-4</wagonVersion>
   </properties>
@@ -374,7 +371,7 @@
       <dependency>
         <groupId>org.codehaus.plexus</groupId>
         <artifactId>plexus-interpolation</artifactId>
-        <version>1.3</version>
+        <version>1.4</version>
       </dependency>
       <dependency>
         <groupId>org.codehaus.plexus</groupId>

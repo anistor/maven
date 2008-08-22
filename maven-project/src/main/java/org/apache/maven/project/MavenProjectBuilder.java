@@ -133,6 +133,14 @@ public interface MavenProjectBuilder
      * structures. Along with the {@link MavenProjectBuilder#restoreDynamicState(MavenProject, ProjectBuilderConfiguration, boolean)}
      * method, this method allows expressions in these areas of the POM and project instance to
      * be reevaluated in the event that a mojo changes one the build-path values, or a project property.
+     * <br/><br/>
+     * This method will process the following:
+     * <ol>
+     *   <li>the specified project's parent project (if not null)</li>
+     *   <li>specified project</li>
+     *   <li>its execution project (if not null)</li>
+     *   <li>any project references (iff processReferences == true)</li>
+     * </ol>
      */
     void calculateConcreteState( MavenProject project, ProjectBuilderConfiguration config, boolean processReferences )
         throws ModelInterpolationException;
@@ -151,6 +159,14 @@ public interface MavenProjectBuilder
      * any expressions that may depend on this changed information. This method will short-circuit if the project
      * is not in a concrete state (see {@link MavenProjectBuilder#calculateConcreteState(MavenProject, ProjectBuilderConfiguration, boolean)}
      * or if the properties and build paths of the project remain unchanged.
+     * <br/><br/>
+     * This method will process the following:
+     * <ol>
+     *   <li>the specified project's parent project (if not null)</li>
+     *   <li>specified project</li>
+     *   <li>its execution project (if not null)</li>
+     *   <li>any project references (iff processReferences == true)</li>
+     * </ol>
      */
     void restoreDynamicState( MavenProject project, ProjectBuilderConfiguration config, boolean processReferences )
         throws ModelInterpolationException;

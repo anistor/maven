@@ -206,6 +206,11 @@ under the License.
       <implementation>org.apache.maven.usability.InvalidArtifactDiagnoser</implementation>
     </component>
 
+    <component>
+      <role>org.apache.maven.ConfigurationInterpolator</role>
+      <implementation>org.apache.maven.ReflectionConfigurationInterpolator</implementation>
+    </component>
+    
     <!--
      |
      | Lifecycle executor
@@ -229,6 +234,9 @@ under the License.
         </requirement>
         <requirement>
           <role>org.apache.maven.project.interpolation.ModelInterpolator</role>
+        </requirement>
+        <requirement>
+          <role>org.apache.maven.ConfigurationInterpolator</role>
         </requirement>
       </requirements>
       <configuration>

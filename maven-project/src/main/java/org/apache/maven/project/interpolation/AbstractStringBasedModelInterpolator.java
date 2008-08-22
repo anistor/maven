@@ -37,6 +37,7 @@ import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
 import org.apache.maven.project.DefaultProjectBuilderConfiguration;
 import org.apache.maven.project.ProjectBuilderConfiguration;
 import org.apache.maven.project.path.PathTranslator;
+import org.codehaus.plexus.interpolation.AbstractValueSource;
 import org.codehaus.plexus.interpolation.InterpolationException;
 import org.codehaus.plexus.interpolation.InterpolationPostProcessor;
 import org.codehaus.plexus.interpolation.Interpolator;
@@ -201,10 +202,17 @@ public abstract class AbstractStringBasedModelInterpolator
                                boolean debug )
         throws ModelInterpolationException
     {
-        List valueSources = createValueSources( model, projectDir, config );
-        List postProcessors = createPostProcessors( model, projectDir, config );
-        
-        return interpolateInternal( src, valueSources, postProcessors, debug );
+        try
+        {
+            List valueSources = createValueSources( model, projectDir, config );
+            List postProcessors = createPostProcessors( model, projectDir, config );
+            
+            return interpolateInternal( src, valueSources, postProcessors, debug );
+        }
+        finally
+        {
+            interpolator.clearAnswers();
+        }
     }
     
     protected List createValueSources( final Model model, final File projectDir, final ProjectBuilderConfiguration config )
@@ -220,7 +228,7 @@ public abstract class AbstractStringBasedModelInterpolator
         ValueSource modelValueSource1 = new PrefixedObjectValueSource( PROJECT_PREFIXES, model, false );
         ValueSource modelValueSource2 = new ObjectBasedValueSource( model );
 
-        ValueSource basedirValueSource = new PrefixedValueSourceWrapper( new ValueSource(){
+        ValueSource basedirValueSource = new PrefixedValueSourceWrapper( new AbstractValueSource( false ){
             public Object getValue( String expression )
             {
                 if ( projectDir != null && "basedir".equals( expression ) )
@@ -255,6 +263,11 @@ public abstract class AbstractStringBasedModelInterpolator
     protected String interpolateInternal( String src, List valueSources, List postProcessors, boolean debug )
         throws ModelInterpolationException
     {
+        if ( src.indexOf( "${" ) < 0 )
+        {
+            return src;
+        }
+        
         Logger logger = getLogger();
 
         String result = src;
@@ -326,7 +339,7 @@ public abstract class AbstractStringBasedModelInterpolator
                     }
                 }
 
-//                interpolator.clearFeedback();
+                interpolator.clearFeedback();
             }
             finally
             {
@@ -349,11 +362,16 @@ public abstract class AbstractStringBasedModelInterpolator
     
     protected abstract Interpolator createInterpolator();
 
-    public void initialize()
+    public final void initialize()
         throws InitializationException
     {
         interpolator = createInterpolator();
         recursionInterceptor = new PrefixAwareRecursionInterceptor( PROJECT_PREFIXES );
+    }
+    
+    protected final Interpolator getInterpolator()
+    {
+        return interpolator;
     }
 
 }

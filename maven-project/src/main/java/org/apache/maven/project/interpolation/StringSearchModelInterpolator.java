@@ -20,6 +20,8 @@ import org.codehaus.plexus.interpolation.Interpolator;
 import org.codehaus.plexus.interpolation.StringSearchInterpolator;
 import org.codehaus.plexus.logging.Logger;
 
+import sun.security.action.GetIntegerAction;
+
 public class StringSearchModelInterpolator
     extends AbstractStringBasedModelInterpolator
 {
@@ -48,25 +50,35 @@ public class StringSearchModelInterpolator
                                       boolean debugEnabled )
         throws ModelInterpolationException
     {
-        List valueSources = createValueSources( model, projectDir, config );
-        List postProcessors = createPostProcessors( model, projectDir, config );
-        
-        InterpolateObjectAction action =
-            new InterpolateObjectAction( obj, valueSources, postProcessors, debugEnabled,
-                                         this, getLogger() );
-        
-        ModelInterpolationException error =
-            (ModelInterpolationException) AccessController.doPrivileged( action );
-        
-        if ( error != null )
+        try
         {
-            throw error;
+            List valueSources = createValueSources( model, projectDir, config );
+            List postProcessors = createPostProcessors( model, projectDir, config );
+            
+            InterpolateObjectAction action =
+                new InterpolateObjectAction( obj, valueSources, postProcessors, debugEnabled,
+                                             this, getLogger() );
+            
+            ModelInterpolationException error =
+                (ModelInterpolationException) AccessController.doPrivileged( action );
+            
+            if ( error != null )
+            {
+                throw error;
+            }
+        }
+        finally
+        {
+            getInterpolator().clearAnswers();
         }
     }
 
     protected Interpolator createInterpolator()
     {
-        return new StringSearchInterpolator();
+        StringSearchInterpolator interpolator = new StringSearchInterpolator();
+        interpolator.setCacheAnswers( true );
+        
+        return interpolator;
     }
     
     private static final class InterpolateObjectAction implements PrivilegedAction

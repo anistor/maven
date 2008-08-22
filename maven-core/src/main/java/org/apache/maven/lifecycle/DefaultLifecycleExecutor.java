@@ -32,6 +32,8 @@ import java.util.Stack;
 import java.util.StringTokenizer;
 
 import org.apache.maven.BuildFailureException;
+import org.apache.maven.ConfigurationInterpolationException;
+import org.apache.maven.ConfigurationInterpolator;
 import org.apache.maven.artifact.handler.ArtifactHandler;
 import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.artifact.repository.ArtifactRepository;
@@ -120,6 +122,8 @@ public class DefaultLifecycleExecutor
     private MavenProjectBuilder mavenProjectBuilder;
 
     private ModelInterpolator modelInterpolator;
+    
+    private ConfigurationInterpolator configInterpolator;
 
     // ----------------------------------------------------------------------
     //
@@ -769,49 +773,17 @@ public class DefaultLifecycleExecutor
             return;
         }
         
-        StringWriter writer = new StringWriter();
-        Xpp3DomWriter.write( writer, mojoExecution.getConfiguration() );
-        
-        String domStr = writer.toString();
-        
-        if ( project == null )
-        {
-            try
-            {
-                project = mavenProjectBuilder.buildStandaloneSuperProject( session.getProjectBuilderConfiguration() );
-            }
-            catch ( ProjectBuildingException e )
-            {
-                throw new LifecycleExecutionException( "Error building super-POM to interpolate configuration for: '" + mojoExecution.getMojoDescriptor().getRoleHint() +
-                                                       "' (execution: '" + mojoExecution.getExecutionId() + "')", e );
-            }
-        }
-        
         try
         {
-            domStr =
-                modelInterpolator.interpolate( domStr, project.getModel(), project.getBasedir(),
-                                               session.getProjectBuilderConfiguration(), getLogger().isDebugEnabled() );
+            mojoExecution.setConfiguration( (Xpp3Dom) configInterpolator.interpolate(
+                                                                                      mojoExecution.getConfiguration(),
+                                                                                      project,
+                                                                                      session.getProjectBuilderConfiguration() ) );
         }
-        catch ( ModelInterpolationException e )
+        catch ( ConfigurationInterpolationException e )
         {
             throw new LifecycleExecutionException( "Error interpolating configuration for: '" + mojoExecution.getMojoDescriptor().getRoleHint() +
-                                              "' (execution: '" + mojoExecution.getExecutionId() + "')", e );
-        }
-        
-        try
-        {
-            mojoExecution.setConfiguration( Xpp3DomBuilder.build( new StringReader( domStr ) ) );
-        }
-        catch ( XmlPullParserException e )
-        {
-            throw new LifecycleExecutionException( "Error reading interpolated configuration for: '" + mojoExecution.getMojoDescriptor().getRoleHint() +
-                                              "' (execution: '" + mojoExecution.getExecutionId() + "')", e );
-        }
-        catch ( IOException e )
-        {
-            throw new LifecycleExecutionException( "Error reading interpolated configuration for: '" + mojoExecution.getMojoDescriptor().getRoleHint() +
-                                              "' (execution: '" + mojoExecution.getExecutionId() + "')", e );
+                                                   "' (execution: '" + mojoExecution.getExecutionId() + "')", e );
         }
     }
     

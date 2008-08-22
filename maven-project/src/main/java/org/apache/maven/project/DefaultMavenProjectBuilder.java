@@ -1835,6 +1835,11 @@ public class DefaultMavenProjectBuilder
     {
         if ( !project.isConcrete() )
         {
+            if ( project.getParent() != null )
+            {
+                calculateConcreteStateInternal( project.getParent(), config, processProjectReferences, processedProjects );
+            }
+            
             Build build = project.getBuild();
             if ( build != null )
             {
@@ -1893,6 +1898,13 @@ public class DefaultMavenProjectBuilder
             project.preserveProperties();
             project.preserveBasedir();
             project.setBuild( model.getBuild() );
+            
+            if ( project.getExecutionProject() != null )
+            {
+                calculateConcreteStateInternal( project.getExecutionProject(), config, processProjectReferences, processedProjects );
+            }
+            
+            project.setConcrete( true );
         }
 
         if ( processProjectReferences )
@@ -1900,13 +1912,6 @@ public class DefaultMavenProjectBuilder
             processedProjects.add( project.getId() );
             calculateConcreteProjectReferences( project, config, processedProjects );
         }
-
-        if ( project.getExecutionProject() != null )
-        {
-            calculateConcreteStateInternal( project.getExecutionProject(), config, processProjectReferences, processedProjects );
-        }
-
-        project.setConcrete( true );
     }
 
     private void initResourceMergeIds( List resources )
@@ -1993,26 +1998,29 @@ public class DefaultMavenProjectBuilder
     private void restoreDynamicStateInternal( MavenProject project, ProjectBuilderConfiguration config, boolean processProjectReferences, Set processedProjects )
         throws ModelInterpolationException
     {
-        if ( !project.isConcrete() || !projectWasChanged( project ) )
+        if ( project.isConcrete() && projectWasChanged( project ) )
         {
-            return;
+            if ( project.getParent() != null )
+            {
+                restoreDynamicStateInternal( project.getParent(), config, processProjectReferences, processedProjects );
+            }
+            
+            restoreBuildRoots( project, config, getLogger().isDebugEnabled() );
+            restoreModelBuildSection( project, config, getLogger().isDebugEnabled() );
+            
+            if ( project.getExecutionProject() != null )
+            {
+                restoreDynamicStateInternal( project.getExecutionProject(), config, processProjectReferences, processedProjects );
+            }
+            
+            project.setConcrete( false );
         }
 
-        restoreBuildRoots( project, config, getLogger().isDebugEnabled() );
-        restoreModelBuildSection( project, config, getLogger().isDebugEnabled() );
-        
         if ( processProjectReferences )
         {
             processedProjects.add( project.getId() );
             restoreDynamicProjectReferences( project, config, processedProjects );
         }
-        
-        if ( project.getExecutionProject() != null )
-        {
-            restoreDynamicStateInternal( project.getExecutionProject(), config, processProjectReferences, processedProjects );
-        }
-
-        project.setConcrete( false );
     }
 
     private boolean projectWasChanged( MavenProject project )
