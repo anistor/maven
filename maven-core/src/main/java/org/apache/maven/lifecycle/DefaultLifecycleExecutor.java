@@ -711,20 +711,20 @@ public class DefaultLifecycleExecutor
                 throw new LifecycleExecutionException( e.getMessage(), e );
             }
             
-//            if ( hasFork )
-//            {
-//                project.setExecutionProject( null );
-//                
-//                if ( usesReactorProjects )
-//                {
-//                    List reactorProjects = session.getSortedProjects();
-//                    for ( Iterator it = reactorProjects.iterator(); it.hasNext(); )
-//                    {
-//                        MavenProject reactorProject = (MavenProject) it.next();
-//                        reactorProject.setExecutionProject( null );
-//                    }
-//                }
-//            }
+            if ( hasFork )
+            {
+                project.setExecutionProject( null );
+                
+                if ( usesReactorProjects )
+                {
+                    List reactorProjects = session.getSortedProjects();
+                    for ( Iterator it = reactorProjects.iterator(); it.hasNext(); )
+                    {
+                        MavenProject reactorProject = (MavenProject) it.next();
+                        reactorProject.setExecutionProject( null );
+                    }
+                }
+            }
             
 //            if ( usesReactorProjects )
 //            {
