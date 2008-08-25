@@ -34,38 +34,13 @@ public class MavenArtifactFilterManager
 {
     public static ArtifactFilter createStandardFilter()
     {
-        Set artifacts = createBaseArtifactSet();
-
-        artifacts.add( "wagon-file" );
-        artifacts.add( "wagon-http-lightweight" );
-        artifacts.add( "wagon-webdav" );
-        artifacts.add( "wagon-ssh" );
-        artifacts.add( "wagon-ssh-external" );
-        artifacts.add( "wagon-ssh-common" );
-        artifacts.add( "wagon-http-shared" );
-
-        return new ExclusionSetFilter( artifacts );
-    }
-
-    public static ArtifactFilter createExtensionFilter()
-    {
-        Set artifacts = createBaseArtifactSet();
-
-        // It should be safe to include wagon implementations, and since this is used by the extension manager they would
-        // get filtered out otherwise
-        
-        return new ExclusionSetFilter( artifacts );
-    }
-
-    private static Set createBaseArtifactSet()
-    {
         // TODO: configure this from bootstrap or scan lib
         Set artifacts = new HashSet();
 
         artifacts.add( "classworlds" );
         artifacts.add( "commons-cli" );
         artifacts.add( "doxia-sink-api" );
-        artifacts.add( "doxia-logging-api" );
+        artifacts.add( "jsch" );
         artifacts.add( "maven-artifact" );
         artifacts.add( "maven-artifact-manager" );
         artifacts.add( "maven-core" );
@@ -83,8 +58,20 @@ public class MavenArtifactFilterManager
         artifacts.add( "maven-settings" );
         artifacts.add( "plexus-container-default" );
         artifacts.add( "plexus-interactivity-api" );
+        //adding shared/maven-toolchain project here, even though not part of the default 
+        //distro yet.
         artifacts.add( "maven-toolchain" );
+        //artifacts.add( "plexus-utils" );
         artifacts.add( "wagon-provider-api" );
-        return artifacts;
+
+        // It should be safe to include implementations, and since this is used by the extension manager they would
+        // get filtered out otherwise
+        //artifacts.add( "wagon-file" );
+        //artifacts.add( "wagon-http-lightweight" );
+        //artifacts.add( "wagon-webdav" );
+        //artifacts.add( "wagon-ssh" );
+        //artifacts.add( "wagon-ssh-external" );
+
+        return new ExclusionSetFilter( artifacts );
     }
 }

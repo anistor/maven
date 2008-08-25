@@ -19,15 +19,6 @@ package org.apache.maven.project.artifact;
  * under the License.
  */
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.factory.ArtifactFactory;
 import org.apache.maven.artifact.metadata.ArtifactMetadataRetrievalException;
@@ -58,6 +49,14 @@ import org.apache.maven.project.validation.ModelValidationResult;
 import org.codehaus.plexus.logging.AbstractLogEnabled;
 import org.codehaus.plexus.util.StringUtils;
 
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+
 /**
  * @author <a href="mailto:jason@maven.org">Jason van Zyl</a>
  * @author <a href="mailto:brett@apache.org">Brett Porter</a>
@@ -77,69 +76,13 @@ public class MavenMetadataSource
 
     // lazily instantiated and cached.
     private MavenProject superProject;
-    
-    private Set warnedPoms = new HashSet();
 
     /**
-     * Resolve all relocations in the POM for this artifact, and return the new artifact coordinate.
+     * Retrieve the metadata for the project from the repository.
+     * Uses the ProjectBuilder, to enable post-processing and inheritance calculation before retrieving the
+     * associated artifacts.
      */
-    public Artifact retrieveRelocatedArtifact( Artifact artifact, ArtifactRepository localRepository, List remoteRepositories )
-        throws ArtifactMetadataRetrievalException
-    {
-        if ( artifact instanceof ActiveProjectArtifact )
-        {
-            return artifact;
-        }
-
-        ProjectRelocation rel = retrieveRelocatedProject( artifact, localRepository, remoteRepositories );
-        
-        if ( rel == null )
-        {
-            return artifact;
-        }
-        
-        MavenProject project = rel.project;
-        if ( project == null || getRelocationKey( artifact ).equals( getRelocationKey( project.getArtifact() ) ) )
-        {
-            return artifact;
-        }
-
-        
-        // NOTE: Using artifact information here, since some POMs are deployed 
-        // to central with one version in the filename, but another in the <version> string!
-        // Case in point: org.apache.ws.commons:XmlSchema:1.1:pom.
-        //
-        // Since relocation triggers a reconfiguration of the artifact's information
-        // in retrieveRelocatedProject(..), this is safe to do.
-        Artifact result = null;
-        if ( artifact.getClassifier() != null )
-        {
-            result = artifactFactory.createArtifactWithClassifier( artifact.getGroupId(), artifact.getArtifactId(), artifact.getVersion(), artifact.getType(), artifact.getClassifier() );
-        }
-        else
-        {
-            result = artifactFactory.createArtifact( artifact.getGroupId(), artifact.getArtifactId(), artifact.getVersion(), artifact.getScope(), artifact.getType() );
-        }
-
-        result.setResolved( artifact.isResolved() );
-        result.setFile( artifact.getFile() );
-
-        result.setScope( artifact.getScope() );
-        result.setArtifactHandler( artifact.getArtifactHandler() );
-        result.setDependencyFilter( artifact.getDependencyFilter() );
-        result.setDependencyTrail( artifact.getDependencyTrail() );
-        result.setOptional( artifact.isOptional() );
-        result.setRelease( artifact.isRelease() );
-
-        return result;
-    }
-
-    private String getRelocationKey( Artifact artifact )
-    {
-        return artifact.getGroupId() + ":" + artifact.getArtifactId() + ":" + artifact.getVersion();
-    }
-
-    private ProjectRelocation retrieveRelocatedProject( Artifact artifact, ArtifactRepository localRepository, List remoteRepositories )
+    public ResolutionGroup retrieve( Artifact artifact, ArtifactRepository localRepository, List remoteRepositories )
         throws ArtifactMetadataRetrievalException
     {
         MavenProject project = null;
@@ -165,31 +108,23 @@ public class MavenMetadataSource
                 }
                 catch ( InvalidProjectModelException e )
                 {
-                    String id = pomArtifact.getId();
-                    
-                    if ( !warnedPoms.contains( id ) )
+                    getLogger().warn( "POM for \'" + pomArtifact +
+                        "\' is invalid. It will be ignored for artifact resolution. Reason: " + e.getMessage() );
+
+                    if ( getLogger().isDebugEnabled() )
                     {
-                        warnedPoms.add( pomArtifact.getId() );
+                        getLogger().debug( "Reason: " + e.getMessage() );
 
-                        getLogger().warn( "POM for \'"
-                                              + pomArtifact
-                                              + "\' is invalid.\n\nIts dependencies (if any) will NOT be available to the current build." );
+                        ModelValidationResult validationResult = e.getValidationResult();
 
-                        if ( getLogger().isDebugEnabled() )
+                        if ( validationResult != null )
                         {
-                            getLogger().debug( "Reason: " + e.getMessage() );
-
-                            ModelValidationResult validationResult = e.getValidationResult();
-
-                            if ( validationResult != null )
+                            getLogger().debug( "\nValidation Errors:" );
+                            for ( Iterator i = validationResult.getMessages().iterator(); i.hasNext(); )
                             {
-                                getLogger().debug( "\nValidation Errors:" );
-                                for ( Iterator i = validationResult.getMessages().iterator(); i.hasNext(); )
-                                {
-                                    getLogger().debug( i.next().toString() );
-                                }
-                                getLogger().debug( "\n" );
+                                getLogger().debug( i.next().toString() );
                             }
+                            getLogger().debug( "\n" );
                         }
                     }
 
@@ -219,18 +154,15 @@ public class MavenMetadataSource
                         if ( relocation.getGroupId() != null )
                         {
                             artifact.setGroupId( relocation.getGroupId() );
-                            project.setGroupId( relocation.getGroupId() );
                         }
                         if ( relocation.getArtifactId() != null )
                         {
                             artifact.setArtifactId( relocation.getArtifactId() );
-                            project.setArtifactId( relocation.getArtifactId() );
                         }
                         if ( relocation.getVersion() != null )
                         {
                             //note: see MNG-3454. This causes a problem, but fixing it may break more.
                             artifact.setVersionRange( VersionRange.createFromVersion( relocation.getVersion() ) );
-                            project.setVersion( relocation.getVersion() );
                         }
 
                         if ( artifact.getDependencyFilter() != null &&
@@ -281,33 +213,8 @@ public class MavenMetadataSource
         }
         while ( !done );
 
-        ProjectRelocation rel = new ProjectRelocation();
-        rel.project = project;
-        rel.pomArtifact = pomArtifact;
-        
-        return rel;
-    }
-
-    /**
-     * Retrieve the metadata for the project from the repository.
-     * Uses the ProjectBuilder, to enable post-processing and inheritance calculation before retrieving the
-     * associated artifacts.
-     */
-    public ResolutionGroup retrieve( Artifact artifact, ArtifactRepository localRepository, List remoteRepositories )
-        throws ArtifactMetadataRetrievalException
-    {
-        ProjectRelocation rel = retrieveRelocatedProject( artifact, localRepository, remoteRepositories );
-        
-        if ( rel == null )
-        {
-            return null;
-        }
-        
-        MavenProject project = rel.project;
-        Artifact pomArtifact = rel.pomArtifact;
-
         // last ditch effort to try to get this set...
-        if ( artifact.getDownloadUrl() == null && pomArtifact != null )
+        if ( artifact.getDownloadUrl() == null )
         {
             // TODO: this could come straight from the project, negating the need to set it in the project itself?
             artifact.setDownloadUrl( pomArtifact.getDownloadUrl() );
@@ -520,11 +427,4 @@ public class MavenMetadataSource
 
         return versions;
     }
-    
-    private static final class ProjectRelocation
-    {
-        private MavenProject project;
-        private Artifact pomArtifact;
-    }
-    
 }

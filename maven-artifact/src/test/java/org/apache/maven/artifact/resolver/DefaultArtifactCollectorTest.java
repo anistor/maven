@@ -19,6 +19,17 @@ package org.apache.maven.artifact.resolver;
  * under the License.
  */
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.factory.ArtifactFactory;
 import org.apache.maven.artifact.metadata.ArtifactMetadataRetrievalException;
@@ -30,20 +41,8 @@ import org.apache.maven.artifact.resolver.filter.ExclusionSetFilter;
 import org.apache.maven.artifact.resolver.filter.ScopeArtifactFilter;
 import org.apache.maven.artifact.versioning.DefaultArtifactVersion;
 import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException;
-import org.apache.maven.artifact.versioning.OverConstrainedVersionException;
 import org.apache.maven.artifact.versioning.VersionRange;
 import org.codehaus.plexus.PlexusTestCase;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 /**
  * Test the default artifact collector.
@@ -69,11 +68,11 @@ public class DefaultArtifactCollectorTest
     {
         super.setUp();
 
-        source = new Source();
-        artifactFactory = (ArtifactFactory) lookup( ArtifactFactory.ROLE );
-        artifactCollector = new DefaultArtifactCollector();
+        this.source = new Source();
+        this.artifactFactory = (ArtifactFactory) lookup( ArtifactFactory.ROLE );
+        this.artifactCollector = new DefaultArtifactCollector();
 
-        projectArtifact = createArtifactSpec( "project", "1.0", null );
+        this.projectArtifact = createArtifactSpec( "project", "1.0", null );
     }
 
     // works, but we don't fail on cycles presently
@@ -319,7 +318,7 @@ public class DefaultArtifactCollectorTest
     public void testCompatibleRecommendedVersion()
         throws ArtifactResolutionException, InvalidVersionSpecificationException
     {
-
+        
         //this test puts two dependencies on C with 3.2 and [1.0,3.0] as the version.
         //it puts 2.5 in the pretend repo...we should get back 2.5
         ArtifactSpec a = createArtifactSpec( "a", "1.0" );
@@ -327,7 +326,7 @@ public class DefaultArtifactCollectorTest
         ArtifactSpec b1 = a.addDependency( "b1", "1.0" );
         b.addDependency( "c", "3.2" );
         b1.addDependency( "c", "[1.0,3.0]" );
-
+      
         //put it in the repo
         ArtifactSpec c = createArtifactSpec( "c", "2.5" );
         source.addArtifact( createArtifactSpec( "c", "2.5" ));
@@ -338,7 +337,7 @@ public class DefaultArtifactCollectorTest
                       res.getArtifacts() );
         assertEquals( "Check version", "2.5", getArtifact( "c", res.getArtifacts() ).getVersion() );
     }
-
+    
     public void testCompatibleRecommendedVersionWithChildren()
         throws ArtifactResolutionException, InvalidVersionSpecificationException
     {
@@ -355,7 +354,7 @@ public class DefaultArtifactCollectorTest
         // put it in the repo
         ArtifactSpec c = createArtifactSpec( "c", "2.5" );
         ArtifactSpec d = c.addDependency( "d","1.0" );
-
+        
         source.addArtifact( c );
         source.addArtifact( d );
         source.addArtifact( c1 );
@@ -367,7 +366,7 @@ public class DefaultArtifactCollectorTest
                       createSet( new Object[] { a.artifact, b.artifact, e.artifact, c.artifact,d.artifact } ), res.getArtifacts() );
         assertEquals( "Check version", "2.5", getArtifact( "c", res.getArtifacts() ).getVersion() );
     }
-
+    
     public void testInCompatibleRecommendedVersion()
         throws ArtifactResolutionException, InvalidVersionSpecificationException
     {
@@ -419,7 +418,7 @@ public class DefaultArtifactCollectorTest
                       createSet( new Object[] { a.artifact, b.artifact, b1.artifact, c.artifact } ), res.getArtifacts() );
         assertEquals( "Check version", "3.0", getArtifact( "c", res.getArtifacts() ).getVersion() );
     }
-
+    
     public void testIncompatibleRanges()
         throws ArtifactResolutionException, InvalidVersionSpecificationException
     {
@@ -791,7 +790,7 @@ public class DefaultArtifactCollectorTest
     {
         ArtifactSpec m = createArtifactSpec( "m", "1.0" );
         ArtifactSpec n = createArtifactSpec( "n", "1.0" );
-
+    
         ArtifactResolutionResult res = collect( createSet( new Object[]{m.artifact, n.artifact} ) );
         Iterator i = res.getArtifacts().iterator();
         assertEquals( "m should be first", m.artifact, i.next() );
@@ -801,29 +800,6 @@ public class DefaultArtifactCollectorTest
         i = res.getArtifacts().iterator();
         assertEquals( "n should be first", n.artifact, i.next() );
         assertEquals( "m should be second", m.artifact, i.next() );
-    }
-
-    public void testOverConstrainedVersionException()
-        throws ArtifactResolutionException, InvalidVersionSpecificationException
-    {
-        ArtifactSpec a = createArtifactSpec( "a", "1.0" );
-        a.addDependency( "b", "[1.0, 2.0)" );
-        a.addDependency( "c", "[3.3.0,4.0.0)" );
-
-        ArtifactSpec b = createArtifactSpec( "b", "1.0.0" );
-        b.addDependency( "c", "3.3.0-v3346" );
-
-        ArtifactSpec c = createArtifactSpec( "c", "3.2.1-v3235e" );
-
-        try
-        {
-            ArtifactResolutionResult res = collect( createSet( new Object[]{a.artifact} ) );
-        }
-        catch ( OverConstrainedVersionException e )
-        {
-            assertTrue( "Versions unordered", e.getMessage().indexOf( "[3.2.1-v3235e, 3.3.0-v3346]" ) != -1);
-            assertTrue( "DependencyTrail not resolved", e.getMessage().indexOf( "Path to dependency:" ) != -1);
-        }
     }
 
     private Artifact getArtifact( String id, Set artifacts )
@@ -945,7 +921,7 @@ public class DefaultArtifactCollectorTest
         private ArtifactSpec addDependency( String id, String version, String scope, boolean optional )
             throws InvalidVersionSpecificationException
         {
-            ArtifactSpec dep = createArtifactSpec( id, version, scope, artifact.getScope(), optional );
+            ArtifactSpec dep = createArtifactSpec( id, version, scope, this.artifact.getScope(), optional );
             return addDependency( dep );
         }
 
@@ -993,7 +969,7 @@ public class DefaultArtifactCollectorTest
                                      ArtifactFilter dependencyFilter )
             throws InvalidVersionSpecificationException
         {
-            Set projectArtifacts = new LinkedHashSet();
+            Set projectArtifacts = new HashSet();
 
             for ( Iterator i = dependencies.iterator(); i.hasNext(); )
             {
@@ -1060,14 +1036,6 @@ public class DefaultArtifactCollectorTest
             {
                 artifactVersions.add( new DefaultArtifactVersion( spec.artifact.getVersion() ) );
             }
-        }
-
-        public Artifact retrieveRelocatedArtifact( Artifact artifact,
-                                                   ArtifactRepository localRepository,
-                                                   List remoteRepositories )
-            throws ArtifactMetadataRetrievalException
-        {
-            return artifact;
         }
     }
 }

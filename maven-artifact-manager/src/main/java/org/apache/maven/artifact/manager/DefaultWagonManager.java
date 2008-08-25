@@ -19,6 +19,19 @@ package org.apache.maven.artifact.manager;
  * under the License.
  */
 
+import java.io.File;
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.security.NoSuchAlgorithmException;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.metadata.ArtifactMetadata;
 import org.apache.maven.artifact.repository.ArtifactRepository;
@@ -36,7 +49,6 @@ import org.apache.maven.wagon.authorization.AuthorizationException;
 import org.apache.maven.wagon.events.TransferListener;
 import org.apache.maven.wagon.observers.ChecksumObserver;
 import org.apache.maven.wagon.proxy.ProxyInfo;
-import org.apache.maven.wagon.proxy.ProxyInfoProvider;
 import org.apache.maven.wagon.repository.Repository;
 import org.apache.maven.wagon.repository.RepositoryPermissions;
 import org.codehaus.plexus.PlexusConstants;
@@ -51,39 +63,17 @@ import org.codehaus.plexus.context.Context;
 import org.codehaus.plexus.context.ContextException;
 import org.codehaus.plexus.logging.AbstractLogEnabled;
 import org.codehaus.plexus.personality.plexus.lifecycle.phase.Contextualizable;
-import org.codehaus.plexus.personality.plexus.lifecycle.phase.Initializable;
-import org.codehaus.plexus.personality.plexus.lifecycle.phase.InitializationException;
 import org.codehaus.plexus.util.FileUtils;
-import org.codehaus.plexus.util.IOUtil;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.security.NoSuchAlgorithmException;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
 
 public class DefaultWagonManager
     extends AbstractLogEnabled
-    implements WagonManager, Contextualizable, Initializable
+    implements WagonManager, Contextualizable
 {
     private static final String WILDCARD = "*";
-
+    
     private static final String EXTERNAL_WILDCARD = "external:*";
 
-    private static final String MAVEN_ARTIFACT_PROPERTIES = "META-INF/maven/org.apache.maven/maven-artifact/pom.properties";
-
-    private static int anonymousMirrorIdSeed = 0;
-    
     private PlexusContainer container;
 
     // TODO: proxies, authentication and mirrors are via settings, and should come in via an alternate method - perhaps
@@ -112,8 +102,6 @@ public class DefaultWagonManager
 
     private RepositoryPermissions defaultRepositoryPermissions;
 
-    private String httpUserAgent;
-
     // TODO: this leaks the component in the public api - it is never released back to the container
     public Wagon getWagon( Repository repository )
         throws UnsupportedProtocolException, WagonConfigurationException
@@ -127,7 +115,7 @@ public class DefaultWagonManager
 
         Wagon wagon = getWagon( protocol );
 
-        configureWagon( wagon, repository.getId(), protocol );
+        configureWagon( wagon, repository.getId() );
 
         return wagon;
     }
@@ -251,11 +239,7 @@ public class DefaultWagonManager
                 }
             }
 
-            wagon.connect( artifactRepository, getAuthenticationInfo( repository.getId() ), new ProxyInfoProvider(){
-                public ProxyInfo getProxyInfo(String protocol) {
-                    return (ProxyInfo) proxies.get( protocol );
-                }
-            });
+            wagon.connect( artifactRepository, getAuthenticationInfo( repository.getId() ), getProxy( protocol ) );
 
             wagon.put( source, remotePath );
 
@@ -425,6 +409,22 @@ public class DefaultWagonManager
             wagon.addTransferListener( downloadMonitor );
         }
 
+        // TODO: configure on repository
+        ChecksumObserver md5ChecksumObserver;
+        ChecksumObserver sha1ChecksumObserver;
+        try
+        {
+            md5ChecksumObserver = new ChecksumObserver( "MD5" );
+            wagon.addTransferListener( md5ChecksumObserver );
+
+            sha1ChecksumObserver = new ChecksumObserver( "SHA-1" );
+            wagon.addTransferListener( sha1ChecksumObserver );
+        }
+        catch ( NoSuchAlgorithmException e )
+        {
+            throw new TransferFailedException( "Unable to add checksum methods: " + e.getMessage(), e );
+        }
+
         File temp = new File( destination + ".tmp" );
         temp.deleteOnExit();
 
@@ -433,11 +433,7 @@ public class DefaultWagonManager
         try
         {
             wagon.connect( new Repository( repository.getId(), repository.getUrl() ),
-                           getAuthenticationInfo( repository.getId() ), new ProxyInfoProvider(){
-                public ProxyInfo getProxyInfo(String protocol) {
-                    return (ProxyInfo) proxies.get( protocol );
-                }
-            });
+                           getAuthenticationInfo( repository.getId() ), getProxy( protocol ) );
 
             boolean firstRun = true;
             boolean retry = true;
@@ -450,56 +446,29 @@ public class DefaultWagonManager
                 // reset the retry flag.
                 retry = false;
 
-                // TODO: configure on repository
-                ChecksumObserver md5ChecksumObserver = null;
-                ChecksumObserver sha1ChecksumObserver = null;
-                try
+                // This should take care of creating destination directory now on
+                if ( destination.exists() && !force )
                 {
-                    md5ChecksumObserver = new ChecksumObserver( "MD5" );
-                    wagon.addTransferListener( md5ChecksumObserver );
-
-                    sha1ChecksumObserver = new ChecksumObserver( "SHA-1" );
-                    wagon.addTransferListener( sha1ChecksumObserver );
-
-                    // This should take care of creating destination directory now on
-                    if ( destination.exists() && !force )
+                    try
                     {
-                        try
+                        downloaded = wagon.getIfNewer( remotePath, temp, destination.lastModified() );
+                        if ( !downloaded )
                         {
-                            downloaded = wagon.getIfNewer( remotePath, temp, destination.lastModified() );
-                            if ( !downloaded )
-                            {
-                                // prevent additional checks of this artifact until it expires again
-                                destination.setLastModified( System.currentTimeMillis() );
-                            }
-                        }
-                        catch ( UnsupportedOperationException e )
-                        {
-                            // older wagons throw this. Just get() instead
-                            wagon.get( remotePath, temp );
-                            downloaded = true;
+                            // prevent additional checks of this artifact until it expires again
+                            destination.setLastModified( System.currentTimeMillis() );
                         }
                     }
-                    else
+                    catch ( UnsupportedOperationException e )
                     {
+                        // older wagons throw this. Just get() instead
                         wagon.get( remotePath, temp );
                         downloaded = true;
                     }
                 }
-                catch ( NoSuchAlgorithmException e )
+                else
                 {
-                    throw new TransferFailedException( "Unable to add checksum methods: " + e.getMessage(), e );
-                }
-                finally
-                {
-                    if ( md5ChecksumObserver != null )
-                    {
-                        wagon.removeTransferListener( md5ChecksumObserver );
-                    }
-                    if ( sha1ChecksumObserver != null )
-                    {
-                        wagon.removeTransferListener( sha1ChecksumObserver );
-                    }
+                    wagon.get( remotePath, temp );
+                    downloaded = true;
                 }
 
                 if ( downloaded )
@@ -558,7 +527,7 @@ public class DefaultWagonManager
                         {
                             // this was a failed transfer, and we don't want to retry.
                             handleChecksumFailure( checksumPolicy, "Error retrieving checksum file for " + remotePath,
-                                md5TryException );
+                                                   md5TryException );
                         }
                     }
 
@@ -726,7 +695,7 @@ public class DefaultWagonManager
         }
     }
 
-
+    
     private void disconnectWagon( Wagon wagon )
     {
         try
@@ -766,7 +735,7 @@ public class DefaultWagonManager
     /**
      * This method finds a matching mirror for the selected repository. If there is an exact match, this will be used.
      * If there is no exact match, then the list of mirrors is examined to see if a pattern applies.
-     *
+     * 
      * @param originalRepository See if there is a mirror for this repository.
      * @return the selected mirror or null if none are found.
      */
@@ -795,13 +764,13 @@ public class DefaultWagonManager
     }
 
     /**
-     * This method checks if the pattern matches the originalRepository.
-     * Valid patterns:
+     * This method checks if the pattern matches the originalRepository. 
+     * Valid patterns: 
      * * = everything
      * external:* = everything not on the localhost and not file based.
      * repo,repo1 = repo or repo1
      * *,!repo1 = everything except repo1
-     *
+     * 
      * @param originalRepository to compare for a match.
      * @param pattern used for match. Currently only '*' is supported.
      * @return true if the repository is a match to this pattern.
@@ -858,7 +827,7 @@ public class DefaultWagonManager
 
     /**
      * Checks the URL to see if this repository refers to an external repository
-     *
+     * 
      * @param originalRepository
      * @return true if external.
      */
@@ -876,10 +845,10 @@ public class DefaultWagonManager
             return false;
         }
     }
-
+    
     /**
      * Set the proxy used for a particular protocol.
-     *
+     * 
      * @param protocol the protocol (required)
      * @param host the proxy host name (required)
      * @param port the proxy port (required)
@@ -968,12 +937,6 @@ public class DefaultWagonManager
                            String mirrorOf,
                            String url )
     {
-        if ( id == null )
-        {
-            id = "mirror-" + anonymousMirrorIdSeed++;
-            getLogger().warn( "You are using a mirror that doesn't declare an <id/> element. Using \'" + id + "\' instead:\nId: " + id + "\nmirrorOf: " + mirrorOf + "\nurl: " + url + "\n" );
-        }
-        
         ArtifactRepository mirror = new DefaultArtifactRepository( id, url, null );
 
         mirrors.put( mirrorOf, mirror );
@@ -1014,27 +977,21 @@ public class DefaultWagonManager
                                  ArtifactRepository repository )
         throws WagonConfigurationException
     {
-        configureWagon( wagon, repository.getId(), repository.getProtocol() );
+        configureWagon( wagon, repository.getId() );
     }
 
     private void configureWagon( Wagon wagon,
-                                 String repositoryId,
-                                 String protocol )
+                                 String repositoryId )
         throws WagonConfigurationException
     {
-        PlexusConfiguration config = (PlexusConfiguration) serverConfigurationMap.get( repositoryId ); 
-        if ( protocol.startsWith( "http" ) || protocol.startsWith( "dav" ) )
-        {
-            config = updateUserAgentForHttp( wagon, config );
-        }
-        
-        if ( config != null )
+        if ( serverConfigurationMap.containsKey( repositoryId ) )
         {
             ComponentConfigurator componentConfigurator = null;
             try
             {
                 componentConfigurator = (ComponentConfigurator) container.lookup( ComponentConfigurator.ROLE );
-                componentConfigurator.configureComponent( wagon, config, container.getContainerRealm() );
+                componentConfigurator.configureComponent( wagon, (PlexusConfiguration) serverConfigurationMap
+                    .get( repositoryId ), container.getContainerRealm() );
             }
             catch ( final ComponentLookupException e )
             {
@@ -1064,59 +1021,6 @@ public class DefaultWagonManager
         }
     }
 
-    // TODO: Remove this, once the maven-shade-plugin 1.2 release is out, allowing configuration of httpHeaders in the components.xml
-    private PlexusConfiguration updateUserAgentForHttp( Wagon wagon, PlexusConfiguration config )
-    {
-        if ( config == null )
-        {
-            config = new XmlPlexusConfiguration( "configuration" );
-        }
-        
-        if ( httpUserAgent != null )
-        {
-            try
-            {
-                wagon.getClass().getMethod( "setHttpHeaders", new Class[]{ Properties.class } );
-                
-                PlexusConfiguration headerConfig = config.getChild( "httpHeaders", true );
-                PlexusConfiguration[] children = headerConfig.getChildren( "property" );
-                boolean found = false;
-                for ( int i = 0; i < children.length; i++ )
-                {
-                    PlexusConfiguration c = children[i].getChild( "name", false );
-                    if ( c != null && "User-Agent".equals( c.getValue( null ) ) )
-                    {
-                        found = true;
-                        break;
-                    }
-                }
-                if ( !found )
-                {
-                    XmlPlexusConfiguration propertyConfig = new XmlPlexusConfiguration( "property" );
-                    headerConfig.addChild( propertyConfig );
-                    
-                    XmlPlexusConfiguration nameConfig = new XmlPlexusConfiguration( "name" );
-                    nameConfig.setValue( "User-Agent" );
-                    propertyConfig.addChild( nameConfig );
-                    
-                    XmlPlexusConfiguration versionConfig = new XmlPlexusConfiguration( "value" );
-                    versionConfig.setValue( httpUserAgent );
-                    propertyConfig.addChild( versionConfig );
-                }
-            }
-            catch ( SecurityException e )
-            {
-                // forget it. this method is public, if it exists.
-            }
-            catch ( NoSuchMethodException e )
-            {
-                // forget it.
-            }
-        }
-        
-        return config;
-    }
-
     public void addConfiguration( String repositoryId,
                                   Xpp3Dom configuration )
     {
@@ -1133,59 +1037,5 @@ public class DefaultWagonManager
     public void setDefaultRepositoryPermissions( RepositoryPermissions defaultRepositoryPermissions )
     {
         this.defaultRepositoryPermissions = defaultRepositoryPermissions;
-    }
-
-    // TODO: Remove this, once the maven-shade-plugin 1.2 release is out, allowing configuration of httpHeaders in the components.xml
-    public void initialize()
-        throws InitializationException
-    {
-        if ( httpUserAgent == null )
-        {
-            InputStream resourceAsStream = null;
-            try
-            {
-                Properties properties = new Properties();
-                resourceAsStream = getClass().getClassLoader().getResourceAsStream( MAVEN_ARTIFACT_PROPERTIES );
-
-                if ( resourceAsStream != null )
-                {
-                    try
-                    {
-                        properties.load( resourceAsStream );
-
-                        httpUserAgent =
-                            "maven-artifact/" + properties.getProperty( "version" ) + " (Java "
-                                + System.getProperty( "java.version" ) + "; " + System.getProperty( "os.name" ) + " "
-                                + System.getProperty( "os.version" ) + ")";
-                    }
-                    catch ( IOException e )
-                    {
-                        getLogger().warn(
-                                          "Failed to load Maven artifact properties from:\n" + MAVEN_ARTIFACT_PROPERTIES
-                                              + "\n\nUser-Agent HTTP header may be incorrect for artifact resolution." );
-                    }
-                }
-            }
-            finally
-            {
-                IOUtil.close( resourceAsStream );
-            }
-        }
-    }
-    
-    /**
-     * {@inheritDoc}
-     */
-    public void setHttpUserAgent( String userAgent )
-    {
-        this.httpUserAgent = userAgent;
-    }
-    
-    /**
-     * {@inheritDoc}
-     */
-    public String getHttpUserAgent()
-    {
-        return httpUserAgent;
     }
 }

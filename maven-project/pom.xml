@@ -23,7 +23,7 @@ under the License.
   <parent>
     <artifactId>maven</artifactId>
     <groupId>org.apache.maven</groupId>
-    <version>2.0.11-SNAPSHOT</version>
+    <version>2.0.9</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>maven-project</artifactId>
@@ -56,10 +56,6 @@ under the License.
     <dependency>
       <groupId>org.apache.maven</groupId>
       <artifactId>maven-plugin-registry</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.codehaus.plexus</groupId>
-      <artifactId>plexus-interpolation</artifactId>
     </dependency>
     <dependency>
       <groupId>org.codehaus.plexus</groupId>

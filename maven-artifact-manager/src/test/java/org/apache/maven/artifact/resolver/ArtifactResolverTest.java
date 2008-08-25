@@ -29,7 +29,7 @@ import org.apache.maven.artifact.repository.ArtifactRepository;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedHashSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -106,7 +106,7 @@ public class ArtifactResolverTest
                                              List remoteRepositories )
                 throws ArtifactMetadataRetrievalException
             {
-                Set dependencies = new LinkedHashSet();
+                Set dependencies = new HashSet();
 
                 if ( "g".equals( artifact.getArtifactId() ) )
                 {
@@ -129,14 +129,6 @@ public class ArtifactResolverTest
                                                    List remoteRepositories )
             {
                 throw new UnsupportedOperationException( "Cannot get available versions in this test case" );
-            }
-
-            public Artifact retrieveRelocatedArtifact( Artifact artifact,
-                                                       ArtifactRepository localRepository,
-                                                       List remoteRepositories )
-                throws ArtifactMetadataRetrievalException
-            {
-                return artifact;
             }
         };
 
@@ -170,7 +162,7 @@ public class ArtifactResolverTest
                                              List remoteRepositories )
                 throws ArtifactMetadataRetrievalException
             {
-                Set dependencies = new LinkedHashSet();
+                Set dependencies = new HashSet();
 
                 if ( "i".equals( artifact.getArtifactId() ) )
                 {
@@ -193,14 +185,6 @@ public class ArtifactResolverTest
                                                    List remoteRepositories )
             {
                 throw new UnsupportedOperationException( "Cannot get available versions in this test case" );
-            }
-
-            public Artifact retrieveRelocatedArtifact( Artifact artifact,
-                                                       ArtifactRepository localRepository,
-                                                       List remoteRepositories )
-                throws ArtifactMetadataRetrievalException
-            {
-                return artifact;
             }
         };
 

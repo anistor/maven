@@ -206,12 +206,12 @@ public class DefaultProfileManager
             {
                 shouldAdd = true;
             }
-            else if ( isActive( profile ) )
+            else if ( !deactivatedIds.contains( profileId ) && isActive( profile ) )
             {
                 shouldAdd = true;
             }
 
-            if ( !deactivatedIds.contains( profileId ) && shouldAdd )
+            if ( shouldAdd )
             {
                 if ( "pom".equals( profile.getSource() ) )
                 {
@@ -230,11 +230,6 @@ public class DefaultProfileManager
             {
                 String profileId = (String) it.next();
 
-                if ( deactivatedIds.contains( profileId ) )
-                {
-                    continue;
-                }
-                
                 Profile profile = (Profile) profilesById.get( profileId );
 
                 activeFromPom.add( profile );
@@ -270,10 +265,7 @@ public class DefaultProfileManager
 
                 if ( activator.canDetermineActivation( profile ) )
                 {
-                    if ( activator.isActive( profile ) )
-                    {
-                        return true;
-                    }
+                    return activator.isActive( profile );
                 }
             }
 

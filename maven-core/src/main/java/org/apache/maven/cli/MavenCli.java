@@ -64,7 +64,6 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Locale;
 import java.util.Properties;
 import java.util.StringTokenizer;
 import java.util.Map.Entry;
@@ -86,15 +85,6 @@ public class MavenCli
     public static final String OS_VERSION = Os.OS_VERSION;
 
     private static Embedder embedder;
-
-    public static void main( String[] args )
-    {
-        ClassWorld classWorld = new ClassWorld( "plexus.core", Thread.currentThread().getContextClassLoader() );
-
-        int result = main( args, classWorld );
-
-        System.exit( result );
-    }
 
     /**
      * @noinspection ConfusingMainMethod
@@ -160,7 +150,7 @@ public class MavenCli
 
             return 0;
         }
-        else if ( debug || commandLine.hasOption( CLIManager.SHOW_VERSION ) )
+        else if ( debug )
         {
             showVersion();
         }
@@ -240,31 +230,26 @@ public class MavenCli
 
             if ( commandLine.hasOption( CLIManager.ACTIVATE_PROFILES ) )
             {
-                String [] profileOptionValues = commandLine.getOptionValues( CLIManager.ACTIVATE_PROFILES );
+                String profilesLine = commandLine.getOptionValue( CLIManager.ACTIVATE_PROFILES );
 
-                if ( profileOptionValues != null )
+                StringTokenizer profileTokens = new StringTokenizer( profilesLine, "," );
+
+                while ( profileTokens.hasMoreTokens() )
                 {
-                    for ( int i=0; i < profileOptionValues.length; ++i )
+                    String profileAction = profileTokens.nextToken().trim();
+
+                    if ( profileAction.startsWith( "-" ) )
                     {
-                        StringTokenizer profileTokens = new StringTokenizer( profileOptionValues[i], "," );
-
-                        while ( profileTokens.hasMoreTokens() )
-                        {
-                            String profileAction = profileTokens.nextToken().trim();
-
-                            if ( profileAction.startsWith( "-" ) || profileAction.startsWith( "!" ) )
-                            {
-                                profileManager.explicitlyDeactivate( profileAction.substring( 1 ) );
-                            }
-                            else if ( profileAction.startsWith( "+" ) )
-                            {
-                                profileManager.explicitlyActivate( profileAction.substring( 1 ) );
-                            }
-                            else
-                            {
-                                profileManager.explicitlyActivate( profileAction );
-                            }
-                        }
+                        profileManager.explicitlyDeactivate( profileAction.substring( 1 ) );
+                    }
+                    else if ( profileAction.startsWith( "+" ) )
+                    {
+                        profileManager.explicitlyActivate( profileAction.substring( 1 ) );
+                    }
+                    else
+                    {
+                        // TODO: deprecate this eventually!
+                        profileManager.explicitlyActivate( profileAction );
                     }
                 }
             }
@@ -575,11 +560,8 @@ public class MavenCli
 
             System.out.println( "Java version: " + System.getProperty( "java.version", "<unknown java version>" ) );
 
-            System.out.println( "Default locale: " + Locale.getDefault() + ", platform encoding: "
-                                + System.getProperty( "file.encoding", "<unknown encoding>" ) );
-
             System.out.println( "OS name: \"" + Os.OS_NAME + "\" version: \"" + Os.OS_VERSION +
-                                "\" arch: \"" + Os.OS_ARCH + "\" family: \"" + Os.OS_FAMILY + "\"" );
+                                "\" arch: \"" + Os.OS_ARCH + "\" Family: \"" + Os.OS_FAMILY + "\"" );
 
         }
         catch ( IOException e )
@@ -692,8 +674,6 @@ public class MavenCli
 
         public static final char VERSION = 'v';
 
-        public static final char SHOW_VERSION = 'V';
-
         private Options options;
 
         public static final char NON_RECURSIVE = 'N';
@@ -788,10 +768,6 @@ public class MavenCli
 
             options.addOption( OptionBuilder.withLongOpt( "fail-never" ).withDescription(
                 "NEVER fail the build, regardless of project result" ).create( FAIL_NEVER ) );
-
-            options.addOption(
-                              OptionBuilder.withLongOpt( "show-version" ).withDescription( "Display version information WITHOUT stopping build" ).create(
-                                  SHOW_VERSION ) );
         }
 
         public CommandLine parse( String[] args )

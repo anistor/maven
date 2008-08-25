@@ -30,163 +30,230 @@ import junit.framework.TestCase;
 public class DefaultArtifactVersionTest
     extends TestCase
 {
-    private ArtifactVersion newArtifactVersion( String version )
-    {
-        return new DefaultArtifactVersion( version );
-    }
-
-    private void checkVersionParsing( String version, int major, int minor, int incremental, int buildnumber,
-                                      String qualifier )
-    {
-        ArtifactVersion artifactVersion = newArtifactVersion( version );
-        String parsed = "'" + version + "' parsed as ('" + artifactVersion.getMajorVersion() + "', '"
-            + artifactVersion.getMinorVersion() + "', '" + artifactVersion.getIncrementalVersion() + "', '"
-            + artifactVersion.getBuildNumber() + "', '" + artifactVersion.getQualifier() + "'), ";
-        assertEquals( parsed + "check major version", major, artifactVersion.getMajorVersion() );
-        assertEquals( parsed + "check minor version", minor, artifactVersion.getMinorVersion() );
-        assertEquals( parsed + "check incremental version", incremental, artifactVersion.getIncrementalVersion() );
-        assertEquals( parsed + "check build number", buildnumber, artifactVersion.getBuildNumber() );
-        assertEquals( parsed + "check qualifier", qualifier, artifactVersion.getQualifier() );
-        assertEquals( "check " + version + " string value", version, artifactVersion.toString() );
-    }
-
     public void testVersionParsing()
     {
-        checkVersionParsing( "1" , 1, 0, 0, 0, null );
-        checkVersionParsing( "1.2" , 1, 2, 0, 0, null );
-        checkVersionParsing( "1.2.3" , 1, 2, 3, 0, null );
-        checkVersionParsing( "1.2.3-1" , 1, 2, 3, 1, null );
-        checkVersionParsing( "1.2.3-alpha-1" , 1, 2, 3, 0, "alpha-1" );
-        checkVersionParsing( "1.2-alpha-1" , 1, 2, 0, 0, "alpha-1" );
-        checkVersionParsing( "1.2-alpha-1-20050205.060708-1" , 1, 2, 0, 0, "alpha-1-20050205.060708-1" );
-        checkVersionParsing( "RELEASE" , 0, 0, 0, 0, "RELEASE" );
-        checkVersionParsing( "2.0-1" , 2, 0, 0, 1, null );
+        DefaultArtifactVersion version = new DefaultArtifactVersion( "1" );
+        assertEquals( "check major version", 1, version.getMajorVersion() );
+        assertEquals( "check minor version", 0, version.getMinorVersion() );
+        assertEquals( "check incremental version", 0, version.getIncrementalVersion() );
+        assertEquals( "check build number", 0, version.getBuildNumber() );
+        assertNull( "check qualifier", version.getQualifier() );
 
-        // 0 at the beginning of a number has a special handling
-        checkVersionParsing( "02" , 0, 0, 0, 0, "02" );
-        checkVersionParsing( "0.09" , 0, 0, 0, 0, "0.09" );
-        checkVersionParsing( "0.2.09" , 0, 0, 0, 0, "0.2.09" );
-        checkVersionParsing( "2.0-01" , 2, 0, 0, 0, "01" );
+        version = new DefaultArtifactVersion( "1.2" );
+        assertEquals( "check major version", 1, version.getMajorVersion() );
+        assertEquals( "check minor version", 2, version.getMinorVersion() );
+        assertEquals( "check incremental version", 0, version.getIncrementalVersion() );
+        assertEquals( "check build number", 0, version.getBuildNumber() );
+        assertNull( "check qualifier", version.getQualifier() );
 
-        // version schemes not really supported: fully transformed as qualifier
-        checkVersionParsing( "1.0.1b" , 0, 0, 0, 0, "1.0.1b" );
-        checkVersionParsing( "1.0M2" , 0, 0, 0, 0, "1.0M2" );
-        checkVersionParsing( "1.0RC2" , 0, 0, 0, 0, "1.0RC2" );
-        checkVersionParsing( "1.7.3.0" , 0, 0, 0, 0, "1.7.3.0" );
-        checkVersionParsing( "1.7.3.0-1" , 0, 0, 0, 0, "1.7.3.0-1" );
-        checkVersionParsing( "PATCH-1193602" , 0, 0, 0, 0, "PATCH-1193602" );
-        checkVersionParsing( "5.0.0alpha-2006020117" , 0, 0, 0, 0, "5.0.0alpha-2006020117" );
-        checkVersionParsing( "1.0.0.-SNAPSHOT", 0, 0, 0, 0, "1.0.0.-SNAPSHOT" );
-        checkVersionParsing( "1..0-SNAPSHOT", 0, 0, 0, 0, "1..0-SNAPSHOT" );
-        checkVersionParsing( "1.0.-SNAPSHOT", 0, 0, 0, 0, "1.0.-SNAPSHOT" );
-        checkVersionParsing( ".1.0-SNAPSHOT", 0, 0, 0, 0, ".1.0-SNAPSHOT" );
+        version = new DefaultArtifactVersion( "1.2.3" );
+        assertEquals( "check major version", 1, version.getMajorVersion() );
+        assertEquals( "check minor version", 2, version.getMinorVersion() );
+        assertEquals( "check incremental version", 3, version.getIncrementalVersion() );
+        assertEquals( "check build number", 0, version.getBuildNumber() );
+        assertNull( "check qualifier", version.getQualifier() );
 
-        checkVersionParsing( "1.2.3.200705301630" , 0, 0, 0, 0, "1.2.3.200705301630" );
-        checkVersionParsing( "1.2.3-200705301630" , 1, 2, 3, 0, "200705301630" );
+        version = new DefaultArtifactVersion( "1.2.3-1" );
+        assertEquals( "check major version", 1, version.getMajorVersion() );
+        assertEquals( "check minor version", 2, version.getMinorVersion() );
+        assertEquals( "check incremental version", 3, version.getIncrementalVersion() );
+        assertEquals( "check build number", 1, version.getBuildNumber() );
+        assertNull( "check qualifier", version.getQualifier() );
+
+        version = new DefaultArtifactVersion( "1.2.3-alpha-1" );
+        assertEquals( "check major version", 1, version.getMajorVersion() );
+        assertEquals( "check minor version", 2, version.getMinorVersion() );
+        assertEquals( "check incremental version", 3, version.getIncrementalVersion() );
+        assertEquals( "check build number", 0, version.getBuildNumber() );
+        assertEquals( "check qualifier", "alpha-1", version.getQualifier() );
+
+        version = new DefaultArtifactVersion( "1.2-alpha-1" );
+        assertEquals( "check major version", 1, version.getMajorVersion() );
+        assertEquals( "check minor version", 2, version.getMinorVersion() );
+        assertEquals( "check incremental version", 0, version.getIncrementalVersion() );
+        assertEquals( "check build number", 0, version.getBuildNumber() );
+        assertEquals( "check qualifier", "alpha-1", version.getQualifier() );
+
+        version = new DefaultArtifactVersion( "1.2-alpha-1-20050205.060708-1" );
+        assertEquals( "check major version", 1, version.getMajorVersion() );
+        assertEquals( "check minor version", 2, version.getMinorVersion() );
+        assertEquals( "check incremental version", 0, version.getIncrementalVersion() );
+        assertEquals( "check build number", 0, version.getBuildNumber() );
+        assertEquals( "check qualifier", "alpha-1-20050205.060708-1", version.getQualifier() );
+
+        version = new DefaultArtifactVersion( "RELEASE" );
+        assertEquals( "check major version", 0, version.getMajorVersion() );
+        assertEquals( "check minor version", 0, version.getMinorVersion() );
+        assertEquals( "check incremental version", 0, version.getIncrementalVersion() );
+        assertEquals( "check build number", 0, version.getBuildNumber() );
+        assertEquals( "check qualifier", "RELEASE", version.getQualifier() );
+
+        version = new DefaultArtifactVersion( "1.0.1b" );
+        assertEquals( "check major version", 0, version.getMajorVersion() );
+        assertEquals( "check minor version", 0, version.getMinorVersion() );
+        assertEquals( "check incremental version", 0, version.getIncrementalVersion() );
+        assertEquals( "check build number", 0, version.getBuildNumber() );
+        assertEquals( "check qualifier", "1.0.1b", version.getQualifier() );
+
+        version = new DefaultArtifactVersion( "1.0RC2" );
+        assertEquals( "check major version", 0, version.getMajorVersion() );
+        assertEquals( "check minor version", 0, version.getMinorVersion() );
+        assertEquals( "check incremental version", 0, version.getIncrementalVersion() );
+        assertEquals( "check build number", 0, version.getBuildNumber() );
+        assertEquals( "check qualifier", "1.0RC2", version.getQualifier() );
+
+        version = new DefaultArtifactVersion( "1.7.3.0" );
+        assertEquals( "check major version", 0, version.getMajorVersion() );
+        assertEquals( "check minor version", 0, version.getMinorVersion() );
+        assertEquals( "check incremental version", 0, version.getIncrementalVersion() );
+        assertEquals( "check build number", 0, version.getBuildNumber() );
+        assertEquals( "check qualifier", "1.7.3.0", version.getQualifier() );
+
+        version = new DefaultArtifactVersion( "0.09" );
+        assertEquals( "check major version", 0, version.getMajorVersion() );
+        assertEquals( "check minor version", 0, version.getMinorVersion() );
+        assertEquals( "check incremental version", 0, version.getIncrementalVersion() );
+        assertEquals( "check build number", 0, version.getBuildNumber() );
+        assertEquals( "check qualifier", "0.09", version.getQualifier() );
+
+        version = new DefaultArtifactVersion( "02" );
+        assertEquals( "check major version", 0, version.getMajorVersion() );
+        assertEquals( "check minor version", 0, version.getMinorVersion() );
+        assertEquals( "check incremental version", 0, version.getIncrementalVersion() );
+        assertEquals( "check build number", 0, version.getBuildNumber() );
+        assertEquals( "check qualifier", "02", version.getQualifier() );
+
+        version = new DefaultArtifactVersion( "PATCH-1193602" );
+        assertEquals( "check major version", 0, version.getMajorVersion() );
+        assertEquals( "check minor version", 0, version.getMinorVersion() );
+        assertEquals( "check incremental version", 0, version.getIncrementalVersion() );
+        assertEquals( "check build number", 0, version.getBuildNumber() );
+        assertEquals( "check qualifier", "PATCH-1193602", version.getQualifier() );
+
+        version = new DefaultArtifactVersion( "2.0-1" );
+        assertEquals( "check major version", 2, version.getMajorVersion() );
+        assertEquals( "check minor version", 0, version.getMinorVersion() );
+        assertEquals( "check incremental version", 0, version.getIncrementalVersion() );
+        assertEquals( "check build number", 1, version.getBuildNumber() );
+        assertNull( "check qualifier", version.getQualifier() );
+        assertEquals( "check string value", "2.0-1", version.toString() );
+
+        version = new DefaultArtifactVersion( "5.0.0alpha-2006020117" );
+        assertEquals( "check major version", 0, version.getMajorVersion() );
+        assertEquals( "check minor version", 0, version.getMinorVersion() );
+        assertEquals( "check incremental version", 0, version.getIncrementalVersion() );
+        assertEquals( "check build number", 0, version.getBuildNumber() );
+        assertEquals( "check qualifier", "5.0.0alpha-2006020117", version.getQualifier() );
     }
 
     public void testVersionComparing()
     {
-        assertVersionEqual( "1", "1" );
-        assertVersionOlder( "1", "2" );
-        assertVersionOlder( "1.5", "2" );
-        assertVersionOlder( "1", "2.5" );
-        assertVersionEqual( "1", "1.0" );
-        assertVersionEqual( "1", "1.0.0" );
-        assertVersionOlder( "1.0", "1.1" );
-        assertVersionOlder( "1.1", "1.2" );
-        assertVersionOlder( "1.0.0", "1.1" );
-        assertVersionOlder( "1.1", "1.2.0" );
-        assertVersionOlder( "1.2", "1.10" );
+        DefaultArtifactVersion version = new DefaultArtifactVersion( "1" );
+        assertTrue( version.compareTo( new DefaultArtifactVersion( "2" ) ) < 0 );
 
-        assertVersionOlder( "1.0-alpha-1", "1.0" );
-        assertVersionOlder( "1.0-alpha-1", "1.0-alpha-2" );
-        //assertVersionOlder( "1.0-alpha-2", "1.0-alpha-15" );
-        assertVersionOlder( "1.0-alpha-1", "1.0-beta-1" );
+        version = new DefaultArtifactVersion( "1.5" );
+        assertTrue( version.compareTo( new DefaultArtifactVersion( "2" ) ) < 0 );
 
-        assertVersionOlder( "1.0-SNAPSHOT", "1.0-beta-1" );
-        assertVersionOlder( "1.0-SNAPSHOT", "1.0" );
-        assertVersionOlder( "1.0-alpha-1-SNAPSHOT", "1.0-alpha-1" );
+        version = new DefaultArtifactVersion( "1" );
+        assertEquals( 0, version.compareTo( new DefaultArtifactVersion( "1" ) ) );
 
-        assertVersionOlder( "1.0", "1.0-1" );
-        assertVersionOlder( "1.0-1", "1.0-2" );
-        assertVersionEqual( "2.0-0", "2.0" );
-        assertVersionOlder( "2.0", "2.0-1" );
-        assertVersionOlder( "2.0.0", "2.0-1" );
-        assertVersionOlder( "2.0-1", "2.0.1" );
+        version = new DefaultArtifactVersion( "2" );
+        assertTrue( version.compareTo( new DefaultArtifactVersion( "1" ) ) > 0 );
 
-        assertVersionOlder( "2.0.1-klm", "2.0.1-lmn" );
-        assertVersionOlder( "2.0.1-xyz", "2.0.1" );
+        version = new DefaultArtifactVersion( "2.5" );
+        assertTrue( version.compareTo( new DefaultArtifactVersion( "1" ) ) > 0 );
 
-        assertVersionOlder( "2.0.1", "2.0.1-123" );
-        assertVersionOlder( "2.0.1-xyz", "2.0.1-123" );
-        //assertVersionOlder( "1.1-foo-2", "1.1-foo-10" );
-    }
+        version = new DefaultArtifactVersion( "1.0" );
+        assertTrue( version.compareTo( new DefaultArtifactVersion( "1" ) ) == 0 );
 
-    public void testVersionSnapshotComparing()
-    {
-        assertVersionEqual( "1-SNAPSHOT", "1-SNAPSHOT" );
-        assertVersionOlder( "1-SNAPSHOT", "2-SNAPSHOT" );
-        assertVersionOlder( "1.5-SNAPSHOT", "2-SNAPSHOT" );
-        assertVersionOlder( "1-SNAPSHOT", "2.5-SNAPSHOT" );
-        assertVersionEqual( "1-SNAPSHOT", "1.0-SNAPSHOT" );
-        assertVersionEqual( "1-SNAPSHOT", "1.0.0-SNAPSHOT" );
-        assertVersionOlder( "1.0-SNAPSHOT", "1.1-SNAPSHOT" );
-        assertVersionOlder( "1.1-SNAPSHOT", "1.2-SNAPSHOT" );
-        assertVersionOlder( "1.0.0-SNAPSHOT", "1.1-SNAPSHOT" );
-        assertVersionOlder( "1.1-SNAPSHOT", "1.2.0-SNAPSHOT" );
+        version = new DefaultArtifactVersion( "1.0.0" );
+        assertTrue( version.compareTo( new DefaultArtifactVersion( "1" ) ) == 0 );
 
-        //assertVersionOlder( "1.0-alpha-1-SNAPSHOT", "1.0-SNAPSHOT" );
-        assertVersionOlder( "1.0-alpha-1-SNAPSHOT", "1.0-alpha-2-SNAPSHOT" );
-        assertVersionOlder( "1.0-alpha-1-SNAPSHOT", "1.0-beta-1-SNAPSHOT" );
+        version = new DefaultArtifactVersion( "1.0" );
+        assertTrue( version.compareTo( new DefaultArtifactVersion( "1.1" ) ) < 0 );
 
-        assertVersionOlder( "1.0-SNAPSHOT-SNAPSHOT", "1.0-beta-1-SNAPSHOT" );
-        assertVersionOlder( "1.0-SNAPSHOT-SNAPSHOT", "1.0-SNAPSHOT" );
-        assertVersionOlder( "1.0-alpha-1-SNAPSHOT-SNAPSHOT", "1.0-alpha-1-SNAPSHOT" );
+        version = new DefaultArtifactVersion( "1.2" );
+        assertTrue( version.compareTo( new DefaultArtifactVersion( "1.1" ) ) > 0 );
 
-        //assertVersionOlder( "1.0-SNAPSHOT", "1.0-1-SNAPSHOT" );
-        //assertVersionOlder( "1.0-1-SNAPSHOT", "1.0-2-SNAPSHOT" );
-        //assertVersionEqual( "2.0-0-SNAPSHOT", "2.0-SNAPSHOT" );
-        //assertVersionOlder( "2.0-SNAPSHOT", "2.0-1-SNAPSHOT" );
-        //assertVersionOlder( "2.0.0-SNAPSHOT", "2.0-1-SNAPSHOT" );
-        assertVersionOlder( "2.0-1-SNAPSHOT", "2.0.1-SNAPSHOT" );
+        version = new DefaultArtifactVersion( "1.0.0" );
+        assertTrue( version.compareTo( new DefaultArtifactVersion( "1.1" ) ) < 0 );
 
-        assertVersionOlder( "2.0.1-klm-SNAPSHOT", "2.0.1-lmn-SNAPSHOT" );
-        // assertVersionOlder( "2.0.1-xyz-SNAPSHOT", "2.0.1-SNAPSHOT" );
-        //assertVersionOlder( "2.0.1-SNAPSHOT", "2.0.1-123-SNAPSHOT" );
-        //assertVersionOlder( "2.0.1-xyz-SNAPSHOT", "2.0.1-123-SNAPSHOT" );
-    }
+        version = new DefaultArtifactVersion( "1.2.0" );
+        assertTrue( version.compareTo( new DefaultArtifactVersion( "1.1" ) ) > 0 );
 
+        version = new DefaultArtifactVersion( "1.0-alpha-1" );
+        assertTrue( version.compareTo( new DefaultArtifactVersion( "1.0" ) ) < 0 );
 
-    public void testSnapshotVsReleases()
-    {
-        assertVersionOlder( "1.0-RC1", "1.0-SNAPSHOT" );
-        //assertVersionOlder( "1.0-rc1", "1.0-SNAPSHOT" );
-        //assertVersionOlder( "1.0-rc-1", "1.0-SNAPSHOT" );
-    }
+        version = new DefaultArtifactVersion( "1.0-alpha-1" );
+        assertTrue( version.compareTo( new DefaultArtifactVersion( "1.0-alpha-2" ) ) < 0 );
 
-    private void assertVersionOlder( String left, String right )
-    {
-        assertTrue( left + " should be older than " + right,
-                    newArtifactVersion( left ).compareTo( newArtifactVersion( right ) ) < 0 );
-        assertTrue( right + " should be newer than " + left,
-                    newArtifactVersion( right ).compareTo( newArtifactVersion( left ) ) > 0 );
-    }
+        version = new DefaultArtifactVersion( "1.0-alpha-1" );
+        assertTrue( version.compareTo( new DefaultArtifactVersion( "1.0-beta-1" ) ) < 0 );
 
-    private void assertVersionEqual( String left, String right )
-    {
-        assertTrue( left + " should be equal to " + right,
-                    newArtifactVersion( left ).compareTo( newArtifactVersion( right ) ) == 0 );
-        assertTrue( right + " should be equal to " + left,
-                    newArtifactVersion( right ).compareTo( newArtifactVersion( left ) ) == 0 );
+        version = new DefaultArtifactVersion( "1.0" );
+        assertTrue( version.compareTo( new DefaultArtifactVersion( "1.0-alpha-1" ) ) > 0 );
+
+        version = new DefaultArtifactVersion( "1.0-alpha-2" );
+        assertTrue( version.compareTo( new DefaultArtifactVersion( "1.0-alpha-1" ) ) > 0 );
+
+        version = new DefaultArtifactVersion( "1.0-beta-1" );
+        assertTrue( version.compareTo( new DefaultArtifactVersion( "1.0-alpha-1" ) ) > 0 );
+
+        version = new DefaultArtifactVersion( "1.0-beta-1" );
+        assertTrue( version.compareTo( new DefaultArtifactVersion( "1.0-SNAPSHOT" ) ) > 0 );
+
+        version = new DefaultArtifactVersion( "1.0-SNAPSHOT" );
+        assertTrue( version.compareTo( new DefaultArtifactVersion( "1.0-beta-1" ) ) < 0 );
+
+        version = new DefaultArtifactVersion( "1.0-SNAPSHOT" );
+        assertTrue( version.compareTo( new DefaultArtifactVersion( "1.0" ) ) < 0 );
+
+        version = new DefaultArtifactVersion( "1.0" );
+        assertTrue( version.compareTo( new DefaultArtifactVersion( "1.0-SNAPSHOT" ) ) > 0 );
+
+        version = new DefaultArtifactVersion( "1.0-alpha-1-SNAPSHOT" );
+        assertTrue( version.compareTo( new DefaultArtifactVersion( "1.0-alpha-1" ) ) < 0 );
+
+        version = new DefaultArtifactVersion( "1.0-alpha-1" );
+        assertTrue( version.compareTo( new DefaultArtifactVersion( "1.0-alpha-1-SNAPSHOT" ) ) > 0 );
+
+        version = new DefaultArtifactVersion( "1.0" );
+        assertTrue( version.compareTo( new DefaultArtifactVersion( "1.0-1" ) ) < 0 );
+
+        version = new DefaultArtifactVersion( "1.0-1" );
+        assertTrue( version.compareTo( new DefaultArtifactVersion( "1.0-2" ) ) < 0 );
+
+        version = new DefaultArtifactVersion( "1.0-1" );
+        assertTrue( version.compareTo( new DefaultArtifactVersion( "1.0" ) ) > 0 );
+
+        version = new DefaultArtifactVersion( "1.0-2" );
+        assertTrue( version.compareTo( new DefaultArtifactVersion( "1.0-1" ) ) > 0 );
+
+        version = new DefaultArtifactVersion( "2.0-0" );
+        assertTrue( version.compareTo( new DefaultArtifactVersion( "2.0" ) ) == 0 );
+
+        version = new DefaultArtifactVersion( "2.0-1" );
+        assertTrue( version.compareTo( new DefaultArtifactVersion( "2.0" ) ) > 0 );
+
+        version = new DefaultArtifactVersion( "2.0-1" );
+        assertTrue( version.compareTo( new DefaultArtifactVersion( "2.0.0" ) ) > 0 );
+
+        version = new DefaultArtifactVersion( "2.0-1" );
+        assertTrue( version.compareTo( new DefaultArtifactVersion( "2.0.1" ) ) < 0 );
+
+        version = new DefaultArtifactVersion( "1.10" );
+        assertTrue( version.compareTo( new DefaultArtifactVersion( "1.2" ) ) > 0 );
+
+        // version = new DefaultArtifactVersion( "1.1-foo-10" );
+        // assertTrue( version.compareTo( new DefaultArtifactVersion( "1.1-foo-2" ) ) > 0 );
     }
 
     public void testVersionComparingWithBuildNumberZero()
     {
-        ArtifactVersion v1 = newArtifactVersion( "2.0" );
-        ArtifactVersion v2 = newArtifactVersion( "2.0-0" );
-        ArtifactVersion v3 = newArtifactVersion( "2.0-alpha1" );
-        ArtifactVersion v4 = newArtifactVersion( "2.0-1" );
+        DefaultArtifactVersion v1 = new DefaultArtifactVersion( "2.0" );
+        DefaultArtifactVersion v2 = new DefaultArtifactVersion( "2.0-0" );
+        DefaultArtifactVersion v3 = new DefaultArtifactVersion( "2.0-alpha1" );
+        DefaultArtifactVersion v4 = new DefaultArtifactVersion( "2.0-1" );
 
         // v1 and v2 are equal
         assertTrue( v1.compareTo( v2 ) == 0 );
@@ -211,44 +278,44 @@ public class DefaultArtifactVersionTest
 
     public void testCompareToEqualsHashCodeConsistency()
     {
-        ArtifactVersion v1;
-        ArtifactVersion v2;
+        DefaultArtifactVersion v1;
+        DefaultArtifactVersion v2;
 
         // equal to itself
-        v1 = newArtifactVersion( "1.3" );
+        v1 = new DefaultArtifactVersion( "1.3" );
         v2 = v1;
-        assertTrue( v1.equals( v2 ) && v2.equals( v1 ) && ( v1.hashCode() == v2.hashCode() )
-                        && ( v1.compareTo( v2 ) == 0 ) && ( v2.compareTo( v1 ) == 0 ) );
+        assertTrue( v1.equals( v2 ) && v2.equals( v1 ) && ( v1.hashCode() == v2.hashCode() ) && ( v1.compareTo( v2 ) == 0 )
+                    && ( v2.compareTo( v1 ) == 0 ) );
 
         // equal to something that means the same
-        v1 = newArtifactVersion( "1" );
-        v2 = newArtifactVersion( "1.0.0-0" );
-        assertTrue( v1.equals( v2 ) && v2.equals( v1 ) && ( v1.hashCode() == v2.hashCode() )
-                        && ( v1.compareTo( v2 ) == 0 ) && ( v2.compareTo( v1 ) == 0 ) );
+        v1 = new DefaultArtifactVersion( "1" );
+        v2 = new DefaultArtifactVersion( "1.0.0-0" );
+        assertTrue( v1.equals( v2 ) && v2.equals( v1 ) && ( v1.hashCode() == v2.hashCode() ) && ( v1.compareTo( v2 ) == 0 )
+                    && ( v2.compareTo( v1 ) == 0 ) );
 
         // equal with qualifier
-        v1 = newArtifactVersion( "1.3-alpha1" );
-        v2 = newArtifactVersion( "1.3-alpha1" );
-        assertTrue( v1.equals( v2 ) && v2.equals( v1 ) && ( v1.hashCode() == v2.hashCode() )
-                        && ( v1.compareTo( v2 ) == 0 ) && ( v2.compareTo( v1 ) == 0 ) );
+        v1 = new DefaultArtifactVersion( "1.3-alpha1" );
+        v2 = new DefaultArtifactVersion( "1.3-alpha1" );
+        assertTrue( v1.equals( v2 ) && v2.equals( v1 ) && ( v1.hashCode() == v2.hashCode() ) && ( v1.compareTo( v2 ) == 0 )
+                    && ( v2.compareTo( v1 ) == 0 ) );
 
         // longer qualifier with same start is *newer*
-        v1 = newArtifactVersion( "1.3-alpha1" );
-        v2 = newArtifactVersion( "1.3-alpha1-1" );
+        v1 = new DefaultArtifactVersion( "1.3-alpha1" );
+        v2 = new DefaultArtifactVersion( "1.3-alpha1-1" );
         assertTrue( !v1.equals( v2 ) && !v2.equals( v1 ) && ( v1.compareTo( v2 ) > 0 ) && ( v2.compareTo( v1 ) < 0 ) );
 
         // different qualifiers alpha compared
-        v1 = newArtifactVersion( "1.3-alpha1" );
-        v2 = newArtifactVersion( "1.3-beta1" );
+        v1 = new DefaultArtifactVersion( "1.3-alpha1" );
+        v2 = new DefaultArtifactVersion( "1.3-beta1" );
         assertTrue( !v1.equals( v2 ) && !v2.equals( v1 ) && ( v1.compareTo( v2 ) < 0 ) && ( v2.compareTo( v1 ) > 0 ) );
     }
 
     public void testTransitivity()
     {
-        ArtifactVersion v1 = newArtifactVersion( "1" );
-        ArtifactVersion v2 = newArtifactVersion( "1.0-0" );
-        ArtifactVersion v3 = newArtifactVersion( "1.0.1" );
-        ArtifactVersion v4 = newArtifactVersion( "1.0-beta1" );
+        DefaultArtifactVersion v1 = new DefaultArtifactVersion( "1" );
+        DefaultArtifactVersion v2 = new DefaultArtifactVersion( "1.0-0" );
+        DefaultArtifactVersion v3 = new DefaultArtifactVersion( "1.0.1" );
+        DefaultArtifactVersion v4 = new DefaultArtifactVersion( "1.0-beta1" );
 
         // v1 and v2 are equal
         assertTrue( v1.equals( v2 ) && v2.equals( v1 ) && ( v1.compareTo( v2 ) == 0 ) && ( v2.compareTo( v1 ) == 0 ) );
@@ -268,7 +335,7 @@ public class DefaultArtifactVersionTest
 
     private void testInterfaceCompare( String version )
     {
-        final ArtifactVersion dav = newArtifactVersion( version );
+        final DefaultArtifactVersion dav = new DefaultArtifactVersion( version );
 
         // create an anonymous instance to compare the big daddy to
         ArtifactVersion av = new ArtifactVersion()

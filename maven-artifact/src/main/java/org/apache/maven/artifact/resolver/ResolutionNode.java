@@ -19,11 +19,6 @@ package org.apache.maven.artifact.resolver;
  * under the License.
  */
 
-import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.resolver.filter.ArtifactFilter;
-import org.apache.maven.artifact.versioning.ArtifactVersion;
-import org.apache.maven.artifact.versioning.OverConstrainedVersionException;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -31,9 +26,14 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.maven.artifact.Artifact;
+import org.apache.maven.artifact.resolver.filter.ArtifactFilter;
+import org.apache.maven.artifact.versioning.ArtifactVersion;
+import org.apache.maven.artifact.versioning.OverConstrainedVersionException;
+
 public class ResolutionNode
 {
-    private Artifact artifact;
+    private final Artifact artifact;
 
     private List children;
 
@@ -53,25 +53,20 @@ public class ResolutionNode
     {
         this.artifact = artifact;
         this.remoteRepositories = remoteRepositories;
-        depth = 0;
-        parents = Collections.EMPTY_LIST;
-        parent = null;
+        this.depth = 0;
+        this.parents = Collections.EMPTY_LIST;
+        this.parent = null;
     }
 
     public ResolutionNode( Artifact artifact, List remoteRepositories, ResolutionNode parent )
     {
         this.artifact = artifact;
         this.remoteRepositories = remoteRepositories;
-        depth = parent.depth + 1;
-        parents = new ArrayList();
-        parents.addAll( parent.parents );
-        parents.add( parent.getKey() );
+        this.depth = parent.depth + 1;
+        this.parents = new ArrayList();
+        this.parents.addAll( parent.parents );
+        this.parents.add( parent.getKey() );
         this.parent = parent;
-    }
-
-    public void setArtifact( Artifact artifact )
-    {
-        this.artifact = artifact;
     }
 
     public Artifact getArtifact()
@@ -147,13 +142,13 @@ public class ResolutionNode
                     //MNG-2123: null is a valid response to getSelectedVersion, don't
                     //assume it won't ever be.
                     if (selected != null)
-                    {
+                    {  
                         artifact.selectVersion( selected.toString() );
                     }
                     else
                     {
                         throw new OverConstrainedVersionException("Unable to get a selected Version for "+ artifact.getArtifactId(),artifact);
-                    }
+                    }                 
                 }
 
                 ids.add( 0, artifact );
@@ -196,7 +191,7 @@ public class ResolutionNode
 
     public void enable()
     {
-        active = true;
+        this.active = true;
         // TODO: if it was null, we really need to go find them now... or is this taken care of by the ordering?
         if ( children != null )
         {
@@ -210,7 +205,7 @@ public class ResolutionNode
 
     public void disable()
     {
-        active = false;
+        this.active = false;
         if ( children != null )
         {
             for ( Iterator i = children.iterator(); i.hasNext(); )
