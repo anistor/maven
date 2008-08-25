@@ -143,6 +143,7 @@ under the License.
     <java fork="true" classname="org.apache.maven.cli.MavenCli" failonerror="true">
       <classpath refid="maven.classpath"/>
       <arg value="-B"/>
+      <arg value="-e"/>
       <arg value="clean"/>
       <arg value="install"/>
     </java>
@@ -153,7 +154,7 @@ under the License.
     The new Maven distribution was created as part of the MAVEN-COMPILE step, above. 
     This goal just validates the presence of that distribution.
     </echo>
-    <property name="maven.assembly" location="maven-distribution/target/${maven.home.basename.expected}-bin.zip"/>
+    <property name="maven.assembly" location="apache-maven/target/${maven.home.basename.expected}-bin.zip"/>
     <condition property="build.failed">
       <not>
         <available file="${maven.assembly}"/>
@@ -165,12 +166,13 @@ under the License.
   <target name="extract-assembly" depends="init,maven-assembly" description="extracts the maven assembly into maven.home">
     <echo>Extracting assembly to ${maven.home.dirname} ...</echo>
     <!-- Deleting the contents inside maven.home allow one to use symlinks for maven.home and still have this work. -->          
-    <delete>
+    <mkdir dir="${maven.home}"/>
+    <delete includeemptydirs="true">
       <fileset dir="${maven.home}">
-        <include name="bin"/>
-        <include name="boot"/>
-        <include name="conf"/>
-        <include name="lib"/>
+        <include name="bin/**"/>
+        <include name="boot/**"/>
+        <include name="conf/**"/>
+        <include name="lib/**"/>
         <include name="*.txt"/>
       </fileset>
     </delete>
