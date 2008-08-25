@@ -170,6 +170,7 @@
           <configuration>
             <tagBase>https://svn.apache.org/repos/asf/maven/components/tags</tagBase>
             <autoVersionSubmodules>true</autoVersionSubmodules>
+            <preparationGoals>install</preparationGoals>
           </configuration>
         </plugin>
         <plugin>
