@@ -9,7 +9,7 @@
   </parent>
 
   <artifactId>maven</artifactId>
-  <version>2.0.10-RC11-SNAPSHOT</version>
+  <version>2.0.10-RC11</version>
   <packaging>pom</packaging>
 
   <name>Maven</name>
@@ -97,9 +97,9 @@
   </mailingLists>
 
   <scm>
-    <connection>scm:svn:http://svn.apache.org/repos/asf/maven/components/branches/maven-2.0.x</connection>
-    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/maven/components/branches/maven-2.0.x</developerConnection>
-    <url>http://svn.apache.org/viewvc/maven/components/branches/maven-2.0.x</url>
+    <connection>scm:svn:http://svn.apache.org/repos/asf/maven/components/tags/maven-2.0.10-RC11</connection>
+    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/maven/components/tags/maven-2.0.10-RC11</developerConnection>
+    <url>http://svn.apache.org/viewvc/maven/components/tags/maven-2.0.10-RC11</url>
   </scm>
 
   <build>
@@ -170,6 +170,7 @@
           <configuration>
             <tagBase>https://svn.apache.org/repos/asf/maven/components/tags</tagBase>
             <autoVersionSubmodules>true</autoVersionSubmodules>
+            <preparationGoals>install</preparationGoals>
           </configuration>
         </plugin>
         <plugin>
@@ -244,7 +245,7 @@
   </modules>
 
   <properties>
-    <mavenVersion>2.0.10-RC11-SNAPSHOT</mavenVersion>
+    <mavenVersion>2.0.10-RC11</mavenVersion>
     <wagonVersion>1.0-beta-4</wagonVersion>
   </properties>
 
