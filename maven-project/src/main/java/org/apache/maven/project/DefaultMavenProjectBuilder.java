@@ -473,12 +473,12 @@ public class DefaultMavenProjectBuilder
         if(dynamicBuild != null) {
             model.setBuild(ModelUtils.cloneBuild(dynamicBuild));    
         }
-
-
         model = modelInterpolator.interpolate(model, projectDir, config, getLogger().isDebugEnabled());
 
-        mergeDeterministicBuildElements(model.getBuild(), dynamicBuild);
-        model.setBuild(dynamicBuild);
+        if(dynamicBuild != null && model.getBuild() != null) {
+            mergeDeterministicBuildElements(model.getBuild(), dynamicBuild);
+            model.setBuild(dynamicBuild);
+        }
 
         // interpolation is before injection, because interpolation is off-limits in the injected variables
         modelDefaultsInjector.injectDefaults(model);
