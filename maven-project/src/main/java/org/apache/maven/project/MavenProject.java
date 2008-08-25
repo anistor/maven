@@ -139,6 +139,18 @@ public class MavenProject
 
     private MavenProjectBuilder mavenProjectBuilder;
 
+    private ProjectBuilderConfiguration projectBuilderConfiguration;
+
+    private File parentFile;
+
+    public File getParentFile() {
+        return parentFile;
+    }
+
+    public void setParentFile(File parentFile) {
+        this.parentFile = parentFile;
+    }
+
     public MavenProject()
     {
         Model model = new Model();
@@ -156,13 +168,15 @@ public class MavenProject
     }
 
     public MavenProject(Model model, ArtifactFactory artifactFactory, MavenTools mavenTools,
-                        RepositoryHelper repositoryHelper, MavenProjectBuilder mavenProjectBuilder)
+                        RepositoryHelper repositoryHelper, MavenProjectBuilder mavenProjectBuilder,
+                        ProjectBuilderConfiguration projectBuilderConfiguration)
             throws InvalidRepositoryException {
         setModel( model );
         this.artifactFactory = artifactFactory;
         this.mavenTools = mavenTools;
         this.repositoryHelper = repositoryHelper;
         this.mavenProjectBuilder = mavenProjectBuilder;
+        this.projectBuilderConfiguration = projectBuilderConfiguration;
         originalModel = ModelUtils.cloneModel( model );
         DistributionManagement dm = model.getDistributionManagement();
 
@@ -219,6 +233,10 @@ public class MavenProject
         if ( project.getArtifacts() != null )
         {
             setArtifacts( Collections.unmodifiableSet( project.getArtifacts() ) );
+        }
+
+        if(project.getParentFile()  != null) {
+            parentFile = new File(project.getParentFile().getAbsolutePath());
         }
 
     //    if ( project.getPluginArtifacts() != null )
@@ -421,6 +439,13 @@ public class MavenProject
 
     public MavenProject getParent()
     {
+        if(parent == null && parentFile != null) {
+            try {
+                parent = mavenProjectBuilder.build(parentFile, projectBuilderConfiguration);
+            } catch (ProjectBuildingException e) {
+                e.printStackTrace();
+            }
+        }
         return parent;
     }
 

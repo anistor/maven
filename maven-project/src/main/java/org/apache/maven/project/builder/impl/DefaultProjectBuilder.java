@@ -24,8 +24,7 @@ import org.apache.maven.artifact.InvalidRepositoryException;
 import org.apache.maven.artifact.factory.ArtifactFactory;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.Parent;
-import org.apache.maven.project.MavenProject;
-import org.apache.maven.project.RepositoryHelper;
+import org.apache.maven.project.*;
 import org.apache.maven.project.builder.ArtifactModelContainerFactory;
 import org.apache.maven.project.builder.IdModelContainerFactory;
 import org.apache.maven.project.builder.PomArtifactResolver;
@@ -40,7 +39,6 @@ import org.codehaus.plexus.logging.LogEnabled;
 import org.codehaus.plexus.logging.Logger;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -69,6 +67,8 @@ public final class DefaultProjectBuilder
 
     private RepositoryHelper repositoryHelper;
 
+    private MavenProjectBuilder mavenProjectBuilder;
+
     /**
      * Default constructor
      */
@@ -91,12 +91,13 @@ public final class DefaultProjectBuilder
     }
 
     /**
-     * @see ProjectBuilder#buildFromLocalPath(java.io.InputStream, java.util.List, java.util.Collection, java.util.Collection, org.apache.maven.project.builder.PomArtifactResolver, java.io.File)
+     * @see ProjectBuilder#buildFromLocalPath(java.io.InputStream, java.util.List, java.util.Collection, java.util.Collection, org.apache.maven.project.builder.PomArtifactResolver, java.io.File, org.apache.maven.project.ProjectBuilderConfiguration)
      */
-    public MavenProject buildFromLocalPath( InputStream pom, List<Model> inheritedModels,
-                                            Collection<ImportModel> importModels,
-                                            Collection<InterpolatorProperty> interpolatorProperties,
-                                            PomArtifactResolver resolver, File projectDirectory )
+    public MavenProject buildFromLocalPath(InputStream pom, List<Model> inheritedModels,
+                                           Collection<ImportModel> importModels,
+                                           Collection<InterpolatorProperty> interpolatorProperties,
+                                           PomArtifactResolver resolver, File projectDirectory,
+                                           ProjectBuilderConfiguration projectBuilderConfiguration)
         throws IOException
     {
         if ( pom == null )
@@ -139,7 +140,7 @@ public final class DefaultProjectBuilder
         domainModels.add( domainModel );
 
         MavenProject mavenParent = null;
-
+        File parentFile = null;
         if ( domainModel.getModel().getParent() != null )
         {
             List<DomainModel> mavenParents;
@@ -153,10 +154,14 @@ public final class DefaultProjectBuilder
             }
 
             if(mavenParents.size() > 0) {
-                mavenParent = buildFromLocalPath( ((InputStreamDomainModel) mavenParents.get(0)).getInputStream(), inheritedModels,
-                        importModels, interpolatorProperties, resolver, projectDirectory);
+                PomClassicDomainModel dm = (PomClassicDomainModel) mavenParents.get(0);
+                parentFile = dm.getFile();
+                domainModel.setParentFile(parentFile);
+                // mavenParent = buildFromLocalPath( dm.getInputStream(), inheritedModels,
+                //        importModels, interpolatorProperties, resolver, projectDirectory);
+               // mavenParent.setFile(dm.getFile());
             }
-            
+
             domainModels.addAll(mavenParents);
         }
 
@@ -174,8 +179,10 @@ public final class DefaultProjectBuilder
 
         Model model = transformedDomainModel.getModel();
         try {
-            MavenProject mavenProject = new MavenProject( model, artifactFactory, mavenTools, repositoryHelper, null);
+            MavenProject mavenProject = new MavenProject( model, artifactFactory, mavenTools, repositoryHelper, null,
+                    projectBuilderConfiguration);
             mavenProject.setParent(mavenParent);
+            mavenProject.setParentFile(parentFile);
             return mavenProject;
         } catch (InvalidRepositoryException e) {
             throw new IOException(e.getMessage());
@@ -223,7 +230,7 @@ public final class DefaultProjectBuilder
         artifactResolver.resolve( artifactParent );
 
         PomClassicDomainModel parentDomainModel =
-            new PomClassicDomainModel( new FileInputStream( artifactParent.getFile() ) );
+            new PomClassicDomainModel( artifactParent.getFile()  );
         if ( !parentDomainModel.matchesParent( domainModel.getModel().getParent() ) )
         {
             logger.warn( "Parent pom ids do not match: File = " + artifactParent.getFile().getAbsolutePath() );
@@ -274,7 +281,7 @@ public final class DefaultProjectBuilder
             throw new IOException( "File does not exist: File =" + parentFile.getAbsolutePath() );
         }
 
-        PomClassicDomainModel parentDomainModel = new PomClassicDomainModel( new FileInputStream( parentFile ) );
+        PomClassicDomainModel parentDomainModel = new PomClassicDomainModel( parentFile  );
         if ( !parentDomainModel.matchesParent( domainModel.getModel().getParent() ) )
         {
             logger.warn( "Parent pom ids do not match: File = " + parentFile.getAbsolutePath() );

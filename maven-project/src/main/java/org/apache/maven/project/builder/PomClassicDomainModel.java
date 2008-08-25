@@ -29,11 +29,7 @@ import org.codehaus.plexus.util.ReaderFactory;
 import org.codehaus.plexus.util.WriterFactory;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.Writer;
+import java.io.*;
 
 /**
  * Provides a wrapper for the maven model.
@@ -58,6 +54,10 @@ public final class PomClassicDomainModel
     private Model model;
 
     private String id;
+
+    private File file;
+
+    private File parentFile;
 
     /**
      * Constructor
@@ -96,6 +96,20 @@ public final class PomClassicDomainModel
         this.inputBytes = IOUtil.toByteArray( inputStream );
     }
 
+    public PomClassicDomainModel(File file) 
+        throws IOException
+    {
+        this(new FileInputStream(file));
+        this.file = file;
+    }
+
+    public File getParentFile() {
+        return parentFile;
+    }
+
+    public void setParentFile(File parentFile) {
+        this.parentFile = parentFile;
+    }
 
     /**
      * Returns true if groupId.equals(a.groupId) && artifactId.equals(a.artifactId) && version.equals(a.version),
@@ -209,6 +223,16 @@ public final class PomClassicDomainModel
         byte[] copy = new byte[inputBytes.length];
         System.arraycopy( inputBytes, 0, copy, 0, inputBytes.length );
         return new ByteArrayInputStream( copy );
+    }
+
+    /**
+     *
+     *
+     * @return file of pom. May be null.
+     */
+    public File getFile()
+    {
+        return file;
     }
 
     /**

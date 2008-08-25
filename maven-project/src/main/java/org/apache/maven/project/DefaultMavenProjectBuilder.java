@@ -38,10 +38,7 @@ import org.apache.maven.profiles.activation.ProfileActivationContext;
 import org.apache.maven.profiles.activation.ProfileActivationException;
 import org.apache.maven.profiles.build.ProfileAdvisor;
 import org.apache.maven.project.artifact.InvalidDependencyVersionException;
-import org.apache.maven.project.build.model.DefaultModelLineage;
-import org.apache.maven.project.build.model.ModelLineage;
 import org.apache.maven.project.build.model.ModelLineageBuilder;
-import org.apache.maven.project.build.model.ModelLineageIterator;
 import org.apache.maven.project.builder.PomArtifactResolver;
 import org.apache.maven.project.builder.ProjectBuilder;
 import org.apache.maven.project.inheritance.ModelInheritanceAssembler;
@@ -171,13 +168,12 @@ public class DefaultMavenProjectBuilder
         MavenProject project = null;//projectWorkspace.getProject( projectDescriptor );
 
         if (project == null) {
-            Model model = readModelFromLocalPath("unknown", projectDescriptor, new PomArtifactResolver(config.getLocalRepository(),
-                    repositoryHelper.buildArtifactRepositories(getSuperModel()), artifactResolver));
-            project = buildInternal(model,
+            project = readModelFromLocalPath("unknown", projectDescriptor, new PomArtifactResolver(config.getLocalRepository(),
+                    repositoryHelper.buildArtifactRepositories(getSuperModel()), artifactResolver), config);
+            project = buildInternal(project.getModel(),
                     config,
-                    repositoryHelper.buildArtifactRepositories(getSuperModel()),
                     projectDescriptor,
-                    STRICT_MODEL_PARSING,
+                    project.getParentFile(),
                     true,
                     true);
         }
@@ -212,9 +208,9 @@ public class DefaultMavenProjectBuilder
             Model model = repositoryHelper.findModelFromRepository(artifact, remoteArtifactRepositories, localRepository);
 
             ProjectBuilderConfiguration config = new DefaultProjectBuilderConfiguration().setLocalRepository(localRepository);
-
-            project = buildInternal(model, config, remoteArtifactRepositories, artifact.getFile(),
-                    false, false, false);
+            //TODO: Construct parent
+            project = buildInternal(model, config, artifact.getFile(), null,
+                    false, false);
         }
 
         return project;
@@ -262,7 +258,7 @@ public class DefaultMavenProjectBuilder
 
         MavenProject project;
         try {
-            project = new MavenProject(superModel, artifactFactory, mavenTools, repositoryHelper, this);
+            project = new MavenProject(superModel, artifactFactory, mavenTools, repositoryHelper, this, config);
         } catch (InvalidRepositoryException e) {
             throw new ProjectBuildingException(STANDALONE_SUPERPOM_GROUPID + ":"
                     + STANDALONE_SUPERPOM_ARTIFACTID,
@@ -274,7 +270,7 @@ public class DefaultMavenProjectBuilder
         //project.setActiveProfiles(activeProfiles);
 
         try {
-            interpolateModelAndInjectDefault(project.getModel(), null, config, activeProfiles);
+            interpolateModelAndInjectDefault(project.getModel(), null, null, config, activeProfiles);
 
             project.setRemoteArtifactRepositories(mavenTools.buildArtifactRepositories(superModel.getRepositories()));
             project.setPluginArtifactRepositories(mavenTools.buildArtifactRepositories(superModel.getRepositories()));
@@ -376,16 +372,15 @@ public class DefaultMavenProjectBuilder
 
     private MavenProject buildInternal(Model model,
                                        ProjectBuilderConfiguration config,
-                                       List parentSearchRepositories,
                                        File projectDescriptor,
-                                       boolean strict,
+                                       File parentDescriptor,
                                        boolean isReactorProject,
                                        boolean fromSourceTree)
             throws ProjectBuildingException {
 
         MavenProject superProject;
         try {
-            superProject = new MavenProject(getSuperModel(), artifactFactory, mavenTools, repositoryHelper, this);
+            superProject = new MavenProject(getSuperModel(), artifactFactory, mavenTools, repositoryHelper, this, config);
         } catch (InvalidRepositoryException e) {
             throw new ProjectBuildingException(STANDALONE_SUPERPOM_GROUPID + ":"
                     + STANDALONE_SUPERPOM_ARTIFACTID,
@@ -428,7 +423,7 @@ public class DefaultMavenProjectBuilder
 
         MavenProject project;
         try {
-            project = interpolateModelAndInjectDefault(model, projectDescriptor, config, activated);
+            project = interpolateModelAndInjectDefault(model, projectDescriptor, parentDescriptor, config, activated);
         }
         catch (ModelInterpolationException e) {
             throw new InvalidProjectModelException(projectId, e.getMessage(), projectDescriptor, e);
@@ -460,6 +455,7 @@ public class DefaultMavenProjectBuilder
 
     private MavenProject interpolateModelAndInjectDefault(Model model,
                                              File pomFile,
+                                             File parentFile,
                                              ProjectBuilderConfiguration config,
                                              List activeProfiles
     )
@@ -484,13 +480,13 @@ public class DefaultMavenProjectBuilder
         modelDefaultsInjector.injectDefaults(model);
 
         // We will return a different project object using the new model (hence the need to return a project, not just modify the parameter)
-        MavenProject project = new MavenProject(model, artifactFactory, mavenTools, repositoryHelper, this);
+        MavenProject project = new MavenProject(model, artifactFactory, mavenTools, repositoryHelper, this, config);
         project.setActiveProfiles(activeProfiles);
 
         Artifact projectArtifact = artifactFactory.createBuildArtifact(project.getGroupId(), project.getArtifactId(),
                 project.getVersion(), project.getPackaging());
         project.setArtifact(projectArtifact);
-
+        project.setParentFile(parentFile);
         validateModel(model, pomFile);
         return project;
     }
@@ -654,9 +650,11 @@ public class DefaultMavenProjectBuilder
         }
     }
 
-    private Model readModelFromLocalPath(String projectId,
+    private MavenProject readModelFromLocalPath(String projectId,
                                          File projectDescriptor,
-                                         PomArtifactResolver resolver)
+                                         PomArtifactResolver resolver,
+                                         ProjectBuilderConfiguration config
+                                       )
             throws ProjectBuildingException {
         if (projectDescriptor == null) {
             throw new IllegalArgumentException("projectDescriptor: null, Project Id =" + projectId);
@@ -670,13 +668,13 @@ public class DefaultMavenProjectBuilder
         try {
             mavenProject = projectBuilder.buildFromLocalPath(new FileInputStream(projectDescriptor),
                     Arrays.asList(getSuperModel()), null, null, resolver,
-                    projectDescriptor.getParentFile());
+                    projectDescriptor.getParentFile(), config);
         } catch (IOException e) {
             e.printStackTrace();
             throw new ProjectBuildingException(projectId, "File = " + projectDescriptor.getAbsolutePath(), e);
         }
 
-        return mavenProject.getModel();
+        return mavenProject;
 
     }
 

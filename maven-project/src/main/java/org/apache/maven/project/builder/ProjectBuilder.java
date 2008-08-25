@@ -21,6 +21,7 @@ package org.apache.maven.project.builder;
 
 import org.apache.maven.model.Model;
 import org.apache.maven.project.MavenProject;
+import org.apache.maven.project.ProjectBuilderConfiguration;
 import org.apache.maven.shared.model.InterpolatorProperty;
 import org.apache.maven.shared.model.ImportModel;
 
@@ -46,13 +47,14 @@ public interface ProjectBuilder
      * @param interpolatorProperties properties used for interpolation of properties within the model
      * @param resolver               artifact resolver used in resolving artifacts
      * @param baseDirectory          the base directory of the model
+     * @param projectBuilderConfiguration
      * @return a maven project for the specified input stream
      * @throws IOException if there is a problem in the construction of the maven project
      */
-    MavenProject buildFromLocalPath( InputStream pom, List<Model> inheritedModels,
-                                     Collection<ImportModel> importModels,
-                                     Collection<InterpolatorProperty> interpolatorProperties,
-                                     PomArtifactResolver resolver, File baseDirectory )
+    MavenProject buildFromLocalPath(InputStream pom, List<Model> inheritedModels,
+                                    Collection<ImportModel> importModels,
+                                    Collection<InterpolatorProperty> interpolatorProperties,
+                                    PomArtifactResolver resolver, File baseDirectory, ProjectBuilderConfiguration projectBuilderConfiguration)
         throws IOException;
 
 }
