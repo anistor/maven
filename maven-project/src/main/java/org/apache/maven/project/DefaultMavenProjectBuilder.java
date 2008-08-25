@@ -208,8 +208,10 @@ public class DefaultMavenProjectBuilder
             Model model = repositoryHelper.findModelFromRepository(artifact, remoteArtifactRepositories, localRepository);
 
             ProjectBuilderConfiguration config = new DefaultProjectBuilderConfiguration().setLocalRepository(localRepository);
+            project = readModelFromLocalPath("unknown", artifact.getFile(), new PomArtifactResolver(config.getLocalRepository(),
+                    repositoryHelper.buildArtifactRepositories(getSuperModel()), artifactResolver), config);
             //TODO: Construct parent
-            project = buildInternal(model, config, artifact.getFile(), null,
+            project = buildInternal(project.getModel(), config, artifact.getFile(), project.getParentFile(),
                     false, false);
         }
 
@@ -687,6 +689,10 @@ public class DefaultMavenProjectBuilder
         String projectId = safeVersionlessKey(model.getGroupId(), model.getArtifactId());
 
         if (validationResult.getMessageCount() > 0) {
+            for(String s : (List<String>) validationResult.getMessages())
+            {
+                System.out.println(s);
+            }
             throw new InvalidProjectModelException(projectId, "Failed to validate POM", pomFile,
                     validationResult);
         }

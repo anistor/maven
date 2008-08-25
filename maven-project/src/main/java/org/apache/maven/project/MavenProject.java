@@ -439,12 +439,34 @@ public class MavenProject
 
     public MavenProject getParent()
     {
-        if(parent == null && parentFile != null) {
-            try {
-                parent = mavenProjectBuilder.build(parentFile, projectBuilderConfiguration);
-            } catch (ProjectBuildingException e) {
-                e.printStackTrace();
+        if(parent == null) {
+            if(parentFile != null)
+            {
+                try {
+                    parent = mavenProjectBuilder.build(parentFile, projectBuilderConfiguration);
+                } catch (ProjectBuildingException e) {
+                    e.printStackTrace();
+                }
             }
+            else if(model.getParent() != null)
+            {
+                try {
+                    parent = mavenProjectBuilder.buildFromRepository(getParentArtifact(),
+                             this.remoteArtifactRepositories, projectBuilderConfiguration.getLocalRepository());
+                } catch (ProjectBuildingException e) {
+                    e.printStackTrace();
+                }
+            }
+            /*
+            else
+            {
+                try {
+                    parent = mavenProjectBuilder.buildStandaloneSuperProject(projectBuilderConfiguration);
+                } catch (ProjectBuildingException e) {
+                    e.printStackTrace();  
+                }
+            }
+            */
         }
         return parent;
     }
@@ -1386,6 +1408,11 @@ public class MavenProject
 
     public Artifact getParentArtifact()
     {
+        if(parentArtifact == null && model.getParent() != null) {
+           Parent p = model.getParent();
+            parentArtifact =
+                    artifactFactory.createParentArtifact( p.getGroupId(), p.getArtifactId(), p.getVersion() );
+        }        
         return parentArtifact;
     }
 
