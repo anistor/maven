@@ -67,8 +67,6 @@ public final class DefaultProjectBuilder
 
     private RepositoryHelper repositoryHelper;
 
-    private MavenProjectBuilder mavenProjectBuilder;
-
     /**
      * Default constructor
      */

@@ -469,7 +469,7 @@ public class DefaultMavenProjectBuilder
 
         Build dynamicBuild = model.getBuild();
         if(dynamicBuild != null) {
-            model.setBuild(ModelUtils.cloneBuild(dynamicBuild));    
+            model.setBuild(ModelUtils.cloneBuild(dynamicBuild));
         }
         model = modelInterpolator.interpolate(model, projectDir, config, getLogger().isDebugEnabled());
 
@@ -479,7 +479,7 @@ public class DefaultMavenProjectBuilder
         }
 
         // interpolation is before injection, because interpolation is off-limits in the injected variables
-        modelDefaultsInjector.injectDefaults(model);
+       // modelDefaultsInjector.injectDefaults(model);
 
         // We will return a different project object using the new model (hence the need to return a project, not just modify the parameter)
         MavenProject project = new MavenProject(model, artifactFactory, mavenTools, repositoryHelper, this, config);

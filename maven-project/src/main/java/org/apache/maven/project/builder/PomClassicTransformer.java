@@ -31,7 +31,8 @@ import java.util.*;
 /**
  * Provides methods for transforming model properties into a domain model for the pom classic format and vice versa.
  */
-public final class PomClassicTransformer
+public final class
+        PomClassicTransformer
     implements ModelTransformer
 {
 
@@ -40,9 +41,11 @@ public final class PomClassicTransformer
      */
     private static Set<String> uris = new HashSet<String>( Arrays.asList( ProjectUri.Build.Extensions.xUri,
                                                         ProjectUri.Build.PluginManagement.Plugins.xUri,
+                                                        ProjectUri.Build.PluginManagement.Plugins.Plugin.configuration,
                                                         ProjectUri.Build.PluginManagement.Plugins.Plugin.Dependencies.xUri,
                                                         ProjectUri.Build.PluginManagement.Plugins.Plugin.Dependencies.Dependency.Exclusions.xUri,
                                                         ProjectUri.Build.PluginManagement.Plugins.Plugin.Executions.xUri,
+
                                                         ProjectUri.Build.Plugins.xUri,
                                                         ProjectUri.Build.Plugins.Plugin.configuration,
                                                         ProjectUri.Build.Plugins.Plugin.Dependencies.xUri,
@@ -146,11 +149,34 @@ public final class PomClassicTransformer
                     }
                 }
         }
-
+        
         for(ModelContainer dependencyContainer : source.queryFor( ProjectUri.Build.Plugins.Plugin.xUri)) {
                 for ( ModelContainer managementContainer : source.queryFor( ProjectUri.Build.PluginManagement.Plugins.Plugin.xUri) )
                 {
                     managementContainer = new ArtifactModelContainerFactory().create(transformPluginManagement(managementContainer.getProperties()));
+
+                    //Remove duplicate executions tags
+                    boolean hasExecutionsTag = false;
+                    for(ModelProperty mp : dependencyContainer.getProperties()) {
+                        if(mp.getUri().equals(ProjectUri.Build.Plugins.Plugin.Executions.xUri)) {
+                            hasExecutionsTag = true;
+                            break;
+                        }
+                    }
+                    List<ModelProperty> pList = new ArrayList<ModelProperty>();
+                    if(!hasExecutionsTag) {
+                        pList =  managementContainer.getProperties();
+                    }
+                    else
+                    {
+                        for(ModelProperty mp : managementContainer.getProperties()) {
+                            if(!mp.getUri().equals(ProjectUri.Build.Plugins.Plugin.Executions.xUri)) {
+                                 pList.add(mp);    
+                            }
+                        }
+                    }
+                    managementContainer = new ArtifactModelContainerFactory().create(pList);
+
                     ModelContainerAction action = dependencyContainer.containerAction(managementContainer);
                     if(action.equals(ModelContainerAction.JOIN) || action.equals(ModelContainerAction.DELETE)) {
                         source.join(dependencyContainer, managementContainer);
@@ -159,9 +185,6 @@ public final class PomClassicTransformer
         }        
 
         props = source.getModelProperties();
-      //   for(ModelProperty mp : props) {
-       //      System.out.println("-" + mp);
-      //   }
 
         String xml = null;
         try
@@ -254,7 +277,7 @@ public final class PomClassicTransformer
                 for ( ModelContainer container : containers )
                 {
                     for ( ModelProperty mp : container.getProperties() )
-                    {
+                    {   
                         if ( mp.getUri().equals( ProjectUri.Build.Plugins.Plugin.Executions.Execution.inherited ) &&
                             mp.getValue() != null && mp.getValue().equals( "false" ) )
                         {
@@ -387,11 +410,6 @@ public final class PomClassicTransformer
                        */
         }
        return modelProperties;
-      //  return ModelTransformerContext.transformModelProperties(modelProperties, Arrays.asList(
-      //          new ProfileModelPropertyTransformer(),
-      //          new PluginManagementModelPropertyTransformer(),
-      //          new DependencyManagementModelPropertyTransformer()
-      //          ));
     }
 
     /**
@@ -467,22 +485,5 @@ public final class PomClassicTransformer
             }
             return transformedProperties;
         }
-
- /*
-    private static class ProfileModelPropertyTransformer implements ModelPropertyTransformer {
-        public List<ModelProperty> transform(List<ModelProperty> modelProperties) {
-            List<ModelProperty> properties = new ArrayList<ModelProperty>(modelProperties);
-            List<ModelProperty> transformedProperties = new ArrayList<ModelProperty>();
-            for(ModelProperty mp : modelProperties) {
-                String uri = mp.getUri().replace("profiles#collection/profile", "");
-            }
-            return properties;
-        }
-
-        public String getBaseUri() {
-            return ProjectUri.baseUri;
-        }
-    }
-    */
 }
 
