@@ -33,12 +33,12 @@ public privileged aspect PBEDerivativeReporterAspect
         call( ArtifactRepository MavenTools+.buildDeploymentArtifactRepository( DeploymentRepository ) )
         && args( repo );
 
-    private pointcut pbldr_processProjectLogic( MavenProject project, File pomFile ):
-        execution( private MavenProject DefaultMavenProjectBuilder.processProjectLogic( MavenProject, File, .. ) )
+    private pointcut pbldr_interpolateModelAndInjectDefault( MavenProject project, File pomFile ):
+        execution( private MavenProject DefaultMavenProjectBuilder.interpolateModelAndInjectDefault( MavenProject, File, .. ) )
         && args( project, pomFile, .. );
 
-    private pointcut within_pbldr_processProjectLogic( MavenProject project, File pomFile ):
-        withincode( private MavenProject DefaultMavenProjectBuilder.processProjectLogic( MavenProject, File, .. ) )
+    private pointcut within_pbldr_interpolateModelAndInjectDefault( MavenProject project, File pomFile ):
+        withincode( private MavenProject DefaultMavenProjectBuilder.interpolateModelAndInjectDefault( MavenProject, File, .. ) )
         && args( project, pomFile, .. );
 
     private pointcut within_DefaultMavenProjectBuilder():
@@ -53,7 +53,7 @@ public privileged aspect PBEDerivativeReporterAspect
     // DefaultMavenProjectBuilder.build(..)
     // --> DefaultMavenProjectBuilder.buildFromSourceFileInternal(..) (private)
     //     --> DefaultMavenProjectBuilder.buildInternal(..) (private)
-    //         --> DefaultMavenProjectBuilder.processProjectLogic(..) (private)
+    //         --> DefaultMavenProjectBuilder.interpolateModelAndInjectDefault(..) (private)
     //             --> DefaultMavenTools.buildDeploymentArtifactRepository(..)
     //             <-- UnknownRepositoryLayoutException
     // <---------- ProjectBuildingException
@@ -61,7 +61,7 @@ public privileged aspect PBEDerivativeReporterAspect
 
     after( MavenProject project, File pomFile, DeploymentRepository repo ) throwing( InvalidRepositoryException cause ):
         mavenTools_buildDeploymentArtifactRepository( repo ) &&
-        cflow( pbldr_processProjectLogic( project, pomFile ) )
+        cflow( pbldr_interpolateModelAndInjectDefault( project, pomFile ) )
         && within_DefaultMavenProjectBuilder()
     {
         getReporter().reportErrorCreatingDeploymentArtifactRepository( project, pomFile, repo, cause );
@@ -79,7 +79,7 @@ public privileged aspect PBEDerivativeReporterAspect
     // DefaultMavenProjectBuilder.build(..)
     // --> DefaultMavenProjectBuilder.buildFromSourceFileInternal(..) (private)
     //     --> DefaultMavenProjectBuilder.buildInternal(..) (private)
-    //         --> DefaultMavenProjectBuilder.processProjectLogic(..) (private)
+    //         --> DefaultMavenProjectBuilder.interpolateModelAndInjectDefault(..) (private)
     //             --> DefaultMavenTools.buildArtifactRepositories(..)
     //                 --> DefaultMavenTools.buildArtifactRepository(..)
     //             <------ UnknownRepositoryLayoutException
@@ -87,7 +87,7 @@ public privileged aspect PBEDerivativeReporterAspect
     // =========================================================================
     after( MavenProject project, File pomFile, Repository repo ) throwing( InvalidRepositoryException cause ):
         mavenTools_buildArtifactRepository( repo )
-        && cflow( pbldr_processProjectLogic( project, pomFile ) )
+        && cflow( pbldr_interpolateModelAndInjectDefault( project, pomFile ) )
     {
         getReporter().reportErrorCreatingArtifactRepository( project.getId(), pomFile, repo, cause );
     }
@@ -125,13 +125,13 @@ public privileged aspect PBEDerivativeReporterAspect
     // DefaultMavenProjectBuilder.build(..)
     // --> DefaultMavenProjectBuilder.buildFromSourceFileInternal(..) (private)
     //     --> DefaultMavenProjectBuilder.buildInternal(..) (private)
-    //         --> DefaultMavenProjectBuilder.processProjectLogic(..) (private)
+    //         --> DefaultMavenProjectBuilder.interpolateModelAndInjectDefault(..) (private)
     //             --> ModelInterpolator.interpolate(..)
     //             <-- ModelInterpolationException
     // <---------- ProjectBuildingException
     // =========================================================================
     after( MavenProject project, File pomFile ) throwing( ModelInterpolationException cause ):
-        pbldr_processProjectLogic( project, pomFile )
+        pbldr_interpolateModelAndInjectDefault( project, pomFile )
     {
         getReporter().reportErrorInterpolatingModel( project, pomFile, cause );
     }
@@ -152,7 +152,7 @@ public privileged aspect PBEDerivativeReporterAspect
     // DefaultMavenProjectBuilder.build(..)
     // --> DefaultMavenProjectBuilder.buildFromSourceFileInternal(..) (private)
     //     --> DefaultMavenProjectBuilder.buildInternal(..) (private)
-    //         --> DefaultMavenProjectBuilder.processProjectLogic(..) (private)
+    //         --> DefaultMavenProjectBuilder.interpolateModelAndInjectDefault(..) (private)
     //             --> DefaultMavenProjectBuilder.createPluginArtifacts(..)
     //             --> DefaultMavenProjectBuilder.createReportArtifacts(..)
     //             --> DefaultMavenProjectBuilder.createExtensionArtifacts(..)
@@ -160,7 +160,7 @@ public privileged aspect PBEDerivativeReporterAspect
     // <---------- ProjectBuildingException
     // =========================================================================
     after( MavenProject project, File pomFile ) throwing( ProjectBuildingException cause ):
-        cflow( pbldr_processProjectLogic( project, pomFile ) )
+        cflow( pbldr_interpolateModelAndInjectDefault( project, pomFile ) )
         && pbldr_createNonDependencyArtifacts()
         && within_DefaultMavenProjectBuilder()
     {
@@ -178,13 +178,13 @@ public privileged aspect PBEDerivativeReporterAspect
     // DefaultMavenProjectBuilder.build(..)
     // --> DefaultMavenProjectBuilder.buildFromSourceFileInternal(..) (private)
     //     --> DefaultMavenProjectBuilder.buildInternal(..) (private)
-    //         --> DefaultMavenProjectBuilder.processProjectLogic(..) (private)
+    //         --> DefaultMavenProjectBuilder.interpolateModelAndInjectDefault(..) (private)
     //             --> (model validator result)
     //         <-- InvalidProjectModelException
     // <------ ProjectBuildingException
     // =========================================================================
     after( MavenProject project, File pomFile ) throwing( InvalidProjectModelException cause ):
-        cflow( pbldr_processProjectLogic( project, pomFile ) )
+        cflow( pbldr_interpolateModelAndInjectDefault( project, pomFile ) )
         && within_DefaultMavenProjectBuilder()
         && execution( void DefaultMavenProjectBuilder.validateModel( .. ) )
     {
