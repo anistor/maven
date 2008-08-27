@@ -80,19 +80,19 @@ public final class ArtifactModelContainerFactory
 
             for ( ModelProperty mp : properties )
             {
-                if ( mp.getUri().endsWith( "version" ) )
+                if ( mp.getUri().endsWith( "version" ) && version == null)
                 {
                     this.version = mp.getValue();
                 }
-                else if ( mp.getUri().endsWith( "artifactId" ) )
+                else if ( mp.getUri().endsWith( "artifactId" ) && artifactId == null)
                 {
                     this.artifactId = mp.getValue();
                 }
-                else if ( mp.getUri().endsWith( "groupId" ) )
+                else if ( mp.getUri().endsWith( "groupId" ) && groupId == null)
                 {
                     this.groupId = mp.getValue();
                 }
-                else if ( mp.getUri().equals( ProjectUri.Dependencies.Dependency.type ) )
+                else if ( mp.getUri().equals( ProjectUri.Dependencies.Dependency.type ) && type == null)
                 {
                     this.type = mp.getValue();
                 }
@@ -106,8 +106,12 @@ public final class ArtifactModelContainerFactory
 
             if ( artifactId == null )
             {
+                StringBuffer sb = new StringBuffer();
+                for(ModelProperty mp: properties) {
+                    sb.append(mp).append("\r\n");
+                }
                 throw new IllegalArgumentException(
-                    "Properties does not contain artifact id. Group ID = " + groupId + ", Version = " + version );
+                    "Properties does not contain artifact id. Group ID = " + groupId + ", Version = " + version + ":" + sb);
             }
 
             if ( type == null )
