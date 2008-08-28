@@ -704,6 +704,20 @@ public class DefaultLifecycleExecutor
             {
                 throw new LifecycleExecutionException( e.getMessage(), e );
             }
+            
+            // NOTE: Ordinarily, we might be tempted to set all pertinent executionProjects
+            // to null here, to release some memory. HOWEVER, the problem is that
+            // the reactorProjects construct doesn't track successive levels of
+            // forked execution properly, so we MUST NOT SET THE executionProject
+            // INSTANCES TO NULL. If we do this inside a two-or-more-level-deep
+            // fork, it can result in passing a null project instance through
+            // to the plugin manager, since successive iterations of the n-1
+            // fork to execute fork n with each project in reactorProjects MUST
+            // HAVE ACCESS TO THE executionProject for every project.
+            //
+            // Just please don't set executionProjects == null here. Not until
+            // we have a mechanism for tracking (stack push/pull) successive
+            // forked lifecycles in the reactorProjects collection.
         }
     }
     
