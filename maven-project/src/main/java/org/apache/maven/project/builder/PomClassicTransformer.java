@@ -367,18 +367,29 @@ public final class
                 tmp.add( index, new ModelProperty( ProjectUri.Scm.developerConnection, scmDeveloperUrl.toString() ) );
             }
 
-
-            //Remove Plugin Repository Inheritance Rule
             //Project Name Inheritance Rule
             //Packaging Inheritance Rule
-            //Build Resources Inheritence Rule
-            //Build Test Resources Inheritance Rule
             //Profiles not inherited rule
             for ( ModelProperty mp : tmp )
             {
                 String uri = mp.getUri();
                 if ( domainModels.indexOf( domainModel ) > 0 && ( uri.equals( ProjectUri.name ) ||
-                    uri.equals( ProjectUri.packaging ) || uri.startsWith( ProjectUri.Profiles.xUri ) ||
+                    uri.equals( ProjectUri.packaging ) || uri.startsWith( ProjectUri.Profiles.xUri )
+                     ) )
+                {
+                    clearedProperties.add( mp );
+                }
+            }
+
+            //Remove Plugin Repository Inheritance Rule
+            //Build Resources Inheritence Rule
+            //Build Test Resources Inheritance Rule
+            //Only inherit the above from super pom (domainModels.size() -1)
+            for ( ModelProperty mp : tmp )
+            {
+                String uri = mp.getUri();
+                if ( domainModels.indexOf( domainModel ) > 0
+                        && domainModels.indexOf(domainModel) != (domainModels.size() -1 ) && (
                     uri.startsWith( ProjectUri.Build.Resources.xUri ) ||
                     uri.startsWith( ProjectUri.Build.TestResources.xUri ) ||
                     uri.startsWith( ProjectUri.PluginRepositories.xUri ) ) )
@@ -386,6 +397,7 @@ public final class
                     clearedProperties.add( mp );
                 }
             }
+            
             ModelProperty artifactId = getPropertyFor( ProjectUri.artifactId, tmp );
             if ( artifactId != null )
             {

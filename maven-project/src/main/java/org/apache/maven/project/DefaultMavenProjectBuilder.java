@@ -174,8 +174,17 @@ public class DefaultMavenProjectBuilder
                     config,
                     projectDescriptor,
                     project.getParentFile(),
-                    true,
-                    true);
+                    true
+            );
+
+            Build build = project.getBuild();
+            // NOTE: setting this script-source root before path translation, because
+            // the plugin tools compose basedir and scriptSourceRoot into a single file.
+            project.addScriptSourceRoot(build.getScriptSourceDirectory());
+            project.addCompileSourceRoot(build.getSourceDirectory());
+            project.addTestCompileSourceRoot(build.getTestSourceDirectory());
+            // Only track the file of a POM in the source tree
+            project.setFile(projectDescriptor);
         }
         return project;
     }
@@ -214,7 +223,7 @@ public class DefaultMavenProjectBuilder
             project = readModelFromLocalPath("unknown", artifact.getFile(), new PomArtifactResolver(config.getLocalRepository(),
                     artifactRepositories, artifactResolver), config);
             project = buildInternal(project.getModel(), config, artifact.getFile(), project.getParentFile(),
-                    false, false);
+                    false);
         }
 
         return project;
@@ -326,27 +335,22 @@ public class DefaultMavenProjectBuilder
                                                                    ProjectBuilderConfiguration config)
             throws ProjectBuildingException {
         MavenProject project = build(projectDescriptor, config);
-        Artifact projectArtifact = project.getArtifact();
-
-        String projectId = safeVersionlessKey(project.getGroupId(), project.getArtifactId());
-
-        Map managedVersions = project.getManagedVersionMap();
 
         try {
             project.setDependencyArtifacts(project.createArtifacts(artifactFactory, null, null));
         }
         catch (InvalidDependencyVersionException e) {
-            throw new ProjectBuildingException(projectId,
+            throw new ProjectBuildingException(safeVersionlessKey(project.getGroupId(), project.getArtifactId()),
                     "Unable to build project due to an invalid dependency version: " +
                             e.getMessage(), projectDescriptor, e);
         }
 
         ArtifactResolutionRequest request = new ArtifactResolutionRequest()
-                .setArtifact(projectArtifact)
+                .setArtifact(project.getArtifact())
                 .setArtifactDependencies(project.getDependencyArtifacts())
                 .setLocalRepository(config.getLocalRepository())
                 .setRemoteRepostories(project.getRemoteArtifactRepositories())
-                .setManagedVersionMap(managedVersions)
+                .setManagedVersionMap(project.getManagedVersionMap())
                 .setMetadataSource(artifactMetadataSource);
 
         ArtifactResolutionResult result = artifactResolver.resolve(request);
@@ -378,8 +382,8 @@ public class DefaultMavenProjectBuilder
                                        ProjectBuilderConfiguration config,
                                        File projectDescriptor,
                                        File parentDescriptor,
-                                       boolean isReactorProject,
-                                       boolean fromSourceTree)
+                                       boolean isReactorProject
+    )
             throws ProjectBuildingException {
 
         MavenProject superProject;
@@ -434,21 +438,6 @@ public class DefaultMavenProjectBuilder
         }
         catch (InvalidRepositoryException e) {
             throw new InvalidProjectModelException(projectId, e.getMessage(), projectDescriptor, e);
-        }
-
-        if (fromSourceTree) {
-            Build build = project.getBuild();
-
-            // NOTE: setting this script-source root before path translation, because
-            // the plugin tools compose basedir and scriptSourceRoot into a single file.
-            project.addScriptSourceRoot(build.getScriptSourceDirectory());
-
-            project.addCompileSourceRoot(build.getSourceDirectory());
-
-            project.addTestCompileSourceRoot(build.getTestSourceDirectory());
-
-            // Only track the file of a POM in the source tree
-            project.setFile(projectDescriptor);
         }
 
         projectWorkspace.storeProjectByCoordinate(project);
