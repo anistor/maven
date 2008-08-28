@@ -48,6 +48,14 @@ public interface MavenProjectBuilder
         throws ProjectBuildingException;
 
     // ----------------------------------------------------------------------
+    // These methods are called by the EventMonitor
+    // ----------------------------------------------------------------------
+
+    void prepareProject(MavenProject project);
+
+    void cleanProject(MavenProject project);
+
+    // ----------------------------------------------------------------------
     // These methods are used by the MavenEmbedder
     // ----------------------------------------------------------------------
 

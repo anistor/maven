@@ -1,4 +1,4 @@
-package org.apache.maven.monitor.event;
+package org.apache.maven.project.transformation;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -19,18 +19,16 @@ package org.apache.maven.monitor.event;
  * under the License.
  */
 
-/**
- * @author jdcasey
- */
-public interface EventDispatcher
+public class ModelTransformationException
+    extends RuntimeException
 {
+    public ModelTransformationException( String message )
+    {
+        super( message );
+    }
 
-    void addEventMonitor( EventMonitor monitor );
-
-    void dispatchStart( MavenEvent event, String target );
-
-    void dispatchEnd( MavenEvent event, String target );
-
-    void dispatchError( MavenEvent event, String target, Throwable cause );
-
+    public ModelTransformationException( String message, Throwable cause )
+    {
+        super( message, cause );
+    }
 }

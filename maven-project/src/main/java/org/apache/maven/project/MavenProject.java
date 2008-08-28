@@ -94,6 +94,8 @@ public class MavenProject
 
     private File file;
 
+    private File originalFile;
+
     private Set artifacts;
 
     private Artifact parentArtifact;
@@ -146,6 +148,8 @@ public class MavenProject
     private Map projectReferences = new HashMap();
 
     private boolean executionRoot;
+
+    private boolean prepared = false;
     
     private Map moduleAdjustments;
 
@@ -446,6 +450,26 @@ public class MavenProject
     public File getBasedir()
     {
         return basedir;
+    }
+
+    public File getOriginalFile()
+    {
+        return originalFile;
+    }
+
+    public void setOriginalFile(File file)
+    {
+        this.originalFile = file;
+    }
+
+    public boolean isPrepared()
+    {
+        return this.prepared;
+    }
+
+    public void setPrepared(boolean prepared)
+    {
+        this.prepared = prepared;
     }
 
     public void setDependencies( List dependencies )

@@ -29,9 +29,9 @@ public abstract class AbstractSelectiveEventMonitor
     implements EventMonitor
 {
     
-    private List boundStartEvents;
-    private List boundErrorEvents;
-    private List boundEndEvents;
+    private List<String> boundStartEvents;
+    private List<String> boundErrorEvents;
+    private List<String> boundEndEvents;
 
     protected AbstractSelectiveEventMonitor(String[] startEvents, String[] endEvents, String[] errorEvents)
     {
@@ -42,39 +42,39 @@ public abstract class AbstractSelectiveEventMonitor
         this.boundErrorEvents = Arrays.asList( errorEvents );
     }
 
-    public final void startEvent( String eventName, String target, long timestamp )
+    public final void startEvent( MavenEvent event, String target, long timestamp )
     {
-        if( boundStartEvents.contains( eventName ) )
+        if( boundStartEvents.contains( event.toString()) )
         {
-            doStartEvent( eventName, target, timestamp );
+            doStartEvent( event, target, timestamp );
         }
     }
     
-    protected void doStartEvent( String eventName, String target, long timestamp )
+    protected void doStartEvent( MavenEvent event, String target, long timestamp )
     {
     }
 
-    public final void endEvent( String eventName, String target, long timestamp )
+    public final void endEvent( MavenEvent event, String target, long timestamp )
     {
-        if( boundEndEvents.contains( eventName ) )
+        if( boundEndEvents.contains( event.toString() ) )
         {
-            doEndEvent( eventName, target, timestamp );
+            doEndEvent( event, target, timestamp );
         }
     }
 
-    protected void doEndEvent( String eventName, String target, long timestamp )
+    protected void doEndEvent( MavenEvent event, String target, long timestamp )
     {
     }
 
-    public final void errorEvent( String eventName, String target, long timestamp, Throwable cause )
+    public final void errorEvent( MavenEvent event, String target, long timestamp, Throwable cause )
     {
-        if( boundErrorEvents.contains( eventName ) )
+        if( boundErrorEvents.contains( event.toString() ) )
         {
-            doErrorEvent( eventName, target, timestamp, cause );
+            doErrorEvent( event, target, timestamp, cause );
         }
     }
 
-    protected void doErrorEvent( String eventName, String target, long timestamp, Throwable cause )
+    protected void doErrorEvent( MavenEvent event, String target, long timestamp, Throwable cause )
     {
     }
 

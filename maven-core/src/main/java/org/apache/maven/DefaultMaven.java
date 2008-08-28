@@ -37,6 +37,8 @@ import org.apache.maven.lifecycle.LifecycleExecutor;
 import org.apache.maven.monitor.event.DefaultEventDispatcher;
 import org.apache.maven.monitor.event.EventDispatcher;
 import org.apache.maven.monitor.event.MavenEvents;
+import org.apache.maven.monitor.event.ProjectEventMonitor;
+import org.apache.maven.monitor.event.MavenEvent;
 import org.apache.maven.profiles.ProfileManager;
 import org.apache.maven.profiles.activation.ProfileActivationException;
 import org.apache.maven.project.DuplicateProjectException;
@@ -119,8 +121,10 @@ public class DefaultMaven
 //        }
 
         EventDispatcher dispatcher = request.getEventDispatcher();
+        
+        request.addEventMonitor( new ProjectEventMonitor( projectBuilder ) );
 
-        String event = MavenEvents.REACTOR_EXECUTION;
+        MavenEvent event = new MavenEvent(MavenEvents.REACTOR_EXECUTION, request);
 
         dispatcher.dispatchStart( event, request.getBaseDirectory() );
 

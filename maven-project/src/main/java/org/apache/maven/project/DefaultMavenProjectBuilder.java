@@ -65,6 +65,7 @@ import org.apache.maven.project.injection.ModelDefaultsInjector;
 import org.apache.maven.project.injection.ProfileInjector;
 import org.apache.maven.project.interpolation.ModelInterpolationException;
 import org.apache.maven.project.interpolation.ModelInterpolator;
+import org.apache.maven.project.transformation.ModelTransformer;
 import org.apache.maven.project.path.PathTranslator;
 import org.apache.maven.project.validation.ModelValidationResult;
 import org.apache.maven.project.validation.ModelValidator;
@@ -160,9 +161,11 @@ public class DefaultMavenProjectBuilder
 
     private ModelValidator validator;
 
-    private Map rawProjectCache = new HashMap();
+    private Map<String, MavenProject> rawProjectCache = new HashMap<String, MavenProject>();
 
-    private Map processedProjectCache = new HashMap();
+    private Map<String, MavenProject> processedProjectCache = new HashMap<String, MavenProject>();
+
+    private Map<String, MavenProject> fileProjectCache = new HashMap<String, MavenProject>();
 
     // TODO: make it a component
     private MavenXpp3Reader modelReader;
@@ -173,7 +176,11 @@ public class DefaultMavenProjectBuilder
 
     private ModelInterpolator modelInterpolator;
 
+    private ModelTransformer modelTransformer;
+
     private ArtifactRepositoryFactory artifactRepositoryFactory;
+
+    private boolean prepared = false;
 
     // ----------------------------------------------------------------------
     // I am making this available for use with a new method that takes a
@@ -185,9 +192,64 @@ public class DefaultMavenProjectBuilder
 
     public static final String MAVEN_MODEL_VERSION = "4.0.0";
 
+    private static final String PARENT_PATTERN = "\\$\\{(.+?)\\}";
+
     public void initialize()
     {
         modelReader = new MavenXpp3Reader();
+    }
+
+    /**
+     * Called by the event dispatcher, transforms the project file so it can be stored into a repository
+     * by replacing any variables in the fields that identify the artifact or its parent.
+     * @param project The MavenProject to transform.
+     */
+    public void prepareProject(MavenProject project)
+    {
+        if (project.isPrepared())
+        {
+            return;
+        }
+        getLogger().debug("Preparing project " + project.getId());
+        Build build = project.getBuild();
+        File projectDescriptor = project.getFile();
+        if (projectDescriptor == null)
+        {
+            return;
+        }
+        File projectDir = project.getBasedir();
+        Model model = project.getModel();
+        String projectId = safeVersionlessKey( model.getGroupId(), model.getArtifactId() );
+        // If the parent version was replaced write the pom to the build directory
+        // and use that file descriptor.
+        String directory = pathTranslator.alignToBaseDirectory(build.getDirectory(), projectDir);
+        File target = new File(directory, projectDescriptor.getName());
+        if ( modelTransformer.transformModel(projectDescriptor, target, project, projectId, false) )
+        {
+            // The model was updated and written to the target directory.
+            if ( project.getOriginalFile() == null )
+            {
+                project.setOriginalFile( projectDescriptor );
+                project.setBasedir(projectDescriptor.getParentFile());
+            }
+            project.setFile( target );
+        }
+        project.setPrepared(true);
+    }
+
+    /**
+     * Called by the event dispatcher, marks the project as "not prepared" - the target directory has
+     * been cleaned.
+     * @param project The MavenProject.
+     */
+    public void cleanProject(MavenProject project)
+    {
+        getLogger().debug("Cleaning project " + project.getId());
+        if (project.isPrepared())
+        {
+            project.setFile( project.getOriginalFile() );
+            project.setPrepared(false);
+        }
     }
 
     // ----------------------------------------------------------------------
@@ -242,7 +304,7 @@ public class DefaultMavenProjectBuilder
     {
         String cacheKey = createCacheKey( artifact.getGroupId(), artifact.getArtifactId(), artifact.getVersion() );
 
-        MavenProject project = (MavenProject) processedProjectCache.get( cacheKey );
+        MavenProject project = processedProjectCache.get( cacheKey );
 
         if ( project != null )
         {
@@ -906,6 +968,14 @@ public class DefaultMavenProjectBuilder
 
             // Only track the file of a POM in the source tree
             project.setFile( projectDescriptor );
+            try
+            {
+                fileProjectCache.put( projectDescriptor.getCanonicalPath(), project );
+            }
+            catch (Exception ex)
+            {
+                // Ignore the exception. It just won't be cached.
+            }
         }
 
 //        try
@@ -1053,7 +1123,7 @@ public class DefaultMavenProjectBuilder
                                               parentProject.getArtifactId(),
                                               parentProject.getVersion() );
 
-            MavenProject processedParent = (MavenProject) processedProjectCache.get( cacheKey );
+            MavenProject processedParent = processedProjectCache.get( cacheKey );
             Artifact parentArtifact;
 
             // yeah, this null check might be a bit paranoid, but better safe than sorry...
@@ -1246,19 +1316,24 @@ public class DefaultMavenProjectBuilder
                 throw new ProjectBuildingException( projectId,
                                                     "Parent element is a duplicate of " + "the current project " );
             }
-            else if ( StringUtils.isEmpty( parentModel.getVersion() ) )
-            {
-                throw new ProjectBuildingException( projectId, "Missing version element from parent element" );
-            }
 
             // the only way this will have a value is if we find the parent on disk...
             File parentDescriptor = null;
 
             model = null;
 
+            resolveParent(parentModel, project, projectId, projectDir, config, strict);
+
+            if ( StringUtils.isEmpty( parentModel.getVersion() ) )
+            {
+                throw new ProjectBuildingException( projectId, "Missing version element from parent element" );
+            }
+            
+            String parentRelativePath = parentModel.getRelativePath();
+
             String parentKey =
                 createCacheKey( parentModel.getGroupId(), parentModel.getArtifactId(), parentModel.getVersion() );
-            MavenProject parentProject = (MavenProject) rawProjectCache.get( parentKey );
+            MavenProject parentProject = rawProjectCache.get( parentKey );
 
             if ( parentProject != null )
             {
@@ -1267,92 +1342,17 @@ public class DefaultMavenProjectBuilder
                 parentDescriptor = parentProject.getFile();
             }
 
-            String parentRelativePath = parentModel.getRelativePath();
-
-            // if we can't find a cached model matching the parent spec, then let's try to look on disk using
-            // <relativePath/>
-            if ( ( model == null ) && ( projectDir != null ) && StringUtils.isNotEmpty( parentRelativePath ) )
+            if ((model == null) && (projectDir != null) && StringUtils.isNotEmpty(parentRelativePath))
             {
-                parentDescriptor = new File( projectDir, parentRelativePath );
-
-                if ( getLogger().isDebugEnabled() )
+                getLogger().debug("Checking relative path " + parentRelativePath + " for " +
+                           parentModel.getGroupId() + "." + parentModel.getArtifactId());
+                // if we can't find a cached model matching the parent spec, then let's try to look on disk using
+                // <relativePath/>
+                ModelWithFile mwf = getParentFromRelativePath(parentModel, projectDir, project, projectId, strict, false);
+                if (mwf != null)
                 {
-                    getLogger().debug( "Searching for parent-POM: " + parentModel.getId() + " of project: " +
-                        project.getId() + " in relative path: " + parentRelativePath );
-                }
-
-                if ( parentDescriptor.isDirectory() )
-                {
-                    if ( getLogger().isDebugEnabled() )
-                    {
-                        getLogger().debug( "Path specified in <relativePath/> (" + parentRelativePath +
-                            ") is a directory. Searching for 'pom.xml' within this directory." );
-                    }
-
-                    parentDescriptor = new File( parentDescriptor, "pom.xml" );
-
-                    if ( !parentDescriptor.exists() )
-                    {
-                        if ( getLogger().isDebugEnabled() )
-                        {
-                            getLogger().debug( "Parent-POM: " + parentModel.getId() + " for project: " +
-                                project.getId() + " cannot be loaded from relative path: " + parentDescriptor +
-                                "; path does not exist." );
-                        }
-                    }
-                }
-
-                if ( parentDescriptor != null )
-                {
-                    try
-                    {
-                        parentDescriptor = parentDescriptor.getCanonicalFile();
-                    }
-                    catch ( IOException e )
-                    {
-                        getLogger().debug( "Failed to canonicalize potential parent POM: \'" + parentDescriptor + "\'",
-                                           e );
-
-                        parentDescriptor = null;
-                    }
-                }
-
-                if ( ( parentDescriptor != null ) && parentDescriptor.exists() )
-                {
-                    Model candidateParent = readModel( projectId, parentDescriptor, strict );
-
-                    String candidateParentGroupId = candidateParent.getGroupId();
-                    if ( ( candidateParentGroupId == null ) && ( candidateParent.getParent() != null ) )
-                    {
-                        candidateParentGroupId = candidateParent.getParent().getGroupId();
-                    }
-
-                    String candidateParentVersion = candidateParent.getVersion();
-                    if ( ( candidateParentVersion == null ) && ( candidateParent.getParent() != null ) )
-                    {
-                        candidateParentVersion = candidateParent.getParent().getVersion();
-                    }
-
-                    if ( parentModel.getGroupId().equals( candidateParentGroupId ) &&
-                        parentModel.getArtifactId().equals( candidateParent.getArtifactId() ) &&
-                        parentModel.getVersion().equals( candidateParentVersion ) )
-                    {
-                        model = candidateParent;
-
-                        getLogger().debug( "Using parent-POM from the project hierarchy at: \'" +
-                            parentModel.getRelativePath() + "\' for project: " + project.getId() );
-                    }
-                    else
-                    {
-                        getLogger().debug( "Invalid parent-POM referenced by relative path '" +
-                            parentModel.getRelativePath() + "' in parent specification in " + project.getId() + ":" +
-                            "\n  Specified: " + parentModel.getId() + "\n  Found:     " + candidateParent.getId() );
-                    }
-                }
-                else if ( getLogger().isDebugEnabled() )
-                {
-                    getLogger().debug(
-                        "Parent-POM: " + parentModel.getId() + " not found in relative path: " + parentRelativePath );
+                    model = mwf.model;
+                    parentDescriptor = mwf.parentDescriptor;
                 }
             }
 
@@ -1427,9 +1427,242 @@ public class DefaultMavenProjectBuilder
             project.setParentArtifact( parentArtifact );
         }
 
-        rawProjectCache.put( createCacheKey( project.getGroupId(), project.getArtifactId(), project.getVersion() ), new MavenProject( project ) );
+        MavenProject cachedProject = new MavenProject( project );
+        modelTransformer.resolveModel( cachedProject.getModel(), projectId, config );
+
+        rawProjectCache.put( createCacheKey( cachedProject.getGroupId(), cachedProject.getArtifactId(),
+                                             cachedProject.getVersion() ), cachedProject );
 
         return project;
+    }
+
+    /*
+     * If the project has a parent make sure the parent version is resolved. The version is obtained by
+     * 1. Resolving any variables provided via system properties (variables from parents won't be found since
+     *    the parent isn't known.
+     * 2. Looking in the file cache for the resolved parent project using the relative location as the key.
+     * 3. Looking for the parent at the relative path on disk.
+     *    a. The target directory at the relative path is inspected for a modified pom.
+     *    b. The project at the relative path is used.
+     * If at the end of this a resolved parent version is not located throw an Exception. Do not try to recurse
+     * to further parents.
+     */
+    private void resolveParent( Parent parentModel,
+                                MavenProject project,
+                                String projectId,
+                                File projectDir,
+                                ProjectBuilderConfiguration config,
+                                boolean strict )
+        throws ProjectBuildingException
+    {
+        String parentRelativePath = parentModel.getRelativePath();
+        String origParentVersion = parentModel.getVersion();
+        Model originalModel = project.getOriginalModel();
+
+        if ( origParentVersion == null || origParentVersion.matches( PARENT_PATTERN ) )
+        {
+            getLogger().debug( "resolving parent version for project " + projectId );
+            Model updatedModel = ModelUtils.cloneModel( originalModel );
+
+            try
+            {
+                modelTransformer.resolveModel( updatedModel, projectId, config );
+            }
+            catch ( Exception ex )
+            {
+                // If it fails just get the parent from the relative path.
+            }
+            String version = updatedModel.getParent().getVersion();
+            String relativePathText = "";
+            if ( version != null && !version.equals( origParentVersion ) )
+            {
+                parentModel.setVersion( version );
+            }
+            else if ( ( projectDir != null ) && StringUtils.isNotEmpty( parentRelativePath ) )
+            {
+                File parentDescriptor = new File(projectDir, parentRelativePath);
+                String parentPath = null;
+                MavenProject parentProject = null;
+                try
+                {
+                    parentPath = parentDescriptor.getCanonicalPath();
+                    parentProject = fileProjectCache.get( parentPath );
+                }
+                catch(Exception ex)
+                {
+                    // Ignore the error. We just won't find the version this way.
+                }
+
+                if (parentProject != null)
+                {
+                    getLogger().debug( "parent version set to " + version);
+                    parentModel.setVersion( parentProject.getVersion() );
+                    return;
+                }
+                // It isn't being built in this maven execution. Try to get it from disk.
+                Model pModel = getParentFromRelativePath( parentModel,
+                                                          projectDir,
+                                                          project,
+                                                          projectId,
+                                                          strict,
+                                                          true ).model;
+                if ( pModel != null )
+                {
+                    try
+                    {
+                        modelTransformer.resolveModel( pModel, projectId, config );
+                    }
+                    catch ( Exception ex )
+                    {
+                        // Ignore the failure.
+                    }
+                    version = pModel.getVersion();
+                    if (version != null && !version.matches( PARENT_PATTERN ))
+                    {
+                        getLogger().debug( "parent version set to " + version);
+                        parentModel.setVersion( version );
+                    }
+                    else
+                    {
+                        getLogger().debug(" Did not determine parent version" );
+                        // The version isn't in the parent. It is either inherited from its parent of is a variable.
+
+                    }
+                }
+                else
+                {
+                    relativePathText = " and parent could not be located at relative path " + parentRelativePath;
+                }
+            }
+            if ( version == origParentVersion )
+            {
+                throw new ProjectBuildingException( projectId, "Parent version property " + origParentVersion +
+                    " is not defined" + relativePathText );
+            }
+        }
+    }
+
+    private class ModelWithFile
+    {
+        public final Model model;
+        public final File parentDescriptor;
+
+        public ModelWithFile(Model model, File descriptor)
+        {
+            this.model = model;
+            this.parentDescriptor = descriptor;
+        }
+    }
+
+    /*
+     * Retrieve the parent Model along with its File descriptor.
+     */
+    private ModelWithFile getParentFromRelativePath(Parent parentModel, File projectDir, MavenProject project,
+                                            String projectId, boolean strict, boolean useTarget )
+            throws ProjectBuildingException
+    {
+        Model model = null;
+        String parentRelativePath = parentModel.getRelativePath();
+
+        File parentDescriptor = new File(projectDir, parentRelativePath);
+        if ( useTarget )
+        {
+            File tempDescriptor;
+
+            if (parentDescriptor.isDirectory())
+            {
+                tempDescriptor = new File(parentDescriptor, "/target/pom.xml");
+            }
+            else
+            {
+                String fileName = parentDescriptor.getName();
+                tempDescriptor = new File(parentDescriptor.getParentFile(), "/target/" + fileName);
+            }
+            if (tempDescriptor.exists())
+            {
+                parentDescriptor = tempDescriptor;
+            }
+        }
+
+        if (getLogger().isDebugEnabled())
+        {
+            getLogger().debug("Searching for parent-POM: " + parentModel.getId() + " of project: " +
+                    project.getId() + " in relative path: " + parentRelativePath + " full path: " +
+                    parentDescriptor.getAbsolutePath());
+        }
+
+        if (parentDescriptor.isDirectory())
+        {
+            if (getLogger().isDebugEnabled())
+            {
+                getLogger().debug("Path specified in <relativePath/> (" + parentRelativePath +
+                        ") is a directory. Searching for 'pom.xml' within this directory.");
+            }
+
+            parentDescriptor = new File(parentDescriptor, "pom.xml");
+
+            if (!parentDescriptor.exists())
+            {
+                if (getLogger().isDebugEnabled())
+                {
+                    getLogger().debug("Parent-POM: " + parentModel.getId() + " for project: " +
+                            project.getId() + " cannot be loaded from relative path: " + parentDescriptor +
+                            "; path does not exist.");
+                }
+            }
+        }
+
+        if (parentDescriptor != null)
+        {
+            try
+            {
+                parentDescriptor = parentDescriptor.getCanonicalFile();
+            }
+            catch (IOException e)
+            {
+                getLogger().debug("Failed to canonicalize potential parent POM: \'" + parentDescriptor + "\'",
+                        e);
+
+                parentDescriptor = null;
+            }
+        }
+
+        if ((parentDescriptor != null) && parentDescriptor.exists())
+        {
+            Model candidateParent = readModel(projectId, parentDescriptor, strict);
+
+            String candidateParentGroupId = candidateParent.getGroupId();
+            if ((candidateParentGroupId == null) && (candidateParent.getParent() != null))
+            {
+                candidateParentGroupId = candidateParent.getParent().getGroupId();
+            }
+
+            String candidateParentVersion = candidateParent.getVersion();
+            if ((candidateParentVersion == null) && (candidateParent.getParent() != null))
+            {
+                candidateParentVersion = candidateParent.getParent().getVersion();
+            }
+
+            if (parentModel.getGroupId().equals(candidateParentGroupId) &&
+                    parentModel.getArtifactId().equals(candidateParent.getArtifactId()))
+            {
+                model = candidateParent;
+                getLogger().debug("Using parent-POM from the project hierarchy at: \'" +
+                        parentModel.getRelativePath() + "\' for project: " + project.getId());
+            }
+            else
+            {
+                getLogger().debug("Invalid parent-POM referenced by relative path '" +
+                        parentModel.getRelativePath() + "' in parent specification in " + project.getId() + ":" +
+                        "\n  Specified: " + parentModel.getId() + "\n  Found:     " + candidateParent.getId());
+            }
+        }
+        else if (getLogger().isDebugEnabled())
+        {
+            getLogger().debug(
+                    "Parent-POM: " + parentModel.getId() + " not found in relative path: " + parentRelativePath);
+        }
+        return new ModelWithFile(model, parentDescriptor);
     }
 
     private void mergeManagedDependencies(Model model, ArtifactRepository localRepository, List parentSearchRepositories)

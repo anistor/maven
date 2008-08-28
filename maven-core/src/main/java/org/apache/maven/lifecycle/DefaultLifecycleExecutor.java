@@ -49,6 +49,7 @@ import org.apache.maven.model.ReportPlugin;
 import org.apache.maven.model.ReportSet;
 import org.apache.maven.monitor.event.EventDispatcher;
 import org.apache.maven.monitor.event.MavenEvents;
+import org.apache.maven.monitor.event.MavenEvent;
 import org.apache.maven.plugin.InvalidPluginException;
 import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -246,7 +247,7 @@ public class DefaultLifecycleExecutor
 
                     // !! This is ripe for refactoring to an aspect.
                     // Event monitoring.
-                    String event = MavenEvents.PROJECT_EXECUTION;
+                    MavenEvent event = new MavenEvent(MavenEvents.PROJECT_EXECUTION, rootProject);
 
                     long buildStartTime = System.currentTimeMillis();
 
@@ -312,7 +313,7 @@ public class DefaultLifecycleExecutor
 
                         // !! This is ripe for refactoring to an aspect.
                         // Event monitoring.
-                        String event = MavenEvents.PROJECT_EXECUTION;
+                        MavenEvent event = new MavenEvent(MavenEvents.PROJECT_EXECUTION, currentProject);
 
                         long buildStartTime = System.currentTimeMillis();
 
@@ -360,7 +361,7 @@ public class DefaultLifecycleExecutor
     }
 
     private void executeGoalAndHandleFailures( String task, MavenSession session, MavenProject project,
-                                               EventDispatcher dispatcher, String event, ReactorManager rm,
+                                               EventDispatcher dispatcher, MavenEvent event, ReactorManager rm,
                                                long buildStartTime, String target )
         throws BuildFailureException, LifecycleExecutionException
     {

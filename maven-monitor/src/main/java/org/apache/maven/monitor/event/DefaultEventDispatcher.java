@@ -37,7 +37,7 @@ public class DefaultEventDispatcher
         eventMonitors.add( monitor );
     }
 
-    public void dispatchStart( String event, String target )
+    public void dispatchStart( MavenEvent event, String target )
     {
         for ( Iterator it = eventMonitors.iterator(); it.hasNext(); )
         {
@@ -46,7 +46,7 @@ public class DefaultEventDispatcher
         }
     }
 
-    public void dispatchEnd( String event, String target )
+    public void dispatchEnd( MavenEvent event, String target )
     {
         for ( Iterator it = eventMonitors.iterator(); it.hasNext(); )
         {
@@ -55,7 +55,7 @@ public class DefaultEventDispatcher
         }
     }
 
-    public void dispatchError( String event, String target, Throwable cause )
+    public void dispatchError( MavenEvent event, String target, Throwable cause )
     {
         for ( Iterator it = eventMonitors.iterator(); it.hasNext(); )
         {

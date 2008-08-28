@@ -42,6 +42,7 @@ import org.apache.maven.model.Plugin;
 import org.apache.maven.model.ReportPlugin;
 import org.apache.maven.monitor.event.EventDispatcher;
 import org.apache.maven.monitor.event.MavenEvents;
+import org.apache.maven.monitor.event.MavenEvent;
 import org.apache.maven.monitor.logging.DefaultLog;
 import org.apache.maven.plugin.descriptor.MojoDescriptor;
 import org.apache.maven.plugin.descriptor.Parameter;
@@ -433,10 +434,9 @@ public class DefaultPluginManager
             dom = Xpp3Dom.mergeXpp3Dom( dom, mojoExecution.getConfiguration() );
         }
 
-        plugin = getConfiguredMojo( session, dom, project, false, mojoExecution );
-
         // Event monitoring.
-        String event = MavenEvents.MOJO_EXECUTION;
+        MavenEvent event = new MavenEvent(MavenEvents.MOJO_EXECUTION, project);
+        
         EventDispatcher dispatcher = session.getEventDispatcher();
 
         String goalExecId = goalName;
@@ -447,6 +447,8 @@ public class DefaultPluginManager
         }
 
         dispatcher.dispatchStart( event, goalExecId );
+
+        plugin = getConfiguredMojo( session, dom, project, false, mojoExecution );
 
         ClassLoader oldClassLoader = Thread.currentThread().getContextClassLoader();
 

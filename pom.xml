@@ -147,6 +147,11 @@ under the License.
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
           <version>2.0.2</version>
+          <configuration>
+            <source>1.5</source>
+            <target>1.5</target>
+            <encoding>${project.build.sourceEncoding}</encoding>
+          </configuration>
         </plugin>
         <plugin>
           <artifactId>maven-assembly-plugin</artifactId>
@@ -235,6 +240,8 @@ under the License.
               <exclude>org/apache/maven/project/inheritance/ModelInheritanceAssembler*</exclude>
               <exclude>org/apache/maven/execution/MavenExecutionRequest*</exclude>
               <exclude>org/apache/maven/plugin/DefaultPluginManager*</exclude>
+              <!-- All event monitor classes were changed to take a MavenEvent instead of a String -->
+              <exclude>org/apache/maven/monitor/event/*</exclude>
             </excludes>
           </configuration>
         </plugin>

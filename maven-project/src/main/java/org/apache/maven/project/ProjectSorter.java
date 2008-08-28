@@ -275,7 +275,7 @@ public class ProjectSorter
         for ( Iterator i = projectMap.values().iterator(); i.hasNext(); )
         {
             project = (MavenProject) i.next();
-            if ( projectDir.equals( project.getFile().getParentFile() ) ) return project;
+            if ( projectDir.equals( project.getBasedir() ) ) return project;
         }
         
         throw new MissingProjectException( "Couldn't find specified project in module list: " + projectDir.getAbsolutePath() );

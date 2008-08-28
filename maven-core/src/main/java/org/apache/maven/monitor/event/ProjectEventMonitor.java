@@ -20,28 +20,43 @@ package org.apache.maven.monitor.event;
  */
 
 import org.codehaus.plexus.logging.Logger;
+import org.apache.maven.project.MavenProjectBuilder;
+import org.apache.maven.project.MavenProject;
 
 /**
- * @author jdcasey
+ * Notifies the ProjectBuilder of events.
  */
-public class DefaultEventMonitor
+public class ProjectEventMonitor
     extends AbstractSelectiveEventMonitor
 {
 
-    private static final String[] START_EVENTS = {MavenEvents.MOJO_EXECUTION};
+    private static final String[] EVENTS = {MavenEvents.MOJO_EXECUTION};
 
-    private final Logger logger;
+    private MavenProjectBuilder builder;
 
-    public DefaultEventMonitor( Logger logger )
+    public ProjectEventMonitor( MavenProjectBuilder builder )
     {
-        super( START_EVENTS, MavenEvents.NO_EVENTS, MavenEvents.NO_EVENTS );
+        super( EVENTS, EVENTS, MavenEvents.NO_EVENTS );
 
-        this.logger = logger;
+        this.builder = builder;
     }
 
     protected void doStartEvent( MavenEvent event, String target, long time )
     {
-        logger.info( "[" + target + "]" );
+        Object obj = event.getSource();
+        if ( !target.startsWith( "clean") && obj != null && obj instanceof MavenProject )
+        {
+            builder.prepareProject((MavenProject)obj);
+        }
+    }
+
+    protected void doEndEvent( MavenEvent event, String target, long timestamp )
+    {
+        Object obj = event.getSource();
+        if ( target.startsWith( "clean") && obj != null && obj instanceof MavenProject )
+        {
+            builder.cleanProject((MavenProject)obj);
+        }
     }
 
 }
