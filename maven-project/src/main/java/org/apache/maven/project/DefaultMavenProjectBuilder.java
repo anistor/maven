@@ -207,10 +207,12 @@ public class DefaultMavenProjectBuilder
         if (project == null) {
             Model model = repositoryHelper.findModelFromRepository(artifact, remoteArtifactRepositories, localRepository);
 
+            List<ArtifactRepository> artifactRepositories = new ArrayList<ArtifactRepository>(remoteArtifactRepositories);
+            artifactRepositories.addAll(repositoryHelper.buildArtifactRepositories(getSuperModel()));
             ProjectBuilderConfiguration config = new DefaultProjectBuilderConfiguration().setLocalRepository(localRepository);
+
             project = readModelFromLocalPath("unknown", artifact.getFile(), new PomArtifactResolver(config.getLocalRepository(),
-                    repositoryHelper.buildArtifactRepositories(getSuperModel()), artifactResolver), config);
-            //TODO: Construct parent
+                    artifactRepositories, artifactResolver), config);
             project = buildInternal(project.getModel(), config, artifact.getFile(), project.getParentFile(),
                     false, false);
         }
@@ -269,7 +271,7 @@ public class DefaultMavenProjectBuilder
         }
 
         getLogger().debug("Activated the following profiles for standalone super-pom: " + activeProfiles);
-        //project.setActiveProfiles(activeProfiles);
+        project.setActiveProfiles(activeProfiles);
 
         try {
             interpolateModelAndInjectDefault(project.getModel(), null, null, config, activeProfiles);
