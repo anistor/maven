@@ -73,22 +73,36 @@ public final class ArtifactModelContainerFactory
 
         private List<ModelProperty> properties;
 
+        private static String findBaseUriFrom(List<ModelProperty> modelProperties)
+        {
+            String baseUri = null;
+            for(ModelProperty mp : modelProperties)
+            {
+                if(baseUri == null || mp.getUri().length() < baseUri.length())
+                {
+                    baseUri = mp.getUri();
+                }
+            }
+            return baseUri;
+        }
+
         private ArtifactModelContainer( List<ModelProperty> properties )
         {
             this.properties = new ArrayList<ModelProperty>( properties );
             this.properties = Collections.unmodifiableList( this.properties );
+            String uri = findBaseUriFrom( this.properties  );
 
             for ( ModelProperty mp : properties )
             {
-                if ( mp.getUri().endsWith( "version" ) && version == null)
+                if ( version == null && mp.getUri().equals( uri + "/version" ) )
                 {
                     this.version = mp.getValue();
                 }
-                else if ( mp.getUri().endsWith( "artifactId" ) && artifactId == null)
+                else if ( artifactId == null && mp.getUri().equals( uri + "/artifactId" ) )
                 {
                     this.artifactId = mp.getValue();
                 }
-                else if ( mp.getUri().endsWith( "groupId" ) && groupId == null)
+                else if ( groupId == null && mp.getUri().equals( uri + "/groupId" ) )
                 {
                     this.groupId = mp.getValue();
                 }
