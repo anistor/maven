@@ -73,10 +73,19 @@ public final class PomClassicDomainModel
             throw new IllegalArgumentException( "model: null" );
         }
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        Writer out = WriterFactory.newXmlWriter( baos );
+        Writer out = null;
         MavenXpp3Writer writer = new MavenXpp3Writer();
-        writer.write( out, model );
-        out.close();
+        try {
+            out = WriterFactory.newXmlWriter( baos );
+            writer.write( out, model );
+        }
+        finally
+        {
+            if(out !=  null)
+            {
+                out.close();
+            }
+        }
         inputBytes = baos.toByteArray();
     }
 
