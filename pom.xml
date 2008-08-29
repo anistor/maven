@@ -246,7 +246,7 @@
   </modules>
 
   <properties>
-    <mavenVersion>2.1.0-M1-RC12</mavenVersion>
+    <mavenVersion>2.1.0-M1-RC13-SNAPSHOT</mavenVersion>
     <wagonVersion>1.0-beta-4</wagonVersion>
   </properties>
 
