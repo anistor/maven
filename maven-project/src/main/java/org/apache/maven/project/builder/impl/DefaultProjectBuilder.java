@@ -137,7 +137,6 @@ public final class DefaultProjectBuilder
         List<DomainModel> domainModels = new ArrayList<DomainModel>();
         domainModels.add( domainModel );
 
-        MavenProject mavenParent = null;
         File parentFile = null;
         if ( domainModel.getModel().getParent() != null )
         {
@@ -175,11 +174,9 @@ public final class DefaultProjectBuilder
         PomClassicDomainModel transformedDomainModel =
             ( (PomClassicDomainModel) ctx.transform( domainModels, transformer, transformer, importModels, properties ) );
        // System.out.println(transformedDomainModel.asString());
-        Model model = transformedDomainModel.getModel();
         try {
-            MavenProject mavenProject = new MavenProject( model, artifactFactory, mavenTools, repositoryHelper, null,
-                    projectBuilderConfiguration);
-            mavenProject.setParent(mavenParent);
+            MavenProject mavenProject = new MavenProject( transformedDomainModel.getModel(), artifactFactory,
+                    mavenTools, repositoryHelper, null, projectBuilderConfiguration);
             mavenProject.setParentFile(parentFile);
             return mavenProject;
         } catch (InvalidRepositoryException e) {
@@ -187,6 +184,13 @@ public final class DefaultProjectBuilder
         }
     }
 
+    /**
+     * Returns true if the relative path of the specified parent references a pom, otherwise returns false.
+     *
+     * @param parent the parent model info
+     * @param projectDirectory the project directory of the child pom
+     * @return true if the relative path of the specified parent references a pom, otherwise returns fals
+     */
     private boolean isParentLocal( Parent parent, File projectDirectory )
     {
         try
@@ -231,7 +235,8 @@ public final class DefaultProjectBuilder
             new PomClassicDomainModel( artifactParent.getFile()  );
         if ( !parentDomainModel.matchesParent( domainModel.getModel().getParent() ) )
         {
-            logger.warn( "Parent pom ids do not match: File = " + artifactParent.getFile().getAbsolutePath() );
+            logger.warn( "Parent pom ids do not match: Parent File = " + artifactParent.getFile().getAbsolutePath()
+                    + ": Child ID = " +  domainModel.getModel().getId() );
             return domainModels;
         }
         else
@@ -245,7 +250,15 @@ public final class DefaultProjectBuilder
         return domainModels;
     }
 
-
+    /**
+     * Returns list of domain model parents of the specified domain model. The parent domain models are part  
+     *
+     * @param domainModel
+     * @param artifactResolver
+     * @param projectDirectory
+     * @return
+     * @throws IOException
+     */
     private List<DomainModel> getDomainModelParentsFromLocalPath( PomClassicDomainModel domainModel,
                                                                   PomArtifactResolver artifactResolver,
                                                                   File projectDirectory )
@@ -276,13 +289,14 @@ public final class DefaultProjectBuilder
 
         if ( !parentFile.exists() )
         {
-            throw new IOException( "File does not exist: File =" + parentFile.getAbsolutePath() );
+            throw new IOException( "File does not exist: File = " + parentFile.getAbsolutePath() );
         }
 
         PomClassicDomainModel parentDomainModel = new PomClassicDomainModel( parentFile  );
         if ( !parentDomainModel.matchesParent( domainModel.getModel().getParent() ) )
         {
-            logger.warn( "Parent pom ids do not match: File = " + parentFile.getAbsolutePath() );
+            logger.warn( "Parent pom ids do not match: Parent File = " + parentFile.getAbsolutePath()
+                    + ": Child ID = " +  domainModel.getModel().getId() );
         }
 
         domainModels.add( parentDomainModel );
@@ -318,6 +332,4 @@ public final class DefaultProjectBuilder
             throw new IOException( "Failed to validate: " + validationResult.toString() );
         }
     }
-
-
 }
