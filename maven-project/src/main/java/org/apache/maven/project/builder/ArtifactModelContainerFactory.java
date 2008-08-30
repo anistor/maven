@@ -92,7 +92,9 @@ public final class ArtifactModelContainerFactory
             this.properties = Collections.unmodifiableList( this.properties );
             String uri = findBaseUriFrom( this.properties  );
 
-            for ( ModelProperty mp : properties )
+            
+
+            for ( ModelProperty mp : this.properties )
             {
                 if ( version == null && mp.getUri().equals( uri + "/version" ) )
                 {
