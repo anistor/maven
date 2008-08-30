@@ -165,25 +165,26 @@ public class DefaultMavenProjectBuilder
     public MavenProject build(File projectDescriptor,
                               ProjectBuilderConfiguration config)
             throws ProjectBuildingException {
-        MavenProject project = null;//projectWorkspace.getProject( projectDescriptor );
+        MavenProject project = projectWorkspace.getProject( projectDescriptor );
 
         if (project == null) {
             project = readModelFromLocalPath("unknown", projectDescriptor, new PomArtifactResolver(config.getLocalRepository(),
                     repositoryHelper.buildArtifactRepositories(getSuperModel()), artifactResolver), config);
+
+            project.setFile(projectDescriptor);
             project = buildInternal(project.getModel(),
                     config,
                     projectDescriptor,
                     project.getParentFile(),
                     true
             );
-
+            
             Build build = project.getBuild();
             // NOTE: setting this script-source root before path translation, because
             // the plugin tools compose basedir and scriptSourceRoot into a single file.
             project.addScriptSourceRoot(build.getScriptSourceDirectory());
             project.addCompileSourceRoot(build.getSourceDirectory());
             project.addTestCompileSourceRoot(build.getTestSourceDirectory());
-            // Only track the file of a POM in the source tree
             project.setFile(projectDescriptor);
         }
         return project;
@@ -439,6 +440,19 @@ public class DefaultMavenProjectBuilder
         catch (InvalidRepositoryException e) {
             throw new InvalidProjectModelException(projectId, e.getMessage(), projectDescriptor, e);
         }
+       
+        project.setActiveProfiles( profileAdvisor.applyActivatedProfiles( project.getModel(), project.getFile(), isReactorProject, profileActivationContext ) );
+
+        if (externalProfileManager != null) {
+            LinkedHashSet active = new LinkedHashSet();
+
+            List existingActiveProfiles = project.getActiveProfiles();
+            if ((existingActiveProfiles != null) && !existingActiveProfiles.isEmpty()) {
+                active.addAll(existingActiveProfiles);
+            }
+
+            profileAdvisor.applyActivatedExternalProfiles(project.getModel(), project.getFile(), externalProfileManager);
+        }
 
         projectWorkspace.storeProjectByCoordinate(project);
         projectWorkspace.storeProjectByFile(project);
@@ -480,6 +494,7 @@ public class DefaultMavenProjectBuilder
                 project.getVersion(), project.getPackaging());
         project.setArtifact(projectArtifact);
         project.setParentFile(parentFile);
+
         validateModel(model, pomFile);
         return project;
     }
