@@ -149,7 +149,7 @@ public final class
                     }
                 }
         }
-        
+
         for(ModelContainer dependencyContainer : source.queryFor( ProjectUri.Build.Plugins.Plugin.xUri)) {
                 for ( ModelContainer managementContainer : source.queryFor( ProjectUri.Build.PluginManagement.Plugins.Plugin.xUri) )
                 {
@@ -171,7 +171,7 @@ public final class
                     {
                         for(ModelProperty mp : managementContainer.getProperties()) {
                             if(!mp.getUri().equals(ProjectUri.Build.Plugins.Plugin.Executions.xUri)) {
-                                 pList.add(mp);    
+                                 pList.add(mp);
                             }
                         }
                     }
@@ -182,7 +182,7 @@ public final class
                         source.join(dependencyContainer, managementContainer);
                     }
                 }
-        }        
+        }
 
         props = source.getModelProperties();
 
@@ -214,6 +214,11 @@ public final class
         StringBuffer scmUrl = new StringBuffer();
         StringBuffer scmConnectionUrl = new StringBuffer();
         StringBuffer scmDeveloperUrl = new StringBuffer();
+
+        boolean containsBuildResources= false;
+        boolean containsTestResources = false;
+        boolean containsPluginRepositories = false;
+
         for ( DomainModel domainModel : domainModels )
         {
             if ( !( domainModel instanceof PomClassicDomainModel ) )
@@ -266,7 +271,7 @@ public final class
 
             }
 
-            //Not inherited plugin execution rule            
+            //Not inherited plugin execution rule
             if ( domainModels.indexOf( domainModel ) > 0 )
             {
                 List<ModelProperty> removeProperties = new ArrayList<ModelProperty>();
@@ -277,7 +282,7 @@ public final class
                 for ( ModelContainer container : containers )
                 {
                     for ( ModelProperty mp : container.getProperties() )
-                    {   
+                    {
                         if ( mp.getUri().equals( ProjectUri.Build.Plugins.Plugin.Executions.Execution.inherited ) &&
                             mp.getValue() != null && mp.getValue().equals( "false" ) )
                         {
@@ -384,20 +389,46 @@ public final class
             //Remove Plugin Repository Inheritance Rule
             //Build Resources Inheritence Rule
             //Build Test Resources Inheritance Rule
-            //Only inherit the above from super pom (domainModels.size() -1)
+            //Only inherit IF: the above is contained in super pom (domainModels.size() -1) && the child doesn't has it's own respective field
+            if(domainModels.indexOf(domainModel) == 0)
+            {
+                containsBuildResources= hasProjectUri(ProjectUri.Build.Resources.xUri, tmp);
+                containsTestResources = hasProjectUri(ProjectUri.Build.TestResources.xUri, tmp);
+                containsPluginRepositories = hasProjectUri(ProjectUri.PluginRepositories.xUri, tmp);
+            }
             for ( ModelProperty mp : tmp )
             {
-                String uri = mp.getUri();
-                if ( domainModels.indexOf( domainModel ) > 0
-                        && domainModels.indexOf(domainModel) != (domainModels.size() -1 ) && (
-                    uri.startsWith( ProjectUri.Build.Resources.xUri ) ||
-                    uri.startsWith( ProjectUri.Build.TestResources.xUri ) ||
-                    uri.startsWith( ProjectUri.PluginRepositories.xUri ) ) )
+                if ( domainModels.indexOf( domainModel ) > 0)
                 {
-                    clearedProperties.add( mp );
+                    String uri = mp.getUri();
+                    boolean isNotSuperPom =  domainModels.indexOf(domainModel) != (domainModels.size() -1 );
+                    if(isNotSuperPom)
+                    {
+                        if(uri.startsWith( ProjectUri.Build.Resources.xUri ) ||
+                                uri.startsWith( ProjectUri.Build.TestResources.xUri ) ||
+                                uri.startsWith( ProjectUri.PluginRepositories.xUri ) )
+                        {
+                            clearedProperties.add( mp );
+                        }
+                    }
+                    else
+                    {
+                        if(containsBuildResources && uri.startsWith( ProjectUri.Build.Resources.xUri ))
+                        {
+                            clearedProperties.add( mp );
+                        }
+                        else if(containsTestResources && uri.startsWith( ProjectUri.Build.TestResources.xUri ))
+                        {
+                            clearedProperties.add( mp );
+                        }
+                        else if(containsPluginRepositories && uri.startsWith( ProjectUri.PluginRepositories.xUri ))
+                        {
+                            clearedProperties.add( mp );
+                        }
+                    }
                 }
             }
-            
+
             ModelProperty artifactId = getPropertyFor( ProjectUri.artifactId, tmp );
             if ( artifactId != null )
             {
@@ -406,6 +437,7 @@ public final class
 
             tmp.removeAll( clearedProperties );
             modelProperties.addAll( tmp );
+            modelProperties.removeAll(clearedProperties);
 
             if ( domainModels.indexOf( domainModel ) == 0 )
             {
@@ -432,6 +464,18 @@ public final class
     public String getBaseUri()
     {
         return ProjectUri.baseUri;
+    }
+
+    private static boolean hasProjectUri(String projectUri, List<ModelProperty> modelProperties)
+    {
+        for(ModelProperty mp : modelProperties)
+        {
+            if(mp.getUri().equals(projectUri))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
