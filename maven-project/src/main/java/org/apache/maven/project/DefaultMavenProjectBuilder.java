@@ -186,9 +186,14 @@ public class DefaultMavenProjectBuilder
             project.addCompileSourceRoot(build.getSourceDirectory());
             project.addTestCompileSourceRoot(build.getTestSourceDirectory());
             project.setFile(projectDescriptor);
+
+            setBuildOutputDirectoryOnParent(project);
+
         }
         return project;
     }
+
+
 
     /**
      * @deprecated
@@ -644,5 +649,15 @@ public class DefaultMavenProjectBuilder
         }
 
         return ArtifactUtils.versionlessKey(gid, aid);
+    }
+    
+    private static void setBuildOutputDirectoryOnParent(MavenProject project)
+    {
+        MavenProject parent = project.getParent();
+        if(parent != null)
+        {
+            parent.getModel().getBuild().setDirectory(parent.getFile().getAbsolutePath());
+            setBuildOutputDirectoryOnParent(parent);
+        }
     }
 }
