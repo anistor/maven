@@ -169,7 +169,7 @@ public class DefaultMavenProjectBuilder
 
         if (project == null) {
             project = readModelFromLocalPath("unknown", projectDescriptor, new PomArtifactResolver(config.getLocalRepository(),
-                    repositoryHelper.buildArtifactRepositories(getSuperModel()), artifactResolver), config);
+                    repositoryHelper.buildArtifactRepositories(getSuperProject(config, projectDescriptor, true).getModel()), artifactResolver), config);
 
             project.setFile(projectDescriptor);
             project = buildInternal(project.getModel(),
@@ -216,10 +216,10 @@ public class DefaultMavenProjectBuilder
 
         if (project == null) {
             Model model = repositoryHelper.findModelFromRepository(artifact, remoteArtifactRepositories, localRepository);
+            ProjectBuilderConfiguration config = new DefaultProjectBuilderConfiguration().setLocalRepository(localRepository);
 
             List<ArtifactRepository> artifactRepositories = new ArrayList<ArtifactRepository>(remoteArtifactRepositories);
-            artifactRepositories.addAll(repositoryHelper.buildArtifactRepositories(getSuperModel()));
-            ProjectBuilderConfiguration config = new DefaultProjectBuilderConfiguration().setLocalRepository(localRepository);
+            artifactRepositories.addAll(repositoryHelper.buildArtifactRepositories(getSuperProject(config, artifact.getFile(), false).getModel()));
 
             project = readModelFromLocalPath("unknown", artifact.getFile(), new PomArtifactResolver(config.getLocalRepository(),
                     artifactRepositories, artifactResolver), config);
@@ -281,11 +281,10 @@ public class DefaultMavenProjectBuilder
         }
 
         getLogger().debug("Activated the following profiles for standalone super-pom: " + activeProfiles);
-        project.setActiveProfiles(activeProfiles);
 
         try {
-            interpolateModelAndInjectDefault(project.getModel(), null, null, config, activeProfiles);
-
+            project = interpolateModelAndInjectDefault(project.getModel(), null, null, config);
+            project.setActiveProfiles(activeProfiles);
             project.setRemoteArtifactRepositories(mavenTools.buildArtifactRepositories(superModel.getRepositories()));
             project.setPluginArtifactRepositories(mavenTools.buildArtifactRepositories(superModel.getRepositories()));
         }
@@ -383,25 +382,11 @@ public class DefaultMavenProjectBuilder
                                        ProjectBuilderConfiguration config,
                                        File projectDescriptor,
                                        File parentDescriptor,
-                                       boolean isReactorProject
-    )
+                                       boolean isReactorProject )
             throws ProjectBuildingException {
-
-        MavenProject superProject;
-        try {
-            superProject = new MavenProject(getSuperModel(), artifactFactory, mavenTools, repositoryHelper, this, config);
-        } catch (InvalidRepositoryException e) {
-            throw new ProjectBuildingException(STANDALONE_SUPERPOM_GROUPID + ":"
-                    + STANDALONE_SUPERPOM_ARTIFACTID,
-                    "Maven super-POM contains an invalid repository!",
-                    e);
-        }
-
         String projectId = safeVersionlessKey(model.getGroupId(), model.getArtifactId());
 
-        // FIXME: Find a way to pass in this context, so it's never null!
         ProfileActivationContext profileActivationContext;
-
         ProfileManager externalProfileManager = config.getGlobalProfileManager();
         if (externalProfileManager != null) {
             // used to trigger the caching of SystemProperties in the container context...
@@ -411,28 +396,14 @@ public class DefaultMavenProjectBuilder
             catch (ProfileActivationException e) {
                 throw new ProjectBuildingException(projectId, "Failed to activate external profiles.", projectDescriptor, e);
             }
-
             profileActivationContext = externalProfileManager.getProfileActivationContext();
         } else {
             profileActivationContext = new DefaultProfileActivationContext(config.getExecutionProperties(), false);
         }
 
-        LinkedHashSet activeInSuperPom = new LinkedHashSet();
-        List activated = profileAdvisor.applyActivatedProfiles(getSuperModel(), projectDescriptor, isReactorProject, profileActivationContext);
-        if (!activated.isEmpty()) {
-            activeInSuperPom.addAll(activated);
-        }
-
-        activated = profileAdvisor.applyActivatedExternalProfiles(getSuperModel(), projectDescriptor, externalProfileManager);
-        if (!activated.isEmpty()) {
-            activeInSuperPom.addAll(activated);
-        }
-
-        superProject.setActiveProfiles(activated);
-
         MavenProject project;
         try {
-            project = interpolateModelAndInjectDefault(model, projectDescriptor, parentDescriptor, config, activated);
+            project = interpolateModelAndInjectDefault(model, projectDescriptor, parentDescriptor, config);
         }
         catch (ModelInterpolationException e) {
             throw new InvalidProjectModelException(projectId, e.getMessage(), projectDescriptor, e);
@@ -440,19 +411,11 @@ public class DefaultMavenProjectBuilder
         catch (InvalidRepositoryException e) {
             throw new InvalidProjectModelException(projectId, e.getMessage(), projectDescriptor, e);
         }
-       
-        project.setActiveProfiles( profileAdvisor.applyActivatedProfiles( project.getModel(), project.getFile(), isReactorProject, profileActivationContext ) );
 
-        if (externalProfileManager != null) {
-            LinkedHashSet active = new LinkedHashSet();
-
-            List existingActiveProfiles = project.getActiveProfiles();
-            if ((existingActiveProfiles != null) && !existingActiveProfiles.isEmpty()) {
-                active.addAll(existingActiveProfiles);
-            }
-
-            profileAdvisor.applyActivatedExternalProfiles(project.getModel(), project.getFile(), externalProfileManager);
-        }
+        List<Profile> projectProfiles = new ArrayList<Profile>();
+        projectProfiles.addAll( profileAdvisor.applyActivatedProfiles( project.getModel(), project.getFile(), isReactorProject, profileActivationContext ) );
+        projectProfiles.addAll(profileAdvisor.applyActivatedExternalProfiles(project.getModel(), project.getFile(), externalProfileManager));
+        project.setActiveProfiles(projectProfiles);
 
         projectWorkspace.storeProjectByCoordinate(project);
         projectWorkspace.storeProjectByFile(project);
@@ -463,8 +426,7 @@ public class DefaultMavenProjectBuilder
     private MavenProject interpolateModelAndInjectDefault(Model model,
                                              File pomFile,
                                              File parentFile,
-                                             ProjectBuilderConfiguration config,
-                                             List activeProfiles
+                                             ProjectBuilderConfiguration config
     )
             throws ProjectBuildingException, ModelInterpolationException, InvalidRepositoryException {
         File projectDir = null;
@@ -488,7 +450,6 @@ public class DefaultMavenProjectBuilder
 
         // We will return a different project object using the new model (hence the need to return a project, not just modify the parameter)
         MavenProject project = new MavenProject(model, artifactFactory, mavenTools, repositoryHelper, this, config);
-        project.setActiveProfiles(activeProfiles);
 
         Artifact projectArtifact = artifactFactory.createBuildArtifact(project.getGroupId(), project.getArtifactId(),
                 project.getVersion(), project.getPackaging());
@@ -546,80 +507,45 @@ public class DefaultMavenProjectBuilder
         }
     }
 
-    /**
-     * @param isReactorProject
-     * @noinspection CollectionDeclaredAsConcreteClass
-     * @todo We need to find an effective way to unit test parts of this method!
-     * @todo Refactor this into smaller methods with discrete purposes.
-     */
-    /*
-    private MavenProject assembleLineage(Model model,
-                                         LinkedList lineage,
-                                         ProjectBuilderConfiguration config,
-                                         File pomFile,
-                                         Set aggregatedRemoteWagonRepositories,
-                                         boolean strict,
-                                         boolean isReactorProject)
-            throws ProjectBuildingException, InvalidRepositoryException {
-        ModelLineage modelLineage = new DefaultModelLineage();
+    private MavenProject getSuperProject(ProjectBuilderConfiguration config, File projectDescriptor, boolean isReactorProject)
+        throws ProjectBuildingException {
 
-        modelLineage.setOrigin(model, pomFile, new ArrayList(aggregatedRemoteWagonRepositories), isReactorProject);
+        MavenProject superProject;
+        Model model = getSuperModel();
+        try {
+            superProject = new MavenProject(model, artifactFactory, mavenTools, repositoryHelper, this, config);
+        } catch (InvalidRepositoryException e) {
+            throw new ProjectBuildingException(STANDALONE_SUPERPOM_GROUPID + ":"
+                    + STANDALONE_SUPERPOM_ARTIFACTID,
+                    "Maven super-POM contains an invalid repository!",
+                    e);
+        }
 
-        modelLineageBuilder.resumeBuildingModelLineage(modelLineage, config, !strict, isReactorProject);
+        String projectId = safeVersionlessKey(model.getGroupId(), model.getArtifactId());
 
-        // FIXME: Find a way to pass in this context, so it's never null!
         ProfileActivationContext profileActivationContext;
         ProfileManager externalProfileManager = config.getGlobalProfileManager();
-
         if (externalProfileManager != null) {
+            // used to trigger the caching of SystemProperties in the container context...
+            try {
+                externalProfileManager.getActiveProfiles();
+            }
+            catch (ProfileActivationException e) {
+                throw new ProjectBuildingException(projectId, "Failed to activate external profiles.", projectDescriptor, e);
+            }
             profileActivationContext = externalProfileManager.getProfileActivationContext();
         } else {
             profileActivationContext = new DefaultProfileActivationContext(config.getExecutionProperties(), false);
         }
 
-        MavenProject lastProject = null;
-        for (ModelLineageIterator it = modelLineage.lineageIterator(); it.hasNext();) {
-            Model currentModel = (Model) it.next();
+        List<Profile> superProjectProfiles = new ArrayList<Profile>();
+        superProjectProfiles.addAll(profileAdvisor.applyActivatedProfiles(model, projectDescriptor, isReactorProject, profileActivationContext));
+        superProjectProfiles.addAll(profileAdvisor.applyActivatedExternalProfiles(model, projectDescriptor, externalProfileManager));
+        superProject.setActiveProfiles(superProjectProfiles);
 
-            File currentPom = it.getPOMFile();
-
-            MavenProject project = new MavenProject(currentModel, artifactFactory, mavenTools, repositoryHelper, this);
-            project.setFile(currentPom);
-
-            if (lastProject != null) {
-                // TODO: Use cached parent project here, and stop looping, if possible...
-                lastProject.setParent(project);
-                project = lastProject.getParent();
-
-                lastProject.setParentArtifact(artifactFactory.createParentArtifact(project.getGroupId(), project
-                        .getArtifactId(), project.getVersion()));
-            }
-
-            // NOTE: the caching aspect may replace the parent project instance, so we apply profiles here.
-            // TODO: Review this...is that a good idea, to allow application of profiles when other profiles could have been applied already?
-            project.setActiveProfiles(profileAdvisor.applyActivatedProfiles(project.getModel(), project.getFile(), isReactorProject, profileActivationContext));
-
-            lineage.addFirst(project);
-
-            lastProject = project;
-        }
-
-        MavenProject result = (MavenProject) lineage.getLast();
-
-        if (externalProfileManager != null) {
-            LinkedHashSet active = new LinkedHashSet();
-
-            List existingActiveProfiles = result.getActiveProfiles();
-            if ((existingActiveProfiles != null) && !existingActiveProfiles.isEmpty()) {
-                active.addAll(existingActiveProfiles);
-            }
-
-            profileAdvisor.applyActivatedExternalProfiles(result.getModel(), pomFile, externalProfileManager);
-        }
-
-        return result;
+        return superProject;
     }
-    */
+
     private Model superModel;
 
     private Model getSuperModel()
@@ -629,7 +555,6 @@ public class DefaultMavenProjectBuilder
         }
 
         URL url = DefaultMavenProjectBuilder.class.getResource("pom-" + MAVEN_MODEL_VERSION + ".xml");
-
         String projectId = safeVersionlessKey(STANDALONE_SUPERPOM_GROUPID, STANDALONE_SUPERPOM_ARTIFACTID);
 
         Reader reader = null;
@@ -675,7 +600,7 @@ public class DefaultMavenProjectBuilder
         MavenProject mavenProject;
         try {
             mavenProject = projectBuilder.buildFromLocalPath(new FileInputStream(projectDescriptor),
-                    Arrays.asList(getSuperModel()), null, null, resolver,
+                    Arrays.asList(getSuperProject(config, projectDescriptor, true).getModel()), null, null, resolver,
                     projectDescriptor.getParentFile(), config);
         } catch (IOException e) {
             e.printStackTrace();
