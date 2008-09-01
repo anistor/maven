@@ -106,7 +106,7 @@ public class DefaultMavenProjectBuilderTest
     public void testDuplicatePluginDefinitionsMerged()
         throws Exception
     {
-        File f1 = getTestFile( "maven-project/src/test/resources/projects/duplicate-plugins-merged-pom.xml" );
+        File f1 = getTestFile( "src/test/resources/projects/duplicate-plugins-merged-pom.xml" );
 
         MavenProject project = getProject( f1 );
         Writer out = WriterFactory.newXmlWriter( System.out );
@@ -155,41 +155,4 @@ public class DefaultMavenProjectBuilderTest
 
         return r;
     }
-
-    public void tetA() throws Exception {
-        ArtifactRepositoryLayout repoLayout = (ArtifactRepositoryLayout) lookup( ArtifactRepositoryLayout.ROLE,
-                                                                                 "default" );
-
-        ArtifactRepository r = new DefaultArtifactRepository( "local", "file://" + "C:\\Documents and Settings\\sisbell\\.m2\\repository\\",
-                                                              repoLayout );
-
-        try {
-            MavenProject mp = projectBuilder.build(new File("C:\\Documents and Settings\\sisbell\\.m2\\repository\\org\\apache\\maven\\maven-core\\2.0\\maven-core-2.0.pom"),
-                    new DefaultProjectBuilderConfiguration().setLocalRepository(r));
-
-        Writer out = WriterFactory.newXmlWriter( System.out );
-        MavenXpp3Writer writer = new MavenXpp3Writer();
-        writer.write( out, mp.getModel() );
-        out.close();
-           // System.out.println(mp.getModel())
-        } catch (Exception e) {
-            e.printStackTrace();  
-        }
-    }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 }
