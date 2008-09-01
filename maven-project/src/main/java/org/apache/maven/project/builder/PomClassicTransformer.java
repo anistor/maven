@@ -453,7 +453,48 @@ public final class
             }
                        */
         }
-       return modelProperties;
+
+       //Rule: Do not join plugin executions without ids
+       List<ModelProperty> removeProperties = new ArrayList<ModelProperty>();
+       ModelDataSource source = new DefaultModelDataSource();
+       source.init( modelProperties, Arrays.asList( new ArtifactModelContainerFactory(), new IdModelContainerFactory() ) );
+       List<ModelContainer> containers =  source.queryFor( ProjectUri.Build.Plugins.Plugin.xUri );
+        for (ModelContainer pluginContainer : containers) {
+            ModelDataSource executionSource = new DefaultModelDataSource();
+            executionSource.init( pluginContainer.getProperties(), Arrays.asList( new ArtifactModelContainerFactory(),
+                    new IdModelContainerFactory() ) );
+            List<ModelContainer> executionContainers =
+                    source.queryFor( ProjectUri.Build.Plugins.Plugin.Executions.Execution.xUri  );
+            if(executionContainers.size() < 2)
+            {
+                break;
+            }
+            boolean hasAtLeastOneWithoutId = true;
+            for (ModelContainer executionContainer : executionContainers) {
+                if(hasAtLeastOneWithoutId)
+                {
+                    hasAtLeastOneWithoutId = hasExecutionId(executionContainer);
+                }
+                if(!hasAtLeastOneWithoutId && !hasExecutionId(executionContainer) && executionContainers.indexOf(executionContainer) > 0)
+                {
+                    removeProperties.addAll(executionContainer.getProperties());
+                }
+            }           
+        }
+        modelProperties.removeAll(removeProperties);
+        return modelProperties;
+    }
+
+    private static boolean hasExecutionId(ModelContainer executionContainer)
+    {
+        for(ModelProperty mp : executionContainer.getProperties() )
+        {
+            if(mp.getUri().equals(ProjectUri.Build.Plugins.Plugin.Executions.Execution.id))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
