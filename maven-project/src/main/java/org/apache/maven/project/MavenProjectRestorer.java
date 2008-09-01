@@ -39,8 +39,10 @@ final class MavenProjectRestorer {
         }
 
         restoreBuildRoots( project, config );
-        restoreModelBuildSection( project, config );
-
+        if(project.getBuild() != null)
+        {
+            restoreModelBuildSection( project, config );
+        }
         restoreDynamicProjectReferences( project, config );
 
         MavenProject executionProject = project.getExecutionProject();
