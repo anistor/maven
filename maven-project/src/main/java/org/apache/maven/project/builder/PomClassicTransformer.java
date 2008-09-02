@@ -184,8 +184,38 @@ public final class
                 }
         }
 
+
         props = source.getModelProperties();
 
+       //Rule: Do not join plugin executions without ids
+       Set<ModelProperty> removeProperties = new HashSet<ModelProperty>();
+       ModelDataSource dataSource = new DefaultModelDataSource();
+       dataSource.init( props, Arrays.asList( new ArtifactModelContainerFactory(), new IdModelContainerFactory() ) );
+       List<ModelContainer> containers =  dataSource.queryFor( ProjectUri.Build.Plugins.Plugin.xUri );
+        for (ModelContainer pluginContainer : containers) {
+            ModelDataSource executionSource = new DefaultModelDataSource();
+            executionSource.init( pluginContainer.getProperties(), Arrays.asList( new ArtifactModelContainerFactory(),
+                    new IdModelContainerFactory() ) );
+            List<ModelContainer> executionContainers =
+                    executionSource.queryFor( ProjectUri.Build.Plugins.Plugin.Executions.Execution.xUri  );
+            if(executionContainers.size() < 2)
+            {
+                continue;
+            }
+
+            boolean hasAtLeastOneWithoutId = true;
+            for (ModelContainer executionContainer : executionContainers) {
+                if(hasAtLeastOneWithoutId)
+                {
+                    hasAtLeastOneWithoutId = hasExecutionId(executionContainer);
+                }
+                if(!hasAtLeastOneWithoutId && !hasExecutionId(executionContainer) && executionContainers.indexOf(executionContainer) > 0)
+                {
+                    removeProperties.addAll(executionContainer.getProperties());
+                }
+            }
+        }
+        props.removeAll(removeProperties);
         String xml = null;
         try
         {
@@ -306,6 +336,10 @@ public final class
             {
                 List<ModelProperty> removeProperties = new ArrayList<ModelProperty>();
                 ModelDataSource source = new DefaultModelDataSource();
+                for(ModelProperty mp : tmp)
+                {
+                    System.out.println(mp);
+                }
                 source.init( tmp, Arrays.asList( new ArtifactModelContainerFactory(), new IdModelContainerFactory() ) );
                 List<ModelContainer> containers = source.queryFor( ProjectUri.Build.Plugins.Plugin.xUri );
                 for ( ModelContainer container : containers )
@@ -454,34 +488,6 @@ public final class
                        */
         }
 
-       //Rule: Do not join plugin executions without ids
-       Set<ModelProperty> removeProperties = new HashSet<ModelProperty>();
-       ModelDataSource source = new DefaultModelDataSource();
-       source.init( modelProperties, Arrays.asList( new ArtifactModelContainerFactory(), new IdModelContainerFactory() ) );
-       List<ModelContainer> containers =  source.queryFor( ProjectUri.Build.Plugins.Plugin.xUri );
-        for (ModelContainer pluginContainer : containers) {
-            ModelDataSource executionSource = new DefaultModelDataSource();
-            executionSource.init( pluginContainer.getProperties(), Arrays.asList( new ArtifactModelContainerFactory(),
-                    new IdModelContainerFactory() ) );
-            List<ModelContainer> executionContainers =
-                    executionSource.queryFor( ProjectUri.Build.Plugins.Plugin.Executions.Execution.xUri  );
-            if(executionContainers.size() < 2)
-            {
-                break;
-            }
-            boolean hasAtLeastOneWithoutId = true;
-            for (ModelContainer executionContainer : executionContainers) {
-                if(hasAtLeastOneWithoutId)
-                {
-                    hasAtLeastOneWithoutId = hasExecutionId(executionContainer);
-                }
-                if(!hasAtLeastOneWithoutId && !hasExecutionId(executionContainer) && executionContainers.indexOf(executionContainer) > 0)
-                {
-                    removeProperties.addAll(executionContainer.getProperties());
-                }
-            }           
-        }
-        modelProperties.removeAll(removeProperties);
         return modelProperties;
     }
 
