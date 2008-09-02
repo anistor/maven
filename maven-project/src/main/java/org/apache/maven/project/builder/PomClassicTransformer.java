@@ -455,7 +455,7 @@ public final class
         }
 
        //Rule: Do not join plugin executions without ids
-       List<ModelProperty> removeProperties = new ArrayList<ModelProperty>();
+       Set<ModelProperty> removeProperties = new HashSet<ModelProperty>();
        ModelDataSource source = new DefaultModelDataSource();
        source.init( modelProperties, Arrays.asList( new ArtifactModelContainerFactory(), new IdModelContainerFactory() ) );
        List<ModelContainer> containers =  source.queryFor( ProjectUri.Build.Plugins.Plugin.xUri );
@@ -464,7 +464,7 @@ public final class
             executionSource.init( pluginContainer.getProperties(), Arrays.asList( new ArtifactModelContainerFactory(),
                     new IdModelContainerFactory() ) );
             List<ModelContainer> executionContainers =
-                    source.queryFor( ProjectUri.Build.Plugins.Plugin.Executions.Execution.xUri  );
+                    executionSource.queryFor( ProjectUri.Build.Plugins.Plugin.Executions.Execution.xUri  );
             if(executionContainers.size() < 2)
             {
                 break;
