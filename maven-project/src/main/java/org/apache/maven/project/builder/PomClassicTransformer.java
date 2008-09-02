@@ -336,10 +336,6 @@ public final class
             {
                 List<ModelProperty> removeProperties = new ArrayList<ModelProperty>();
                 ModelDataSource source = new DefaultModelDataSource();
-                for(ModelProperty mp : tmp)
-                {
-                    System.out.println(mp);
-                }
                 source.init( tmp, Arrays.asList( new ArtifactModelContainerFactory(), new IdModelContainerFactory() ) );
                 List<ModelContainer> containers = source.queryFor( ProjectUri.Build.Plugins.Plugin.xUri );
                 for ( ModelContainer container : containers )
