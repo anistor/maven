@@ -31,6 +31,7 @@ import org.apache.maven.artifact.resolver.ArtifactResolutionResult;
 import org.apache.maven.artifact.resolver.ArtifactResolver;
 import org.apache.maven.model.*;
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
+import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
 import org.apache.maven.profiles.MavenProfilesBuilder;
 import org.apache.maven.profiles.ProfileManager;
 import org.apache.maven.profiles.activation.DefaultProfileActivationContext;
@@ -55,6 +56,7 @@ import org.codehaus.plexus.personality.plexus.lifecycle.phase.Initializable;
 import org.codehaus.plexus.util.IOUtil;
 import org.codehaus.plexus.util.ReaderFactory;
 import org.codehaus.plexus.util.StringUtils;
+import org.codehaus.plexus.util.WriterFactory;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
 import java.io.*;
@@ -179,7 +181,7 @@ public class DefaultMavenProjectBuilder
                     true
             );
             
-            Build build = project.getBuild();
+           Build build = project.getBuild();
             // NOTE: setting this script-source root before path translation, because
             // the plugin tools compose basedir and scriptSourceRoot into a single file.
             project.addScriptSourceRoot(build.getScriptSourceDirectory());
@@ -305,8 +307,6 @@ public class DefaultMavenProjectBuilder
                     "Maven super-POM contains an invalid expressions!",
                     e);
         }
-
-     //   project.setOriginalModel(superModel);
 
         project.setExecutionRoot(true);
 
@@ -629,8 +629,16 @@ public class DefaultMavenProjectBuilder
             {
                 System.out.println(s);
             }
+            try {
+                Writer out = WriterFactory.newXmlWriter( System.out );
+                MavenXpp3Writer writer = new MavenXpp3Writer();
+                writer.write( out, model);
+                out.close();
+            } catch (IOException e) {
+
+            }
             throw new InvalidProjectModelException(projectId, "Failed to validate POM", pomFile,
-                    validationResult);
+                    validationResult );
         }
     }
 
