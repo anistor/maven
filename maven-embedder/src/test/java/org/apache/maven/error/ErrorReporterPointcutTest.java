@@ -450,6 +450,7 @@ public class ErrorReporterPointcutTest
         reporterCtl.verify();
     }
 
+    /*
     public void testReportExtensionPluginVersionNotFound()
         throws IOException
     {
@@ -474,7 +475,7 @@ public class ErrorReporterPointcutTest
 
         reporterCtl.verify();
     }
-
+    */
     public void testReportIncompatibleMavenVersionForExtensionPlugin()
         throws IOException
     {

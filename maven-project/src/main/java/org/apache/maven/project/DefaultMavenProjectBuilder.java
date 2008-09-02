@@ -220,9 +220,10 @@ public class DefaultMavenProjectBuilder
         if (!Artifact.LATEST_VERSION.equals(artifact.getVersion()) && !Artifact.RELEASE_VERSION.equals(artifact.getVersion())) {
             project = projectWorkspace.getProject(artifact.getGroupId(), artifact.getArtifactId(), artifact.getVersion());
         }
-
+        File f = artifact.getFile();
         if (project == null) {
-            Model model = repositoryHelper.findModelFromRepository(artifact, remoteArtifactRepositories, localRepository);
+            repositoryHelper.findModelFromRepository(artifact, remoteArtifactRepositories, localRepository);
+
             ProjectBuilderConfiguration config = new DefaultProjectBuilderConfiguration().setLocalRepository(localRepository);
 
             List<ArtifactRepository> artifactRepositories = new ArrayList<ArtifactRepository>(remoteArtifactRepositories);
@@ -233,6 +234,9 @@ public class DefaultMavenProjectBuilder
             project = buildInternal(project.getModel(), config, artifact.getFile(), project.getParentFile(),
                     false);
         }
+
+        artifact.setFile(f);
+        project.setVersion(artifact.getVersion());
 
         return project;
     }
