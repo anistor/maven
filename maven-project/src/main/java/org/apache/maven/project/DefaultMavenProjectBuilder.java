@@ -41,7 +41,6 @@ import org.apache.maven.profiles.build.ProfileAdvisor;
 import org.apache.maven.project.artifact.InvalidDependencyVersionException;
 import org.apache.maven.project.builder.PomArtifactResolver;
 import org.apache.maven.project.builder.ProjectBuilder;
-import org.apache.maven.project.injection.ModelDefaultsInjector;
 import org.apache.maven.project.interpolation.ModelInterpolationException;
 import org.apache.maven.project.interpolation.ModelInterpolator;
 import org.apache.maven.project.path.PathTranslator;
@@ -115,8 +114,6 @@ public class DefaultMavenProjectBuilder
     private MavenXpp3Reader modelReader;
 
     private PathTranslator pathTranslator;
-
-    private ModelDefaultsInjector modelDefaultsInjector;
 
     private ModelInterpolator modelInterpolator;
 
@@ -449,7 +446,7 @@ public class DefaultMavenProjectBuilder
         }
 
         // interpolation is before injection, because interpolation is off-limits in the injected variables
-        modelDefaultsInjector.injectDefaults(model);
+        new DefaultModelDefaultsInjector().injectDefaults(model);
 
         // We will return a different project object using the new model (hence the need to return a project, not just modify the parameter)
         MavenProject project = new MavenProject(model, artifactFactory, mavenTools, repositoryHelper, this, config);
@@ -664,6 +661,111 @@ public class DefaultMavenProjectBuilder
         {
             parent.getModel().getBuild().setDirectory(parent.getFile().getAbsolutePath());
             setBuildOutputDirectoryOnParent(parent);
+        }
+    }
+
+    private static class DefaultModelDefaultsInjector
+    {
+        public void injectDefaults( Model model )
+        {
+            injectDependencyDefaults( model.getDependencies(), model.getDependencyManagement() );
+            if ( model.getBuild() != null )
+            {
+                injectPluginDefaults( model.getBuild(), model.getBuild().getPluginManagement() );
+            }
+        }
+
+        private static void injectPluginDefaults( Build build, PluginManagement pluginManagement )
+        {
+            if ( pluginManagement == null )
+            {
+                // nothing to inject.
+                return ;
+            }
+
+            List buildPlugins = build.getPlugins();
+
+            if ( buildPlugins != null && !buildPlugins.isEmpty() )
+            {
+                Map pmPlugins = pluginManagement.getPluginsAsMap();
+
+                if ( pmPlugins != null && !pmPlugins.isEmpty() )
+                {
+                    for ( Iterator it = buildPlugins.iterator(); it.hasNext(); )
+                    {
+                        Plugin buildPlugin = (Plugin) it.next();
+
+                        Plugin pmPlugin = (Plugin) pmPlugins.get( buildPlugin.getKey() );
+
+                        if ( pmPlugin != null )
+                        {
+                            ModelUtils.mergePluginDefinitions( buildPlugin, pmPlugin, false );
+                        }
+                    }
+                }
+            }
+
+        }
+
+        private static void injectDependencyDefaults( List dependencies, DependencyManagement dependencyManagement )
+        {
+            if ( dependencyManagement != null )
+            {
+                // a given project's dependencies should be smaller than the
+                // group-defined defaults set...
+                // in other words, the project's deps will probably be a subset of
+                // those specified in defaults.
+                Map depsMap = new TreeMap();
+                for ( Iterator it = dependencies.iterator(); it.hasNext(); )
+                {
+                    Dependency dep = (Dependency) it.next();
+                    depsMap.put( dep.getManagementKey(), dep );
+                }
+
+                List managedDependencies = dependencyManagement.getDependencies();
+
+                for ( Iterator it = managedDependencies.iterator(); it.hasNext(); )
+                {
+                    Dependency def = (Dependency) it.next();
+                    String key = def.getManagementKey();
+
+                    Dependency dep = (Dependency) depsMap.get( key );
+                    if ( dep != null )
+                    {
+                        mergeDependencyWithDefaults( dep, def );
+                    }
+                }
+            }
+        }
+
+        private static void mergeDependencyWithDefaults( Dependency dep, Dependency def )
+        {
+            if ( dep.getScope() == null && def.getScope() != null )
+            {
+                dep.setScope( def.getScope() );
+                dep.setSystemPath( def.getSystemPath() );
+            }
+
+            if ( dep.getVersion() == null && def.getVersion() != null )
+            {
+                dep.setVersion( def.getVersion() );
+            }
+
+            if ( dep.getClassifier() == null && def.getClassifier() != null )
+            {
+                dep.setClassifier( def.getClassifier() );
+            }
+
+            if ( dep.getType() == null && def.getType() != null )
+            {
+                dep.setType( def.getType() );
+            }
+
+            List exclusions = dep.getExclusions();
+            if ( exclusions == null || exclusions.isEmpty() )
+            {
+                dep.setExclusions( def.getExclusions() );
+            }
         }
     }
 }

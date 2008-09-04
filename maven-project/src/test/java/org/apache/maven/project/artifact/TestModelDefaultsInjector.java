@@ -1,4 +1,4 @@
-package org.apache.maven.project.injection;
+package org.apache.maven.project.artifact;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -35,8 +35,7 @@ import java.util.TreeMap;
 /**
  * @author jdcasey Created on Feb 1, 2005
  */
-public class DefaultModelDefaultsInjector
-    implements ModelDefaultsInjector
+public class TestModelDefaultsInjector
 {
     public void injectDefaults( Model model )
     {
@@ -47,7 +46,7 @@ public class DefaultModelDefaultsInjector
         }
     }
 
-    private void injectPluginDefaults( Build build, PluginManagement pluginManagement )
+    private static void injectPluginDefaults( Build build, PluginManagement pluginManagement )
     {
         if ( pluginManagement == null )
         {
@@ -71,7 +70,7 @@ public class DefaultModelDefaultsInjector
                     
                     if ( pmPlugin != null )
                     {
-                        mergePluginWithDefaults( buildPlugin, pmPlugin );
+                        ModelUtils.mergePluginDefinitions( buildPlugin, pmPlugin, false );
                     }
                 }
             }
@@ -79,12 +78,7 @@ public class DefaultModelDefaultsInjector
         
     }
 
-    public void mergePluginWithDefaults( Plugin plugin, Plugin def )
-    {
-        ModelUtils.mergePluginDefinitions( plugin, def, false );
-    }
-
-    private void injectDependencyDefaults( List dependencies, DependencyManagement dependencyManagement )
+    private static void injectDependencyDefaults( List dependencies, DependencyManagement dependencyManagement )
     {
         if ( dependencyManagement != null )
         {
@@ -115,7 +109,7 @@ public class DefaultModelDefaultsInjector
         }
     }
 
-    private void mergeDependencyWithDefaults( Dependency dep, Dependency def )
+    private static void mergeDependencyWithDefaults( Dependency dep, Dependency def )
     {
         if ( dep.getScope() == null && def.getScope() != null )
         {
@@ -144,5 +138,4 @@ public class DefaultModelDefaultsInjector
             dep.setExclusions( def.getExclusions() );
         }
     }
-
 }

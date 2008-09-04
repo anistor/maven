@@ -139,57 +139,6 @@ public class DefaultModelLineageBuilder
         return lineage;
     }
 
-    public void resumeBuildingModelLineage( ModelLineage lineage,
-                                            ProjectBuilderConfiguration config,
-                                            boolean allowStubs,
-                                            boolean isReactorProject )
-        throws ProjectBuildingException
-    {
-        if ( lineage.size() == 0 )
-        {
-            throw new ProjectBuildingException( "unknown",
-                                                "Cannot resume a ModelLineage that doesn't contain at least one Model instance." );
-        }
-
-        List currentRemoteRepositories = lineage.getDeepestAncestorArtifactRepositoryList();
-
-        if ( currentRemoteRepositories == null )
-        {
-            currentRemoteRepositories = new ArrayList();
-        }
-
-        ModelAndFile current = new ModelAndFile( lineage.getDeepestAncestorModel(),
-                                                 lineage.getDeepestAncestorFile(),
-                                                 lineage.isDeepestAncestorUsingProfilesXml() );
-
-        // use the above information to re-bootstrap the resolution chain...
-        current = resolveParentPom( current,
-                                    currentRemoteRepositories,
-                                    config,
-                                    allowStubs,
-                                    isReactorProject);
-
-        while ( current != null )
-        {
-            lineage.addParent( current.getModel(),
-                               current.getFile(),
-                               currentRemoteRepositories,
-                               current.isValidProfilesXmlLocation() );
-
-            currentRemoteRepositories = updateRepositorySet( current.getModel(),
-                                                             currentRemoteRepositories,
-                                                             current.getFile(),
-                                                             config,
-                                                             current.isValidProfilesXmlLocation() );
-
-            current = resolveParentPom( current,
-                                        currentRemoteRepositories,
-                                        config,
-                                        allowStubs,
-                                        isReactorProject );
-        }
-    }
-
     /**
      * Read the Model instance from the given POM file. Skip caching the Model on this call, since
      * it's meant for diagnostic purposes (to determine a parent match).

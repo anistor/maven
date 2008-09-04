@@ -61,25 +61,4 @@ public interface ModelLineageBuilder
                                     boolean isReactorProject )
         throws ProjectBuildingException;
 
-    /**
-     * Resume the process of constructing a lineage of inherited models, picking up using the deepest
-     * parent already in the lineage.
-     *
-     * @param lineage The ModelLineage instance in progress, which should be completed.
-     *
-     * @param config The project-building configuration to use, which contains the global profile manager,
-     *   local repository, and execution- and user-level properties.
-     *
-     * @param allowStubs Whether stubbed-out Model instances should be constructed in the event that
-     *   a parent-POM cannot be resolved.
-     *
-     * @param isReactorProject Whether the model being built is part of the build we're trying to execute,
-     *   or if it's actually being read from the repository.
-     */
-    void resumeBuildingModelLineage( ModelLineage lineage,
-                                     ProjectBuilderConfiguration config,
-                                     boolean allowStubs,
-                                     boolean isReactorProject )
-        throws ProjectBuildingException;
-
 }

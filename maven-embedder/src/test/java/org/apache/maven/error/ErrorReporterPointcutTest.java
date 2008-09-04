@@ -1121,7 +1121,8 @@ public class ErrorReporterPointcutTest
 
         reporterCtl.verify();
     }
-
+    /*
+    //This is now in maven-core: ReactorManager
     public void testReportProjectCollision()
         throws IOException
     {
@@ -1139,7 +1140,7 @@ public class ErrorReporterPointcutTest
 
         reporterCtl.verify();
     }
-
+    */
     /*
     TODO: Disabled - add back in
     public void testReportProjectValidationFailure()

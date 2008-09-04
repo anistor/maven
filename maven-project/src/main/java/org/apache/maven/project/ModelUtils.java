@@ -62,54 +62,6 @@ public final class ModelUtils
 {
 
     /**
-     * Given this plugin list:
-     *
-     * A1 -> B -> C -> A2 -> D
-     *
-     * Rearrange it to this:
-     *
-     * A(A1 + A2) -> B -> C -> D
-     *
-     * In cases of overlapping definitions, A1 is overridden by A2
-     *
-     */
-    public static void mergeDuplicatePluginDefinitions( PluginContainer pluginContainer )
-    {
-        if ( pluginContainer == null )
-        {
-            return;
-        }
-
-        List originalPlugins = pluginContainer.getPlugins();
-
-        if ( ( originalPlugins == null ) || originalPlugins.isEmpty() )
-        {
-            return;
-        }
-
-        List normalized = new ArrayList( originalPlugins.size() );
-
-        for ( Iterator it = originalPlugins.iterator(); it.hasNext(); )
-        {
-            Plugin currentPlugin = (Plugin) it.next();
-
-            if ( normalized.contains( currentPlugin ) )
-            {
-                int idx = normalized.indexOf( currentPlugin );
-                Plugin firstPlugin = (Plugin) normalized.get( idx );
-
-                mergePluginDefinitions( firstPlugin, currentPlugin, false );
-            }
-            else
-            {
-                normalized.add( currentPlugin );
-            }
-        }
-
-        pluginContainer.setPlugins( normalized );
-    }
-
-    /**
      * This should be the resulting ordering of plugins after merging:
      *
      * Given:
@@ -262,67 +214,6 @@ public final class ModelUtils
         return results;
     }
 
-    public static void mergeReportPluginLists( Reporting child, Reporting parent, boolean handleAsInheritance )
-    {
-        if ( ( child == null ) || ( parent == null ) )
-        {
-            // nothing to do.
-            return;
-        }
-
-        List parentPlugins = parent.getPlugins();
-
-        if ( ( parentPlugins != null ) && !parentPlugins.isEmpty() )
-        {
-            Map assembledPlugins = new TreeMap();
-
-            Map childPlugins = child.getReportPluginsAsMap();
-
-            for ( Iterator it = parentPlugins.iterator(); it.hasNext(); )
-            {
-                ReportPlugin parentPlugin = (ReportPlugin) it.next();
-
-                String parentInherited = parentPlugin.getInherited();
-
-                if ( !handleAsInheritance || ( parentInherited == null ) ||
-                    Boolean.valueOf( parentInherited ).booleanValue() )
-                {
-
-                    ReportPlugin assembledPlugin = parentPlugin;
-
-                    ReportPlugin childPlugin = (ReportPlugin) childPlugins.get( parentPlugin.getKey() );
-
-                    if ( childPlugin != null )
-                    {
-                        assembledPlugin = childPlugin;
-
-                        mergeReportPluginDefinitions( childPlugin, parentPlugin, handleAsInheritance );
-                    }
-
-                    if ( handleAsInheritance && ( parentInherited == null ) )
-                    {
-                        assembledPlugin.unsetInheritanceApplied();
-                    }
-
-                    assembledPlugins.put( assembledPlugin.getKey(), assembledPlugin );
-                }
-            }
-
-            for ( Iterator it = childPlugins.values().iterator(); it.hasNext(); )
-            {
-                ReportPlugin childPlugin = (ReportPlugin) it.next();
-
-                if ( !assembledPlugins.containsKey( childPlugin.getKey() ) )
-                {
-                    assembledPlugins.put( childPlugin.getKey(), childPlugin );
-                }
-            }
-
-            child.setPlugins( new ArrayList( assembledPlugins.values() ) );
-
-            child.flushReportPluginMap();
-        }
-    }
 
     public static void mergePluginDefinitions( Plugin child, Plugin parent, boolean handleAsInheritance )
     {
@@ -413,77 +304,6 @@ public final class ModelUtils
 
     }
 
-    public static void mergeReportPluginDefinitions( ReportPlugin child, ReportPlugin parent,
-                                                     boolean handleAsInheritance )
-    {
-        if ( ( child == null ) || ( parent == null ) )
-        {
-            // nothing to do.
-            return;
-        }
-
-        if ( ( child.getVersion() == null ) && ( parent.getVersion() != null ) )
-        {
-            child.setVersion( parent.getVersion() );
-        }
-
-        // from here to the end of the method is dealing with merging of the <executions/> section.
-        String parentInherited = parent.getInherited();
-
-        boolean parentIsInherited = ( parentInherited == null ) || Boolean.valueOf( parentInherited ).booleanValue();
-
-        List parentReportSets = parent.getReportSets();
-
-        if ( ( parentReportSets != null ) && !parentReportSets.isEmpty() )
-        {
-            Map assembledReportSets = new TreeMap();
-
-            Map childReportSets = child.getReportSetsAsMap();
-
-            for ( Iterator it = parentReportSets.iterator(); it.hasNext(); )
-            {
-                ReportSet parentReportSet = (ReportSet) it.next();
-
-                if ( !handleAsInheritance || parentIsInherited )
-                {
-                    ReportSet assembledReportSet = parentReportSet;
-
-                    ReportSet childReportSet = (ReportSet) childReportSets.get( parentReportSet.getId() );
-
-                    if ( childReportSet != null )
-                    {
-                        mergeReportSetDefinitions( childReportSet, parentReportSet );
-
-                        assembledReportSet = childReportSet;
-                    }
-                    else if ( handleAsInheritance && ( parentInherited == null ) )
-                    {
-                        parentReportSet.unsetInheritanceApplied();
-                    }
-
-                    assembledReportSets.put( assembledReportSet.getId(), assembledReportSet );
-                }
-            }
-
-            for ( Iterator it = childReportSets.entrySet().iterator(); it.hasNext(); )
-            {
-                Map.Entry entry = (Map.Entry) it.next();
-
-                String id = (String) entry.getKey();
-
-                if ( !assembledReportSets.containsKey( id ) )
-                {
-                    assembledReportSets.put( id, entry.getValue() );
-                }
-            }
-
-            child.setReportSets( new ArrayList( assembledReportSets.values() ) );
-
-            child.flushReportSetMap();
-        }
-
-    }
-
     private static void mergePluginExecutionDefinitions( PluginExecution child, PluginExecution parent )
     {
         if ( child.getPhase() == null )
@@ -515,41 +335,6 @@ public final class ModelUtils
         }
 
         child.setGoals( goals );
-
-        Xpp3Dom childConfiguration = (Xpp3Dom) child.getConfiguration();
-        Xpp3Dom parentConfiguration = (Xpp3Dom) parent.getConfiguration();
-
-        childConfiguration = Xpp3Dom.mergeXpp3Dom( childConfiguration, parentConfiguration );
-
-        child.setConfiguration( childConfiguration );
-    }
-
-    private static void mergeReportSetDefinitions( ReportSet child, ReportSet parent )
-    {
-        List parentReports = parent.getReports();
-        List childReports = child.getReports();
-
-        List reports = new ArrayList();
-
-        if ( ( childReports != null ) && !childReports.isEmpty() )
-        {
-            reports.addAll( childReports );
-        }
-
-        if ( parentReports != null )
-        {
-            for ( Iterator i = parentReports.iterator(); i.hasNext(); )
-            {
-                String report = (String) i.next();
-
-                if ( !reports.contains( report ) )
-                {
-                    reports.add( report );
-                }
-            }
-        }
-
-        child.setReports( reports );
 
         Xpp3Dom childConfiguration = (Xpp3Dom) child.getConfiguration();
         Xpp3Dom parentConfiguration = (Xpp3Dom) parent.getConfiguration();
