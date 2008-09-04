@@ -83,7 +83,7 @@ public class DefaultRepositoryHelper implements RepositoryHelper, Initializable,
 
             File file = projectArtifact.getFile();
             artifact.setFile(file);
-            legacy_model = readModelLegacy(projectId, file, true);
+            legacy_model = readModelLegacy(projectId, file, false);
 
             String downloadUrl = null;
 

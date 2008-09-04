@@ -39,10 +39,8 @@ import org.apache.maven.profiles.activation.ProfileActivationContext;
 import org.apache.maven.profiles.activation.ProfileActivationException;
 import org.apache.maven.profiles.build.ProfileAdvisor;
 import org.apache.maven.project.artifact.InvalidDependencyVersionException;
-import org.apache.maven.project.build.model.ModelLineageBuilder;
 import org.apache.maven.project.builder.PomArtifactResolver;
 import org.apache.maven.project.builder.ProjectBuilder;
-import org.apache.maven.project.inheritance.ModelInheritanceAssembler;
 import org.apache.maven.project.injection.ModelDefaultsInjector;
 import org.apache.maven.project.interpolation.ModelInterpolationException;
 import org.apache.maven.project.interpolation.ModelInterpolator;
@@ -111,8 +109,6 @@ public class DefaultMavenProjectBuilder
 
     private ArtifactFactory artifactFactory;
 
-    private ModelInheritanceAssembler modelInheritanceAssembler;
-
     private ModelValidator validator;
 
     // TODO: make it a component
@@ -123,8 +119,6 @@ public class DefaultMavenProjectBuilder
     private ModelDefaultsInjector modelDefaultsInjector;
 
     private ModelInterpolator modelInterpolator;
-
-    private ModelLineageBuilder modelLineageBuilder;
 
     private ProfileAdvisor profileAdvisor;
 

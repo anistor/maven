@@ -127,10 +127,6 @@ under the License.
           <role>org.apache.maven.project.workspace.ProjectWorkspace</role>
         </requirement>
         <requirement>
-          <role>org.apache.maven.project.build.model.ModelLineageBuilder</role>
-          <role-hint>default</role-hint>
-        </requirement>
-        <requirement>
           <role>org.apache.maven.profiles.build.ProfileAdvisor</role>
           <role-hint>default</role-hint>
         </requirement>
@@ -142,9 +138,6 @@ under the License.
         </requirement>
         <requirement>
           <role>org.apache.maven.project.interpolation.ModelInterpolator</role>
-        </requirement>
-        <requirement>
-          <role>org.apache.maven.project.inheritance.ModelInheritanceAssembler</role>
         </requirement>
         <requirement>
           <role>org.apache.maven.project.validation.ModelValidator</role>
