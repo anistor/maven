@@ -247,6 +247,7 @@ public abstract class AbstractStringBasedModelInterpolator
         valueSources.add( basedirValueSource );
         valueSources.add( new BuildTimestampValueSource( config.getBuildStartTime(), timestampFormat ) );
         valueSources.add( modelValueSource1 );
+        valueSources.add( new MapBasedValueSource( config.getUserProperties() ) );
         valueSources.add( new PrefixedValueSourceWrapper( new MapBasedValueSource( modelProperties ), PROJECT_PREFIXES, true ) );
         valueSources.add( new MapBasedValueSource( config.getExecutionProperties() ) );
         valueSources.add( new AbstractValueSource( false )
@@ -257,7 +258,6 @@ public abstract class AbstractStringBasedModelInterpolator
             }
         } );
         valueSources.add( modelValueSource2 );
-        valueSources.add( new MapBasedValueSource( config.getUserProperties() ) );
         
         return valueSources;
     }
