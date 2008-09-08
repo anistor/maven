@@ -1,33 +1,33 @@
 package org.apache.maven.project;
 
+import org.apache.maven.MavenTools;
+import org.apache.maven.artifact.Artifact;
+import org.apache.maven.artifact.ArtifactStatus;
+import org.apache.maven.artifact.ArtifactUtils;
+import org.apache.maven.artifact.InvalidRepositoryException;
+import org.apache.maven.artifact.factory.ArtifactFactory;
+import org.apache.maven.artifact.repository.ArtifactRepository;
+import org.apache.maven.artifact.repository.ArtifactRepositoryPolicy;
+import org.apache.maven.artifact.resolver.ArtifactNotFoundException;
+import org.apache.maven.artifact.resolver.ArtifactResolutionException;
+import org.apache.maven.artifact.resolver.ArtifactResolver;
+import org.apache.maven.model.DistributionManagement;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.Repository;
-import org.apache.maven.model.DistributionManagement;
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
 import org.apache.maven.profiles.activation.ProfileActivationContext;
 import org.apache.maven.profiles.build.ProfileAdvisor;
-import org.apache.maven.artifact.InvalidRepositoryException;
-import org.apache.maven.artifact.ArtifactUtils;
-import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.ArtifactStatus;
-import org.apache.maven.artifact.factory.ArtifactFactory;
-import org.apache.maven.artifact.resolver.ArtifactResolutionException;
-import org.apache.maven.artifact.resolver.ArtifactNotFoundException;
-import org.apache.maven.artifact.resolver.ArtifactResolver;
-import org.apache.maven.artifact.repository.ArtifactRepository;
-import org.apache.maven.artifact.repository.ArtifactRepositoryPolicy;
-import org.apache.maven.MavenTools;
-import org.codehaus.plexus.util.StringUtils;
-import org.codehaus.plexus.util.ReaderFactory;
-import org.codehaus.plexus.util.IOUtil;
-import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
-import org.codehaus.plexus.logging.Logger;
 import org.codehaus.plexus.logging.LogEnabled;
+import org.codehaus.plexus.logging.Logger;
 import org.codehaus.plexus.personality.plexus.lifecycle.phase.Initializable;
 import org.codehaus.plexus.personality.plexus.lifecycle.phase.InitializationException;
+import org.codehaus.plexus.util.IOUtil;
+import org.codehaus.plexus.util.ReaderFactory;
+import org.codehaus.plexus.util.StringUtils;
+import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
-import java.util.*;
 import java.io.*;
+import java.util.*;
 
 /**
  * This is a temporary class. These methods are originally from the DefaultMavenProjectHelper. This class will be

@@ -1,13 +1,13 @@
 package org.apache.maven.project;
 
-import org.apache.maven.model.Model;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.repository.ArtifactRepository;
+import org.apache.maven.model.Model;
 import org.apache.maven.profiles.activation.ProfileActivationContext;
 
-import java.util.List;
-import java.util.LinkedHashSet;
 import java.io.File;
+import java.util.LinkedHashSet;
+import java.util.List;
 
 /**
  * This is a temporary class. These methods are originally from the DefaultMavenProjectHelper. This class will be

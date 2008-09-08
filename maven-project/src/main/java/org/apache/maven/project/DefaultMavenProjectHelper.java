@@ -22,18 +22,18 @@ package org.apache.maven.project;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.artifact.InvalidArtifactRTException;
-import org.apache.maven.artifact.metadata.ArtifactMetadata;
-import org.apache.maven.artifact.versioning.VersionRange;
-import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.artifact.handler.ArtifactHandler;
 import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
+import org.apache.maven.artifact.metadata.ArtifactMetadata;
+import org.apache.maven.artifact.repository.ArtifactRepository;
+import org.apache.maven.artifact.versioning.VersionRange;
 import org.apache.maven.model.Resource;
 import org.codehaus.plexus.logging.AbstractLogEnabled;
 
 import java.io.File;
-import java.util.List;
-import java.util.Collections;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 
 public class DefaultMavenProjectHelper
     extends AbstractLogEnabled

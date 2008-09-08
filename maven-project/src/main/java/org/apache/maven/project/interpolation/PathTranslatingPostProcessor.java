@@ -20,9 +20,7 @@ package org.apache.maven.project.interpolation;
  */
 
 import org.apache.maven.project.path.PathTranslator;
-import org.codehaus.plexus.interpolation.AbstractFunctionValueSourceWrapper;
 import org.codehaus.plexus.interpolation.InterpolationPostProcessor;
-import org.codehaus.plexus.interpolation.ValueSource;
 
 import java.io.File;
 import java.util.List;

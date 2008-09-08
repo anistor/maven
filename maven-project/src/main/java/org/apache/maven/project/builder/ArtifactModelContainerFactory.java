@@ -24,11 +24,7 @@ import org.apache.maven.shared.model.ModelContainerAction;
 import org.apache.maven.shared.model.ModelContainerFactory;
 import org.apache.maven.shared.model.ModelProperty;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 public final class ArtifactModelContainerFactory
     implements ModelContainerFactory

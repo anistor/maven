@@ -3,8 +3,8 @@ package org.apache.maven.project.builder.impl;
 import org.apache.maven.shared.model.ImportModel;
 import org.apache.maven.shared.model.ModelProperty;
 
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
 
 public final class DefaultImportModel implements ImportModel {
 

@@ -1,15 +1,15 @@
 package org.apache.maven.project;
 
-import org.apache.maven.project.interpolation.ModelInterpolationException;
-import org.apache.maven.project.interpolation.ModelInterpolator;
-import org.apache.maven.project.path.PathTranslator;
 import org.apache.maven.model.Build;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.Resource;
-
-import java.util.*;
-import java.io.File;
+import org.apache.maven.project.interpolation.ModelInterpolationException;
+import org.apache.maven.project.interpolation.ModelInterpolator;
+import org.apache.maven.project.path.PathTranslator;
 import org.codehaus.plexus.logging.Logger;
+
+import java.io.File;
+import java.util.*;
 
 final class MavenProjectRestorer {
 

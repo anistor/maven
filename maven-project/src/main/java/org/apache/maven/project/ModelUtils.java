@@ -19,44 +19,12 @@ package org.apache.maven.project;
  * under the License.
  */
 
-import org.apache.maven.model.Activation;
-import org.apache.maven.model.ActivationFile;
-import org.apache.maven.model.ActivationProperty;
-import org.apache.maven.model.Build;
-import org.apache.maven.model.BuildBase;
-import org.apache.maven.model.Dependency;
-import org.apache.maven.model.DependencyManagement;
-import org.apache.maven.model.DeploymentRepository;
-import org.apache.maven.model.DistributionManagement;
-import org.apache.maven.model.Exclusion;
-import org.apache.maven.model.Extension;
-import org.apache.maven.model.Model;
-import org.apache.maven.model.Parent;
-import org.apache.maven.model.Plugin;
-import org.apache.maven.model.PluginContainer;
-import org.apache.maven.model.PluginExecution;
-import org.apache.maven.model.PluginManagement;
-import org.apache.maven.model.Profile;
-import org.apache.maven.model.Relocation;
-import org.apache.maven.model.ReportPlugin;
-import org.apache.maven.model.ReportSet;
-import org.apache.maven.model.Reporting;
-import org.apache.maven.model.Repository;
-import org.apache.maven.model.RepositoryBase;
-import org.apache.maven.model.RepositoryPolicy;
-import org.apache.maven.model.Resource;
-import org.apache.maven.model.Site;
+import org.apache.maven.model.*;
 import org.apache.maven.project.inheritance.DefaultModelInheritanceAssembler;
 import org.apache.maven.project.inheritance.ModelInheritanceAssembler;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.TreeMap;
+import java.util.*;
 
 public final class ModelUtils
 {
