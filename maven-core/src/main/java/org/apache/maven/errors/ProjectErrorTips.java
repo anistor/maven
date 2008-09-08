@@ -1,4 +1,4 @@
-package org.apache.maven.project.error;
+package org.apache.maven.errors;
 
 import org.apache.maven.artifact.InvalidRepositoryException;
 import org.apache.maven.model.Dependency;

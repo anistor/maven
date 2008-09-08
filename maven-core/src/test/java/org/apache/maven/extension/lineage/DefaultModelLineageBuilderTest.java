@@ -1,4 +1,4 @@
-package org.apache.maven.project.build.model;
+package org.apache.maven.extension.lineage;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -34,8 +34,8 @@ import org.apache.maven.profiles.activation.DefaultProfileActivationContext;
 import org.apache.maven.profiles.activation.ProfileActivationContext;
 import org.apache.maven.project.DefaultProjectBuilderConfiguration;
 import org.apache.maven.project.ProjectBuildingException;
-import org.apache.maven.project.error.ProjectErrorReporter;
-import org.apache.maven.project.error.ProjectReporterManager;
+import org.apache.maven.errors.ProjectErrorReporter;
+import org.apache.maven.errors.ProjectReporterManager;
 import org.codehaus.plexus.PlexusTestCase;
 import org.codehaus.plexus.logging.Logger;
 import org.codehaus.plexus.util.FileUtils;
@@ -575,93 +575,6 @@ public class DefaultModelLineageBuilderTest
         model.setVersion( version );
 
         return model;
-    }
-
-    public void testReadPOMWithParentMissingFromRepository()
-        throws IOException
-    {
-        File localRepoDirectory = File.createTempFile( "DefaultModelLineageBuilder.localRepository.",
-                                                       "" );
-
-        localRepoDirectory.delete();
-        localRepoDirectory.mkdirs();
-
-        deleteDirOnExit( localRepoDirectory );
-
-        Model current = createModel( "group", "current", "1" );
-
-        Parent currentParent = new Parent();
-        currentParent.setGroupId( "group" );
-        currentParent.setArtifactId( "parent" );
-        currentParent.setVersion( "1" );
-
-        current.setParent( currentParent );
-
-        File currentPOM = File.createTempFile( "DefaultModelLineageBuilder.test.", ".pom" );
-        currentPOM.deleteOnExit();
-
-        writeModel( current, currentPOM );
-
-        ArtifactRepository localRepository = new DefaultArtifactRepository(
-                                                                            "local",
-                                                                            localRepoDirectory.toURL()
-                                                                                              .toExternalForm(),
-                                                                            defaultLayout );
-
-        try
-        {
-            modelLineageBuilder.buildModelLineage( currentPOM,
-                                                   new DefaultProjectBuilderConfiguration().setLocalRepository( localRepository ),
-                                                   Collections.EMPTY_LIST,
-                                                   false,
-                                                   true );
-
-            fail( "should have thrown an ArtifactNotFoundException" );
-        }
-        catch ( ProjectBuildingException e )
-        {
-            assertTrue( ( e.getCause() instanceof ArtifactNotFoundException ) );
-
-            ProjectErrorReporter reporter = ProjectReporterManager.getReporter();
-            Throwable reportedCause = reporter.findReportedException( e );
-            assertNotNull( reportedCause );
-            System.out.println( reporter.getFormattedMessage( reportedCause ) );
-        }
-
-    }
-
-    public void testReadPOM_HandleErrorWhenFileDoesntExist()
-        throws IOException
-    {
-        File localRepoDirectory = new File( "localRepo" ).getAbsoluteFile();
-        File currentPOM = new File( "pom/pom/pom/pom.xml" );
-
-        ArtifactRepository localRepository = new DefaultArtifactRepository(
-                                                                            "local",
-                                                                            localRepoDirectory.toURL()
-                                                                                              .toExternalForm(),
-                                                                            defaultLayout );
-
-        try
-        {
-            modelLineageBuilder.buildModelLineage( currentPOM,
-                                                   new DefaultProjectBuilderConfiguration().setLocalRepository( localRepository ),
-                                                   Collections.EMPTY_LIST,
-                                                   false,
-                                                   true );
-
-            fail( "should have thrown an IOException" );
-        }
-        catch ( ProjectBuildingException e )
-        {
-            assertTrue( ( e.getCause() instanceof IOException ) );
-
-            ProjectErrorReporter reporter = ProjectReporterManager.getReporter();
-            Throwable reportedCause = reporter.findReportedException( e );
-            assertNotNull( reportedCause );
-            System.out.println( reporter.getFormattedMessage( reportedCause ) );
-        }
-
     }
 
 }

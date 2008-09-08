@@ -3,7 +3,7 @@ package org.apache.maven.project.workspace;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.Parent;
 import org.apache.maven.project.MavenProject;
-import org.apache.maven.project.build.model.ModelAndFile;
+import org.apache.maven.project.ModelAndFile;
 import org.apache.maven.workspace.MavenWorkspaceStore;
 import org.codehaus.plexus.logging.LogEnabled;
 import org.codehaus.plexus.logging.Logger;

@@ -1,4 +1,4 @@
-package org.apache.maven.project.build.model;
+package org.apache.maven.extension.lineage;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -28,7 +28,7 @@ import java.util.Iterator;
 import java.util.List;
 
 /**
- * @see org.apache.maven.project.build.model.ModelLineage
+ * @see ModelLineage
  */
 public class DefaultModelLineage
     implements ModelLineage
@@ -37,7 +37,7 @@ public class DefaultModelLineage
     private List tuples = new ArrayList();
 
     /**
-     * @see org.apache.maven.project.build.model.ModelLineage#addParent(org.apache.maven.model.Model, java.io.File, java.util.List)
+     * @see ModelLineage#addParent(org.apache.maven.model.Model, java.io.File, java.util.List)
      */
     public void addParent( Model model, File pomFile, List artifactRepositories, boolean validProfilesXmlLocation )
     {
@@ -50,7 +50,7 @@ public class DefaultModelLineage
     }
 
     /**
-     * @see org.apache.maven.project.build.model.ModelLineage#artifactRepositoryListIterator()
+     * @see ModelLineage#artifactRepositoryListIterator()
      */
     public Iterator artifactRepositoryListIterator()
     {
@@ -78,7 +78,7 @@ public class DefaultModelLineage
     }
 
     /**
-     * @see org.apache.maven.project.build.model.ModelLineage#fileIterator()
+     * @see ModelLineage#fileIterator()
      */
     public Iterator fileIterator()
     {
@@ -106,7 +106,7 @@ public class DefaultModelLineage
     }
 
     /**
-     * @see org.apache.maven.project.build.model.ModelLineage#getArtifactRepositories(org.apache.maven.model.Model)
+     * @see ModelLineage#getArtifactRepositories(org.apache.maven.model.Model)
      */
     public List getArtifactRepositories( Model model )
     {
@@ -139,7 +139,7 @@ public class DefaultModelLineage
     }
 
     /**
-     * @see org.apache.maven.project.build.model.ModelLineage#getFile(org.apache.maven.model.Model)
+     * @see ModelLineage#getFile(org.apache.maven.model.Model)
      */
     public File getFile( Model model )
     {
@@ -277,7 +277,7 @@ public class DefaultModelLineage
     }
 
     /**
-     * @see org.apache.maven.project.build.model.ModelLineage#modelIterator()
+     * @see ModelLineage#modelIterator()
      */
     public Iterator modelIterator()
     {
@@ -315,7 +315,7 @@ public class DefaultModelLineage
     }
 
     /**
-     * @see org.apache.maven.project.build.model.ModelLineage#size()
+     * @see ModelLineage#size()
      */
     public int size()
     {

@@ -1,4 +1,4 @@
-package org.apache.maven.project.error;
+package org.apache.maven.errors;
 
 import org.apache.maven.artifact.InvalidRepositoryException;
 import org.apache.maven.artifact.resolver.ArtifactNotFoundException;
@@ -17,7 +17,7 @@ import org.apache.maven.project.InvalidProjectVersionException;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.ProjectBuilderConfiguration;
 import org.apache.maven.project.artifact.InvalidDependencyVersionException;
-import org.apache.maven.project.build.model.ModelAndFile;
+import org.apache.maven.project.ModelAndFile;
 import org.apache.maven.project.interpolation.ModelInterpolationException;
 import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;

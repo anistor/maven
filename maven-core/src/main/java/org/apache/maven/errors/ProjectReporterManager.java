@@ -1,4 +1,4 @@
-package org.apache.maven.project.error;
+package org.apache.maven.errors;
 
 public final class ProjectReporterManager
 {

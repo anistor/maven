@@ -1,4 +1,4 @@
-package org.apache.maven.project.build.model;
+package org.apache.maven.project;
 
 import org.apache.maven.model.Model;
 

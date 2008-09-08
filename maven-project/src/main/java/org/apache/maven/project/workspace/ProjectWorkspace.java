@@ -1,7 +1,7 @@
 package org.apache.maven.project.workspace;
 
 import org.apache.maven.project.MavenProject;
-import org.apache.maven.project.build.model.ModelAndFile;
+import org.apache.maven.project.ModelAndFile;
 
 import java.io.File;
 

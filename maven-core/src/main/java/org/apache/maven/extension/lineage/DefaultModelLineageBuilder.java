@@ -1,4 +1,4 @@
-package org.apache.maven.project.build.model;
+package org.apache.maven.extension.lineage;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -34,6 +34,7 @@ import org.apache.maven.profiles.activation.ProfileActivationContext;
 import org.apache.maven.profiles.build.ProfileAdvisor;
 import org.apache.maven.project.ProjectBuilderConfiguration;
 import org.apache.maven.project.ProjectBuildingException;
+import org.apache.maven.project.ModelAndFile;
 import org.apache.maven.project.workspace.ProjectWorkspace;
 import org.codehaus.plexus.logging.LogEnabled;
 import org.codehaus.plexus.logging.Logger;
@@ -52,7 +53,7 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * @see org.apache.maven.project.build.model.ModelLineageBuilder
+ * @see ModelLineageBuilder
  */
 public class DefaultModelLineageBuilder
     implements ModelLineageBuilder, LogEnabled
@@ -84,7 +85,7 @@ public class DefaultModelLineageBuilder
     }
 
     /**
-     * @see org.apache.maven.project.build.model.ModelLineageBuilder#buildModelLineage(java.io.File, org.apache.maven.artifact.repository.ArtifactRepository, java.util.List)
+     * @see ModelLineageBuilder#buildModelLineage(java.io.File, org.apache.maven.artifact.repository.ArtifactRepository, java.util.List)
      */
     public ModelLineage buildModelLineage( File pom,
                                            ProjectBuilderConfiguration config,

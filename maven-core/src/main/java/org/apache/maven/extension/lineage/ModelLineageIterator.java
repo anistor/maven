@@ -1,4 +1,4 @@
-package org.apache.maven.project.build.model;
+package org.apache.maven.extension.lineage;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one

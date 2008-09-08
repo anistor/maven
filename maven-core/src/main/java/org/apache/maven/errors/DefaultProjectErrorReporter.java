@@ -1,4 +1,4 @@
-package org.apache.maven.project.error;
+package org.apache.maven.errors;
 
 import org.apache.maven.artifact.InvalidRepositoryException;
 import org.apache.maven.artifact.repository.ArtifactRepository;
@@ -20,7 +20,7 @@ import org.apache.maven.project.InvalidProjectVersionException;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.ProjectBuilderConfiguration;
 import org.apache.maven.project.artifact.InvalidDependencyVersionException;
-import org.apache.maven.project.build.model.ModelAndFile;
+import org.apache.maven.project.ModelAndFile;
 import org.apache.maven.project.interpolation.ModelInterpolationException;
 import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
@@ -62,7 +62,7 @@ public class DefaultProjectErrorReporter
     }
 
     /**
-     * @see org.apache.maven.project.error.ProjectErrorReporter#clearErrors()
+     * @see ProjectErrorReporter#clearErrors()
      */
     public void clearErrors()
     {
@@ -76,7 +76,7 @@ public class DefaultProjectErrorReporter
     }
 
     /**
-     * @see org.apache.maven.project.error.ProjectErrorReporter#hasInformationFor(java.lang.Throwable)
+     * @see ProjectErrorReporter#hasInformationFor(java.lang.Throwable)
      */
     public Throwable findReportedException( Throwable error )
     {
@@ -93,7 +93,7 @@ public class DefaultProjectErrorReporter
     }
 
     /**
-     * @see org.apache.maven.project.error.ProjectErrorReporter#getFormattedMessage(java.lang.Throwable)
+     * @see ProjectErrorReporter#getFormattedMessage(java.lang.Throwable)
      */
     public String getFormattedMessage( Throwable error )
     {
@@ -101,7 +101,7 @@ public class DefaultProjectErrorReporter
     }
 
     /**
-     * @see org.apache.maven.project.error.ProjectErrorReporter#getRealCause(java.lang.Throwable)
+     * @see ProjectErrorReporter#getRealCause(java.lang.Throwable)
      */
     public Throwable getRealCause( Throwable error )
     {
@@ -140,7 +140,7 @@ public class DefaultProjectErrorReporter
     }
 
     /**
-     * @see org.apache.maven.project.error.ProjectErrorReporter#reportActivatorErrorWhileApplyingProfiles(org.apache.maven.profiles.activation.ProfileActivator, org.apache.maven.model.Model, java.io.File, org.apache.maven.model.Profile, org.apache.maven.profiles.activation.ProfileActivationContext, org.apache.maven.profiles.activation.ProfileActivationException)
+     * @see ProjectErrorReporter#reportActivatorErrorWhileApplyingProfiles(org.apache.maven.profiles.activation.ProfileActivator, org.apache.maven.model.Model, java.io.File, org.apache.maven.model.Profile, org.apache.maven.profiles.activation.ProfileActivationContext, org.apache.maven.profiles.activation.ProfileActivationException)
      */
     public void reportActivatorError( ProfileActivator activator,
                                       Model model,
@@ -179,7 +179,7 @@ public class DefaultProjectErrorReporter
     }
 
     /**
-     * @see org.apache.maven.project.error.ProjectErrorReporter#reportActivatorLookupError(java.lang.String, java.io.File, org.apache.maven.model.Profile, org.codehaus.plexus.component.repository.exception.ComponentLookupException)
+     * @see ProjectErrorReporter#reportActivatorLookupError(java.lang.String, java.io.File, org.apache.maven.model.Profile, org.codehaus.plexus.component.repository.exception.ComponentLookupException)
      */
     public void reportActivatorLookupError( Model model,
                                             File pomFile,
@@ -213,7 +213,7 @@ public class DefaultProjectErrorReporter
     }
 
     /**
-     * @see org.apache.maven.project.error.ProjectErrorReporter#reportErrorLoadingExternalProfilesFromFile(org.apache.maven.model.Model, java.io.File, java.io.File, java.io.IOException)
+     * @see ProjectErrorReporter#reportErrorLoadingExternalProfilesFromFile(org.apache.maven.model.Model, java.io.File, java.io.File, java.io.IOException)
      */
     public void reportErrorLoadingExternalProfilesFromFile( Model model,
                                                             File pomFile,
@@ -242,7 +242,7 @@ public class DefaultProjectErrorReporter
     }
 
     /**
-     * @see org.apache.maven.project.error.ProjectErrorReporter#reportErrorLoadingExternalProfilesFromFile(org.apache.maven.model.Model, java.io.File, java.io.File, org.codehaus.plexus.util.xml.pull.XmlPullParserException)
+     * @see ProjectErrorReporter#reportErrorLoadingExternalProfilesFromFile(org.apache.maven.model.Model, java.io.File, java.io.File, org.codehaus.plexus.util.xml.pull.XmlPullParserException)
      */
     public void reportErrorLoadingExternalProfilesFromFile( Model model,
                                                             File pomFile,
@@ -278,7 +278,7 @@ public class DefaultProjectErrorReporter
     }
 
     /**
-     * @see org.apache.maven.project.error.ProjectErrorReporter#reportInvalidRepositoryWhileGettingRepositoriesFromProfiles(org.apache.maven.model.Repository, java.lang.String, java.io.File, org.apache.maven.artifact.InvalidRepositoryException)
+     * @see ProjectErrorReporter#reportInvalidRepositoryWhileGettingRepositoriesFromProfiles(org.apache.maven.model.Repository, java.lang.String, java.io.File, org.apache.maven.artifact.InvalidRepositoryException)
      */
     public void reportInvalidRepositoryWhileGettingRepositoriesFromProfiles( Repository repo,
                                                                              Model model,
