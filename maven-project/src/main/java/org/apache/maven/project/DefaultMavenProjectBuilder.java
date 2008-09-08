@@ -603,7 +603,6 @@ public class DefaultMavenProjectBuilder
                     Arrays.asList(getSuperProject(config, projectDescriptor, true).getModel()), null, null, resolver,
                     projectDescriptor.getParentFile(), config);
         } catch (IOException e) {
-            e.printStackTrace();
             throw new ProjectBuildingException(projectId, "File = " + projectDescriptor.getAbsolutePath(), e);
         }
 
