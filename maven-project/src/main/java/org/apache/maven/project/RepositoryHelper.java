@@ -13,23 +13,20 @@ import java.util.List;
  * This is a temporary class. These methods are originally from the DefaultMavenProjectHelper. This class will be
  * eliminated when Mercury is integrated.
  */
-public interface RepositoryHelper {
+public interface RepositoryHelper
+{
 
     String ROLE = RepositoryHelper.class.getName();
 
-    Model findModelFromRepository(Artifact artifact,
-                                  List remoteArtifactRepositories,
-                                  ArtifactRepository localRepository)
-            throws ProjectBuildingException;
+    Model findModelFromRepository( Artifact artifact, List remoteArtifactRepositories,
+                                   ArtifactRepository localRepository )
+        throws ProjectBuildingException;
 
-    List buildArtifactRepositories(Model model)
-            throws ProjectBuildingException;
+    List buildArtifactRepositories( Model model )
+        throws ProjectBuildingException;
 
-    LinkedHashSet collectInitialRepositories(Model model,
-                                             Model superModel,
-                                             List parentSearchRepositories,
-                                             File pomFile,
-                                             boolean validProfilesXmlLocation,
-                                             ProfileActivationContext profileActivationContext)
-            throws ProjectBuildingException;
+    LinkedHashSet collectInitialRepositories( Model model, Model superModel, List parentSearchRepositories,
+                                              File pomFile, boolean validProfilesXmlLocation,
+                                              ProfileActivationContext profileActivationContext )
+        throws ProjectBuildingException;
 }

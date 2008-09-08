@@ -16,6 +16,7 @@ public class DefaultProjectWorkspace
 {
 
     private MavenWorkspaceStore workspaceStore;
+
     private Logger logger;
 
     public DefaultProjectWorkspace()
@@ -28,9 +29,7 @@ public class DefaultProjectWorkspace
         this.logger = logger;
     }
 
-    public ModelAndFile getModelAndFile( String groupId,
-                                         String artifactId,
-                                         String version )
+    public ModelAndFile getModelAndFile( String groupId, String artifactId, String version )
     {
         Map cache = workspaceStore.getWorkspaceCache( ProjectWorkspace.MODEL_AND_FILE_BYGAV_KEY );
 
@@ -70,9 +69,7 @@ public class DefaultProjectWorkspace
         return (MavenProject) cache.get( pathKey );
     }
 
-    public MavenProject getProject( String groupId,
-                                    String artifactId,
-                                    String version )
+    public MavenProject getProject( String groupId, String artifactId, String version )
     {
         Map cache = workspaceStore.getWorkspaceCache( ProjectWorkspace.PROJECT_INSTANCE_BYGAV_KEY );
 
@@ -131,7 +128,8 @@ public class DefaultProjectWorkspace
 
     public void storeProjectByFile( MavenProject project )
     {
-        if ( project.getFile() == null ){
+        if ( project.getFile() == null )
+        {
             return;
         }
 

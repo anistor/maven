@@ -13,9 +13,7 @@ public class ModelAndFile
 
     private final boolean validProfilesXmlLocation;
 
-    public ModelAndFile( Model model,
-                  File file,
-                  boolean validProfilesXmlLocation )
+    public ModelAndFile( Model model, File file, boolean validProfilesXmlLocation )
     {
         this.model = model;
         this.file = file;

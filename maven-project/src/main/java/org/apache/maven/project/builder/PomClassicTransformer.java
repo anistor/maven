@@ -20,19 +20,31 @@ package org.apache.maven.project.builder;
  */
 
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
-import org.apache.maven.shared.model.*;
+import org.apache.maven.shared.model.DomainModel;
+import org.apache.maven.shared.model.ModelContainer;
+import org.apache.maven.shared.model.ModelContainerAction;
+import org.apache.maven.shared.model.ModelDataSource;
+import org.apache.maven.shared.model.ModelMarshaller;
+import org.apache.maven.shared.model.ModelProperty;
+import org.apache.maven.shared.model.ModelTransformer;
 import org.apache.maven.shared.model.impl.DefaultModelDataSource;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
 import java.io.IOException;
 import java.io.StringReader;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Provides methods for transforming model properties into a domain model for the pom classic format and vice versa.
  */
-public final class
-        PomClassicTransformer
+public final class PomClassicTransformer
     implements ModelTransformer
 {
 
@@ -40,73 +52,74 @@ public final class
      * The URIs this tranformer supports
      */
     private static Set<String> uris = new HashSet<String>( Arrays.asList( ProjectUri.Build.Extensions.xUri,
-                                                        ProjectUri.Build.PluginManagement.Plugins.xUri,
-                                                        ProjectUri.Build.PluginManagement.Plugins.Plugin.configuration,
-                                                        ProjectUri.Build.PluginManagement.Plugins.Plugin.Dependencies.xUri,
-                                                        ProjectUri.Build.PluginManagement.Plugins.Plugin.Dependencies.Dependency.Exclusions.xUri,
-                                                        ProjectUri.Build.PluginManagement.Plugins.Plugin.Executions.xUri,
+                                                                          ProjectUri.Build.PluginManagement.Plugins.xUri,
+                                                                          ProjectUri.Build.PluginManagement.Plugins.Plugin.configuration,
+                                                                          ProjectUri.Build.PluginManagement.Plugins.Plugin.Dependencies.xUri,
+                                                                          ProjectUri.Build.PluginManagement.Plugins.Plugin.Dependencies.Dependency.Exclusions.xUri,
+                                                                          ProjectUri.Build.PluginManagement.Plugins.Plugin.Executions.xUri,
 
-                                                        ProjectUri.Build.Plugins.xUri,
-                                                        ProjectUri.Build.Plugins.Plugin.configuration,
-                                                        ProjectUri.Build.Plugins.Plugin.Dependencies.xUri,
-                                                        ProjectUri.Build.Plugins.Plugin.Executions.xUri,
-                                                        ProjectUri.Build.Resources.xUri,
-                                                        ProjectUri.Build.Resources.Resource.includes,
-                                                        ProjectUri.Build.Resources.Resource.excludes,
-                                                        ProjectUri.Build.TestResources.xUri,
+                                                                          ProjectUri.Build.Plugins.xUri,
+                                                                          ProjectUri.Build.Plugins.Plugin.configuration,
+                                                                          ProjectUri.Build.Plugins.Plugin.Dependencies.xUri,
+                                                                          ProjectUri.Build.Plugins.Plugin.Executions.xUri,
+                                                                          ProjectUri.Build.Resources.xUri,
+                                                                          ProjectUri.Build.Resources.Resource.includes,
+                                                                          ProjectUri.Build.Resources.Resource.excludes,
+                                                                          ProjectUri.Build.TestResources.xUri,
 
-                                                        ProjectUri.CiManagement.Notifiers.xUri,
+                                                                          ProjectUri.CiManagement.Notifiers.xUri,
 
-                                                        ProjectUri.Contributors.xUri,
+                                                                          ProjectUri.Contributors.xUri,
 
-                                                        ProjectUri.Dependencies.xUri,
-                                                        ProjectUri.Dependencies.Dependency.Exclusions.xUri,
+                                                                          ProjectUri.Dependencies.xUri,
+                                                                          ProjectUri.Dependencies.Dependency.Exclusions.xUri,
 
-                                                        ProjectUri.DependencyManagement.Dependencies.xUri,
-                                                        ProjectUri.DependencyManagement.Dependencies.Dependency.Exclusions.xUri,
+                                                                          ProjectUri.DependencyManagement.Dependencies.xUri,
+                                                                          ProjectUri.DependencyManagement.Dependencies.Dependency.Exclusions.xUri,
 
-                                                        ProjectUri.Developers.xUri,
-                                                        ProjectUri.Developers.Developer.roles, ProjectUri.Licenses.xUri,
-                                                        ProjectUri.MailingLists.xUri, ProjectUri.Modules.xUri,
-                                                        ProjectUri.PluginRepositories.xUri,
+                                                                          ProjectUri.Developers.xUri,
+                                                                          ProjectUri.Developers.Developer.roles,
+                                                                          ProjectUri.Licenses.xUri,
+                                                                          ProjectUri.MailingLists.xUri,
+                                                                          ProjectUri.Modules.xUri,
+                                                                          ProjectUri.PluginRepositories.xUri,
 
-                                                        ProjectUri.Profiles.xUri,
-                                                        ProjectUri.Profiles.Profile.Build.Plugins.xUri,
-                                                        ProjectUri.Profiles.Profile.Build.Plugins.Plugin.Dependencies.xUri,
-                                                        ProjectUri.Profiles.Profile.Build.Resources.xUri,
-                                                        ProjectUri.Profiles.Profile.Build.TestResources.xUri,
-                                                        ProjectUri.Profiles.Profile.Dependencies.xUri,
-                                                        ProjectUri.Profiles.Profile.Dependencies.Dependency.Exclusions.xUri,
-                                                        ProjectUri.Profiles.Profile.DependencyManagement.Dependencies.xUri,
-                                                        ProjectUri.Profiles.Profile.PluginRepositories.xUri,
-                                                        ProjectUri.Profiles.Profile.Reporting.Plugins.xUri,
-                                                        ProjectUri.Profiles.Profile.Repositories.xUri,
+                                                                          ProjectUri.Profiles.xUri,
+                                                                          ProjectUri.Profiles.Profile.Build.Plugins.xUri,
+                                                                          ProjectUri.Profiles.Profile.Build.Plugins.Plugin.Dependencies.xUri,
+                                                                          ProjectUri.Profiles.Profile.Build.Resources.xUri,
+                                                                          ProjectUri.Profiles.Profile.Build.TestResources.xUri,
+                                                                          ProjectUri.Profiles.Profile.Dependencies.xUri,
+                                                                          ProjectUri.Profiles.Profile.Dependencies.Dependency.Exclusions.xUri,
+                                                                          ProjectUri.Profiles.Profile.DependencyManagement.Dependencies.xUri,
+                                                                          ProjectUri.Profiles.Profile.PluginRepositories.xUri,
+                                                                          ProjectUri.Profiles.Profile.Reporting.Plugins.xUri,
+                                                                          ProjectUri.Profiles.Profile.Repositories.xUri,
 
-                                                        ProjectUri.Reporting.Plugins.xUri,
-                                                        ProjectUri.Reporting.Plugins.Plugin.ReportSets.xUri,
+                                                                          ProjectUri.Reporting.Plugins.xUri,
+                                                                          ProjectUri.Reporting.Plugins.Plugin.ReportSets.xUri,
 
-                                                        ProjectUri.Repositories.xUri,
+                                                                          ProjectUri.Repositories.xUri,
 
-                                                        "http://apache.org/maven/project/profiles/profile/build/pluginManagement/plugins/plugin/dependencies#collection",
-                                                        "http://apache.org/maven/project/profiles/profile/build/pluginManagement/plugins/plugin/dependencies/dependency/exclusions#collection",
-                                                        "http://apache.org/maven/project/profiles/profile/build/pluginManagement/plugins/plugin/executions#collection",
-                                                        "http://apache.org/maven/project/profiles/profile/build/pluginManagement/plugins#collection",
-                                                        "http://apache.org/maven/project/profiles/profile/build/plugins/plugin/dependencies/dependency/exclusions#collection",
-                                                        "http://apache.org/maven/project/profiles/profile/dependencyManagement/dependencies/dependency/exclusions#collection",
-                                                        "http://apache.org/maven/project/profiles/profile/reporting/plugins/plugin/reportSets#collection",
-                                                        "http://apache.org/maven/project/profiles/profile/build/plugins/plugin/executions#collection" ));
+                                                                          "http://apache.org/maven/project/profiles/profile/build/pluginManagement/plugins/plugin/dependencies#collection",
+                                                                          "http://apache.org/maven/project/profiles/profile/build/pluginManagement/plugins/plugin/dependencies/dependency/exclusions#collection",
+                                                                          "http://apache.org/maven/project/profiles/profile/build/pluginManagement/plugins/plugin/executions#collection",
+                                                                          "http://apache.org/maven/project/profiles/profile/build/pluginManagement/plugins#collection",
+                                                                          "http://apache.org/maven/project/profiles/profile/build/plugins/plugin/dependencies/dependency/exclusions#collection",
+                                                                          "http://apache.org/maven/project/profiles/profile/dependencyManagement/dependencies/dependency/exclusions#collection",
+                                                                          "http://apache.org/maven/project/profiles/profile/reporting/plugins/plugin/reportSets#collection",
+                                                                          "http://apache.org/maven/project/profiles/profile/build/plugins/plugin/executions#collection" ) );
 
     private static Map<String, List<ModelProperty>> cache = new HashMap<String, List<ModelProperty>>();
 
     private Collection<Profile> profiles;
-
 
     //private static List<DomainModel> cache = new ArrayList<DomainModel>();
 
     /**
      * Default constructor
      */
-    public PomClassicTransformer(Collection<Profile> profiles)
+    public PomClassicTransformer( Collection<Profile> profiles )
     {
         this.profiles = profiles;
     }
@@ -139,83 +152,98 @@ public final class
         ModelDataSource source = new DefaultModelDataSource();
         source.init( props, Arrays.asList( new ArtifactModelContainerFactory(), new IdModelContainerFactory() ) );
 
-        for(ModelContainer dependencyContainer : source.queryFor( ProjectUri.Dependencies.Dependency.xUri)) {
-                for ( ModelContainer managementContainer : source.queryFor( ProjectUri.DependencyManagement.Dependencies.Dependency.xUri) )
+        for ( ModelContainer dependencyContainer : source.queryFor( ProjectUri.Dependencies.Dependency.xUri ) )
+        {
+            for ( ModelContainer managementContainer : source.queryFor(
+                ProjectUri.DependencyManagement.Dependencies.Dependency.xUri ) )
+            {
+                managementContainer = new ArtifactModelContainerFactory().create(
+                    transformDependencyManagement( managementContainer.getProperties() ) );
+                ModelContainerAction action = dependencyContainer.containerAction( managementContainer );
+                if ( action.equals( ModelContainerAction.JOIN ) || action.equals( ModelContainerAction.DELETE ) )
                 {
-                    managementContainer = new ArtifactModelContainerFactory().create(transformDependencyManagement(managementContainer.getProperties()));
-                    ModelContainerAction action = dependencyContainer.containerAction(managementContainer);
-                    if(action.equals(ModelContainerAction.JOIN) || action.equals(ModelContainerAction.DELETE)) {
-                        source.join(dependencyContainer, managementContainer);
-                    }
+                    source.join( dependencyContainer, managementContainer );
                 }
+            }
         }
 
-        for(ModelContainer dependencyContainer : source.queryFor( ProjectUri.Build.Plugins.Plugin.xUri)) {
-                for ( ModelContainer managementContainer : source.queryFor( ProjectUri.Build.PluginManagement.Plugins.Plugin.xUri) )
-                {
-                    managementContainer = new ArtifactModelContainerFactory().create(transformPluginManagement(managementContainer.getProperties()));
+        for ( ModelContainer dependencyContainer : source.queryFor( ProjectUri.Build.Plugins.Plugin.xUri ) )
+        {
+            for ( ModelContainer managementContainer : source.queryFor(
+                ProjectUri.Build.PluginManagement.Plugins.Plugin.xUri ) )
+            {
+                managementContainer = new ArtifactModelContainerFactory().create(
+                    transformPluginManagement( managementContainer.getProperties() ) );
 
-                    //Remove duplicate executions tags
-                    boolean hasExecutionsTag = false;
-                    for(ModelProperty mp : dependencyContainer.getProperties()) {
-                        if(mp.getUri().equals(ProjectUri.Build.Plugins.Plugin.Executions.xUri)) {
-                            hasExecutionsTag = true;
-                            break;
-                        }
-                    }
-                    List<ModelProperty> pList = new ArrayList<ModelProperty>();
-                    if(!hasExecutionsTag) {
-                        pList =  managementContainer.getProperties();
-                    }
-                    else
+                //Remove duplicate executions tags
+                boolean hasExecutionsTag = false;
+                for ( ModelProperty mp : dependencyContainer.getProperties() )
+                {
+                    if ( mp.getUri().equals( ProjectUri.Build.Plugins.Plugin.Executions.xUri ) )
                     {
-                        for(ModelProperty mp : managementContainer.getProperties()) {
-                            if(!mp.getUri().equals(ProjectUri.Build.Plugins.Plugin.Executions.xUri)) {
-                                 pList.add(mp);
-                            }
-                        }
-                    }
-                    managementContainer = new ArtifactModelContainerFactory().create(pList);
-
-                    ModelContainerAction action = dependencyContainer.containerAction(managementContainer);
-                    if(action.equals(ModelContainerAction.JOIN) || action.equals(ModelContainerAction.DELETE)) {
-                        source.join(dependencyContainer, managementContainer);
+                        hasExecutionsTag = true;
+                        break;
                     }
                 }
-        }
+                List<ModelProperty> pList = new ArrayList<ModelProperty>();
+                if ( !hasExecutionsTag )
+                {
+                    pList = managementContainer.getProperties();
+                }
+                else
+                {
+                    for ( ModelProperty mp : managementContainer.getProperties() )
+                    {
+                        if ( !mp.getUri().equals( ProjectUri.Build.Plugins.Plugin.Executions.xUri ) )
+                        {
+                            pList.add( mp );
+                        }
+                    }
+                }
+                managementContainer = new ArtifactModelContainerFactory().create( pList );
 
+                ModelContainerAction action = dependencyContainer.containerAction( managementContainer );
+                if ( action.equals( ModelContainerAction.JOIN ) || action.equals( ModelContainerAction.DELETE ) )
+                {
+                    source.join( dependencyContainer, managementContainer );
+                }
+            }
+        }
 
         props = source.getModelProperties();
 
-       //Rule: Do not join plugin executions without ids
-       Set<ModelProperty> removeProperties = new HashSet<ModelProperty>();
-       ModelDataSource dataSource = new DefaultModelDataSource();
-       dataSource.init( props, Arrays.asList( new ArtifactModelContainerFactory(), new IdModelContainerFactory() ) );
-       List<ModelContainer> containers =  dataSource.queryFor( ProjectUri.Build.Plugins.Plugin.xUri );
-        for (ModelContainer pluginContainer : containers) {
+        //Rule: Do not join plugin executions without ids
+        Set<ModelProperty> removeProperties = new HashSet<ModelProperty>();
+        ModelDataSource dataSource = new DefaultModelDataSource();
+        dataSource.init( props, Arrays.asList( new ArtifactModelContainerFactory(), new IdModelContainerFactory() ) );
+        List<ModelContainer> containers = dataSource.queryFor( ProjectUri.Build.Plugins.Plugin.xUri );
+        for ( ModelContainer pluginContainer : containers )
+        {
             ModelDataSource executionSource = new DefaultModelDataSource();
-            executionSource.init( pluginContainer.getProperties(), Arrays.asList( new ArtifactModelContainerFactory(),
-                    new IdModelContainerFactory() ) );
+            executionSource.init( pluginContainer.getProperties(),
+                                  Arrays.asList( new ArtifactModelContainerFactory(), new IdModelContainerFactory() ) );
             List<ModelContainer> executionContainers =
-                    executionSource.queryFor( ProjectUri.Build.Plugins.Plugin.Executions.Execution.xUri  );
-            if(executionContainers.size() < 2)
+                executionSource.queryFor( ProjectUri.Build.Plugins.Plugin.Executions.Execution.xUri );
+            if ( executionContainers.size() < 2 )
             {
                 continue;
             }
 
             boolean hasAtLeastOneWithoutId = true;
-            for (ModelContainer executionContainer : executionContainers) {
-                if(hasAtLeastOneWithoutId)
+            for ( ModelContainer executionContainer : executionContainers )
+            {
+                if ( hasAtLeastOneWithoutId )
                 {
-                    hasAtLeastOneWithoutId = hasExecutionId(executionContainer);
+                    hasAtLeastOneWithoutId = hasExecutionId( executionContainer );
                 }
-                if(!hasAtLeastOneWithoutId && !hasExecutionId(executionContainer) && executionContainers.indexOf(executionContainer) > 0)
+                if ( !hasAtLeastOneWithoutId && !hasExecutionId( executionContainer ) &&
+                    executionContainers.indexOf( executionContainer ) > 0 )
                 {
-                    removeProperties.addAll(executionContainer.getProperties());
+                    removeProperties.addAll( executionContainer.getProperties() );
                 }
             }
         }
-        props.removeAll(removeProperties);
+        props.removeAll( removeProperties );
         String xml = null;
         try
         {
@@ -245,7 +273,7 @@ public final class
         StringBuffer scmConnectionUrl = new StringBuffer();
         StringBuffer scmDeveloperUrl = new StringBuffer();
 
-        boolean containsBuildResources= false;
+        boolean containsBuildResources = false;
         boolean containsTestResources = false;
         boolean containsPluginRepositories = false;
 
@@ -409,8 +437,7 @@ public final class
             {
                 String uri = mp.getUri();
                 if ( domainModels.indexOf( domainModel ) > 0 && ( uri.equals( ProjectUri.name ) ||
-                    uri.equals( ProjectUri.packaging ) || uri.startsWith( ProjectUri.Profiles.xUri )
-                     ) )
+                    uri.equals( ProjectUri.packaging ) || uri.startsWith( ProjectUri.Profiles.xUri ) ) )
                 {
                     clearedProperties.add( mp );
                 }
@@ -420,38 +447,38 @@ public final class
             //Build Resources Inheritence Rule
             //Build Test Resources Inheritance Rule
             //Only inherit IF: the above is contained in super pom (domainModels.size() -1) && the child doesn't has it's own respective field
-            if(domainModels.indexOf(domainModel) == 0)
+            if ( domainModels.indexOf( domainModel ) == 0 )
             {
-                containsBuildResources= hasProjectUri(ProjectUri.Build.Resources.xUri, tmp);
-                containsTestResources = hasProjectUri(ProjectUri.Build.TestResources.xUri, tmp);
-                containsPluginRepositories = hasProjectUri(ProjectUri.PluginRepositories.xUri, tmp);
+                containsBuildResources = hasProjectUri( ProjectUri.Build.Resources.xUri, tmp );
+                containsTestResources = hasProjectUri( ProjectUri.Build.TestResources.xUri, tmp );
+                containsPluginRepositories = hasProjectUri( ProjectUri.PluginRepositories.xUri, tmp );
             }
             for ( ModelProperty mp : tmp )
             {
-                if ( domainModels.indexOf( domainModel ) > 0)
+                if ( domainModels.indexOf( domainModel ) > 0 )
                 {
                     String uri = mp.getUri();
-                    boolean isNotSuperPom =  domainModels.indexOf(domainModel) != (domainModels.size() -1 );
-                    if(isNotSuperPom)
+                    boolean isNotSuperPom = domainModels.indexOf( domainModel ) != ( domainModels.size() - 1 );
+                    if ( isNotSuperPom )
                     {
-                        if(uri.startsWith( ProjectUri.Build.Resources.xUri ) ||
-                                uri.startsWith( ProjectUri.Build.TestResources.xUri ) ||
-                                uri.startsWith( ProjectUri.PluginRepositories.xUri ) )
+                        if ( uri.startsWith( ProjectUri.Build.Resources.xUri ) ||
+                            uri.startsWith( ProjectUri.Build.TestResources.xUri ) ||
+                            uri.startsWith( ProjectUri.PluginRepositories.xUri ) )
                         {
                             clearedProperties.add( mp );
                         }
                     }
                     else
                     {
-                        if(containsBuildResources && uri.startsWith( ProjectUri.Build.Resources.xUri ))
+                        if ( containsBuildResources && uri.startsWith( ProjectUri.Build.Resources.xUri ) )
                         {
                             clearedProperties.add( mp );
                         }
-                        else if(containsTestResources && uri.startsWith( ProjectUri.Build.TestResources.xUri ))
+                        else if ( containsTestResources && uri.startsWith( ProjectUri.Build.TestResources.xUri ) )
                         {
                             clearedProperties.add( mp );
                         }
-                        else if(containsPluginRepositories && uri.startsWith( ProjectUri.PluginRepositories.xUri ))
+                        else if ( containsPluginRepositories && uri.startsWith( ProjectUri.PluginRepositories.xUri ) )
                         {
                             clearedProperties.add( mp );
                         }
@@ -467,7 +494,7 @@ public final class
 
             tmp.removeAll( clearedProperties );
             modelProperties.addAll( tmp );
-            modelProperties.removeAll(clearedProperties);
+            modelProperties.removeAll( clearedProperties );
 
             if ( domainModels.indexOf( domainModel ) == 0 )
             {
@@ -487,11 +514,11 @@ public final class
         return modelProperties;
     }
 
-    private static boolean hasExecutionId(ModelContainer executionContainer)
+    private static boolean hasExecutionId( ModelContainer executionContainer )
     {
-        for(ModelProperty mp : executionContainer.getProperties() )
+        for ( ModelProperty mp : executionContainer.getProperties() )
         {
-            if(mp.getUri().equals(ProjectUri.Build.Plugins.Plugin.Executions.Execution.id))
+            if ( mp.getUri().equals( ProjectUri.Build.Plugins.Plugin.Executions.Execution.id ) )
             {
                 return true;
             }
@@ -509,11 +536,11 @@ public final class
         return ProjectUri.baseUri;
     }
 
-    private static boolean hasProjectUri(String projectUri, List<ModelProperty> modelProperties)
+    private static boolean hasProjectUri( String projectUri, List<ModelProperty> modelProperties )
     {
-        for(ModelProperty mp : modelProperties)
+        for ( ModelProperty mp : modelProperties )
         {
-            if(mp.getUri().equals(projectUri))
+            if ( mp.getUri().equals( projectUri ) )
             {
                 return true;
             }
@@ -561,28 +588,33 @@ public final class
         return null;
     }
 
-        private static List<ModelProperty> transformDependencyManagement(List<ModelProperty> modelProperties) {
-            List<ModelProperty> transformedProperties = new ArrayList<ModelProperty>();
-            for(ModelProperty mp : modelProperties) {
-                if(mp.getUri().startsWith(ProjectUri.DependencyManagement.xUri))
-                {
-                    transformedProperties.add(new ModelProperty(
-                            mp.getUri().replace(ProjectUri.DependencyManagement.xUri, ProjectUri.xUri), mp.getValue()));
-                }
+    private static List<ModelProperty> transformDependencyManagement( List<ModelProperty> modelProperties )
+    {
+        List<ModelProperty> transformedProperties = new ArrayList<ModelProperty>();
+        for ( ModelProperty mp : modelProperties )
+        {
+            if ( mp.getUri().startsWith( ProjectUri.DependencyManagement.xUri ) )
+            {
+                transformedProperties.add( new ModelProperty(
+                    mp.getUri().replace( ProjectUri.DependencyManagement.xUri, ProjectUri.xUri ), mp.getValue() ) );
             }
-            return transformedProperties;
         }
+        return transformedProperties;
+    }
 
-        public static List<ModelProperty> transformPluginManagement(List<ModelProperty> modelProperties) {
-            List<ModelProperty> transformedProperties = new ArrayList<ModelProperty>();
-            for(ModelProperty mp : modelProperties) {
-                if(mp.getUri().startsWith(ProjectUri.Build.PluginManagement.xUri))
-                {
-                    transformedProperties.add(new ModelProperty(
-                            mp.getUri().replace(ProjectUri.Build.PluginManagement.xUri, ProjectUri.Build.xUri), mp.getValue()));
-                }
+    public static List<ModelProperty> transformPluginManagement( List<ModelProperty> modelProperties )
+    {
+        List<ModelProperty> transformedProperties = new ArrayList<ModelProperty>();
+        for ( ModelProperty mp : modelProperties )
+        {
+            if ( mp.getUri().startsWith( ProjectUri.Build.PluginManagement.xUri ) )
+            {
+                transformedProperties.add( new ModelProperty(
+                    mp.getUri().replace( ProjectUri.Build.PluginManagement.xUri, ProjectUri.Build.xUri ),
+                    mp.getValue() ) );
             }
-            return transformedProperties;
         }
+        return transformedProperties;
+    }
 }
 

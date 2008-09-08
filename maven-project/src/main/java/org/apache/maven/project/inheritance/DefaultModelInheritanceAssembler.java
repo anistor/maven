@@ -19,12 +19,32 @@ package org.apache.maven.project.inheritance;
  * under the License.
  */
 
-import org.apache.maven.model.*;
+import org.apache.maven.model.Build;
+import org.apache.maven.model.Dependency;
+import org.apache.maven.model.DependencyManagement;
+import org.apache.maven.model.DeploymentRepository;
+import org.apache.maven.model.DistributionManagement;
+import org.apache.maven.model.Model;
+import org.apache.maven.model.PluginManagement;
+import org.apache.maven.model.ReportPlugin;
+import org.apache.maven.model.ReportSet;
+import org.apache.maven.model.Reporting;
+import org.apache.maven.model.Resource;
+import org.apache.maven.model.Scm;
+import org.apache.maven.model.Site;
 import org.apache.maven.project.ModelUtils;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.StringTokenizer;
+import java.util.TreeMap;
 
 /**
  * @author Jason van Zyl
@@ -38,9 +58,7 @@ public class DefaultModelInheritanceAssembler
 
     // TODO: Remove this!
     @SuppressWarnings("unchecked")
-    public void assembleBuildInheritance( Build childBuild,
-                                           Build parentBuild,
-                                           boolean handleAsInheritance )
+    public void assembleBuildInheritance( Build childBuild, Build parentBuild, boolean handleAsInheritance )
     {
         // The build has been set but we want to step in here and fill in
         // values that have not been set by the child.
@@ -116,8 +134,7 @@ public class DefaultModelInheritanceAssembler
         }
         else
         {
-            ModelUtils.mergePluginLists( childBuild.getPluginManagement(), parentBuild.getPluginManagement(),
-                                         false );
+            ModelUtils.mergePluginLists( childBuild.getPluginManagement(), parentBuild.getPluginManagement(), false );
         }
     }
 
@@ -510,7 +527,7 @@ public class DefaultModelInheritanceAssembler
             child.flushReportSetMap();
         }
 
-    }  
+    }
 
     // TODO: Remove this!
     @SuppressWarnings("unchecked")
@@ -560,7 +577,8 @@ public class DefaultModelInheritanceAssembler
         }
     }
 
-    private void assembleDistributionInheritence( Model child, Model parent, String childPathAdjustment, boolean appendPaths )
+    private void assembleDistributionInheritence( Model child, Model parent, String childPathAdjustment,
+                                                  boolean appendPaths )
     {
         if ( parent.getDistributionManagement() != null )
         {
@@ -712,7 +730,6 @@ public class DefaultModelInheritanceAssembler
                 pathElements.addLast( token );
             }
         }
-
 
         StringBuffer cleanedPath = new StringBuffer();
 

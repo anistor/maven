@@ -12,13 +12,19 @@ public class DefaultProfileActivationContext
 {
 
     private boolean isCustomActivatorFailureSuppressed;
+
     private final Properties executionProperties;
+
     List explicitlyActive;
+
     List explicitlyInactive;
+
     private final MavenRealmManager realmManager;
+
     private List activeByDefault;
 
-    public DefaultProfileActivationContext( MavenRealmManager realmManager, Properties executionProperties, boolean isCustomActivatorFailureSuppressed )
+    public DefaultProfileActivationContext( MavenRealmManager realmManager, Properties executionProperties,
+                                            boolean isCustomActivatorFailureSuppressed )
     {
         this.realmManager = realmManager;
         this.executionProperties = executionProperties;

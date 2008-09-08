@@ -26,14 +26,25 @@ import org.codehaus.plexus.util.ReaderFactory;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
-import java.io.*;
-import java.util.*;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.Reader;
+import java.io.StringReader;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
  * This is a temporary class. These methods are originally from the DefaultMavenProjectHelper. This class will be
  * eliminated when Mercury is integrated.
  */
-public class DefaultRepositoryHelper implements RepositoryHelper, Initializable, LogEnabled {
+public class DefaultRepositoryHelper
+    implements RepositoryHelper, Initializable, LogEnabled
+{
 
     private Logger logger;
 
@@ -49,41 +60,44 @@ public class DefaultRepositoryHelper implements RepositoryHelper, Initializable,
 
     private MavenXpp3Reader modelReader;
 
-    private Logger getLogger() {
+    private Logger getLogger()
+    {
         return logger;
     }
 
-    public Model findModelFromRepository(Artifact artifact,
-                                         List remoteArtifactRepositories,
-                                         ArtifactRepository localRepository)
-            throws ProjectBuildingException {
+    public Model findModelFromRepository( Artifact artifact, List remoteArtifactRepositories,
+                                          ArtifactRepository localRepository )
+        throws ProjectBuildingException
+    {
 
-        String projectId = safeVersionlessKey(artifact.getGroupId(), artifact.getArtifactId());
-        remoteArtifactRepositories = normalizeToArtifactRepositories(remoteArtifactRepositories, projectId);
+        String projectId = safeVersionlessKey( artifact.getGroupId(), artifact.getArtifactId() );
+        remoteArtifactRepositories = normalizeToArtifactRepositories( remoteArtifactRepositories, projectId );
 
         Artifact projectArtifact;
 
         // if the artifact is not a POM, we need to construct a POM artifact based on the artifact parameter given.
-        if ("pom".equals(artifact.getType())) {
+        if ( "pom".equals( artifact.getType() ) )
+        {
             projectArtifact = artifact;
-        } else {
-            getLogger().warn("Attempting to build MavenProject instance for Artifact (" + artifact.getGroupId() + ":"
-                    + artifact.getArtifactId() + ":" + artifact.getVersion() + ") of type: "
-                    + artifact.getType() + "; constructing POM artifact instead.");
+        }
+        else
+        {
+            getLogger().warn( "Attempting to build MavenProject instance for Artifact (" + artifact.getGroupId() + ":" +
+                artifact.getArtifactId() + ":" + artifact.getVersion() + ") of type: " + artifact.getType() +
+                "; constructing POM artifact instead." );
 
-            projectArtifact = artifactFactory.createProjectArtifact(artifact.getGroupId(),
-                    artifact.getArtifactId(),
-                    artifact.getVersion(),
-                    artifact.getScope());
+            projectArtifact = artifactFactory.createProjectArtifact( artifact.getGroupId(), artifact.getArtifactId(),
+                                                                     artifact.getVersion(), artifact.getScope() );
         }
 
         Model legacy_model;
-        try {
-            artifactResolver.resolve(projectArtifact, remoteArtifactRepositories, localRepository);
+        try
+        {
+            artifactResolver.resolve( projectArtifact, remoteArtifactRepositories, localRepository );
 
             File file = projectArtifact.getFile();
-            artifact.setFile(file);
-            legacy_model = readModelLegacy(projectId, file, false);
+            artifact.setFile( file );
+            legacy_model = readModelLegacy( projectId, file, false );
 
             String downloadUrl = null;
 
@@ -91,41 +105,53 @@ public class DefaultRepositoryHelper implements RepositoryHelper, Initializable,
 
             DistributionManagement distributionManagement = legacy_model.getDistributionManagement();
 
-            if (distributionManagement != null) {
+            if ( distributionManagement != null )
+            {
                 downloadUrl = distributionManagement.getDownloadUrl();
 
-                status = ArtifactStatus.valueOf(distributionManagement.getStatus());
+                status = ArtifactStatus.valueOf( distributionManagement.getStatus() );
             }
 
-            checkStatusAndUpdate(projectArtifact, status, file, remoteArtifactRepositories, localRepository);
+            checkStatusAndUpdate( projectArtifact, status, file, remoteArtifactRepositories, localRepository );
 
             // TODO: this is gross. Would like to give it the whole model, but maven-artifact shouldn't depend on that
             // Can a maven-core implementation of the Artifact interface store it, and be used in the exceptions?
-            if (downloadUrl != null) {
-                projectArtifact.setDownloadUrl(downloadUrl);
-            } else {
-                projectArtifact.setDownloadUrl(legacy_model.getUrl());
+            if ( downloadUrl != null )
+            {
+                projectArtifact.setDownloadUrl( downloadUrl );
+            }
+            else
+            {
+                projectArtifact.setDownloadUrl( legacy_model.getUrl() );
             }
         }
-        catch (ArtifactResolutionException e) {
-            throw new ProjectBuildingException(projectId, "Error getting POM for '" + projectId + "' from the repository: " + e.getMessage(), e);
+        catch ( ArtifactResolutionException e )
+        {
+            throw new ProjectBuildingException( projectId, "Error getting POM for '" + projectId +
+                "' from the repository: " + e.getMessage(), e );
         }
-        catch (ArtifactNotFoundException e) {
-            throw new ProjectBuildingException(projectId, "POM '" + projectId + "' not found in repository: " + e.getMessage(), e);
+        catch ( ArtifactNotFoundException e )
+        {
+            throw new ProjectBuildingException( projectId,
+                                                "POM '" + projectId + "' not found in repository: " + e.getMessage(),
+                                                e );
         }
 
         return legacy_model;
     }
 
-    public List buildArtifactRepositories(Model model)
-            throws ProjectBuildingException {
-        try {
-            return mavenTools.buildArtifactRepositories(model.getRepositories());
+    public List buildArtifactRepositories( Model model )
+        throws ProjectBuildingException
+    {
+        try
+        {
+            return mavenTools.buildArtifactRepositories( model.getRepositories() );
         }
-        catch (InvalidRepositoryException e) {
-            String projectId = safeVersionlessKey(model.getGroupId(), model.getArtifactId());
+        catch ( InvalidRepositoryException e )
+        {
+            String projectId = safeVersionlessKey( model.getGroupId(), model.getArtifactId() );
 
-            throw new ProjectBuildingException(projectId, e.getMessage(), e);
+            throw new ProjectBuildingException( projectId, e.getMessage(), e );
         }
     }
 
@@ -138,152 +164,179 @@ public class DefaultRepositoryHelper implements RepositoryHelper, Initializable,
     * 4. superModel repositories
     * 5. parentSearchRepositories
     */
-    public LinkedHashSet collectInitialRepositories(Model model,
-                                                    Model superModel,
-                                                    List parentSearchRepositories,
-                                                    File pomFile,
-                                                    boolean validProfilesXmlLocation,
-                                                    ProfileActivationContext profileActivationContext)
-            throws ProjectBuildingException {
+    public LinkedHashSet collectInitialRepositories( Model model, Model superModel, List parentSearchRepositories,
+                                                     File pomFile, boolean validProfilesXmlLocation,
+                                                     ProfileActivationContext profileActivationContext )
+        throws ProjectBuildingException
+    {
         LinkedHashSet collected = new LinkedHashSet();
 
-        collectInitialRepositoriesFromModel(collected, model, pomFile, validProfilesXmlLocation, profileActivationContext);
+        collectInitialRepositoriesFromModel( collected, model, pomFile, validProfilesXmlLocation,
+                                             profileActivationContext );
 
-        collectInitialRepositoriesFromModel(collected, superModel, null, validProfilesXmlLocation, profileActivationContext);
+        collectInitialRepositoriesFromModel( collected, superModel, null, validProfilesXmlLocation,
+                                             profileActivationContext );
 
-        if ((parentSearchRepositories != null) && !parentSearchRepositories.isEmpty()) {
-            collected.addAll(parentSearchRepositories);
+        if ( ( parentSearchRepositories != null ) && !parentSearchRepositories.isEmpty() )
+        {
+            collected.addAll( parentSearchRepositories );
         }
 
         return collected;
     }
 
-    private List normalizeToArtifactRepositories(List remoteArtifactRepositories,
-                                                String projectId)
-            throws ProjectBuildingException {
-        List normalized = new ArrayList(remoteArtifactRepositories.size());
+    private List normalizeToArtifactRepositories( List remoteArtifactRepositories, String projectId )
+        throws ProjectBuildingException
+    {
+        List normalized = new ArrayList( remoteArtifactRepositories.size() );
 
         boolean normalizationNeeded = false;
-        for (Iterator it = remoteArtifactRepositories.iterator(); it.hasNext();) {
+        for ( Iterator it = remoteArtifactRepositories.iterator(); it.hasNext(); )
+        {
             Object item = it.next();
 
-            if (item instanceof ArtifactRepository) {
-                normalized.add(item);
-            } else if (item instanceof Repository) {
+            if ( item instanceof ArtifactRepository )
+            {
+                normalized.add( item );
+            }
+            else if ( item instanceof Repository )
+            {
                 Repository repo = (Repository) item;
-                try {
-                    item = mavenTools.buildArtifactRepository(repo);
+                try
+                {
+                    item = mavenTools.buildArtifactRepository( repo );
 
-                    normalized.add(item);
+                    normalized.add( item );
                     normalizationNeeded = true;
                 }
-                catch (InvalidRepositoryException e) {
-                    throw new ProjectBuildingException(projectId, "Error building artifact repository for id: " + repo.getId(), e);
+                catch ( InvalidRepositoryException e )
+                {
+                    throw new ProjectBuildingException( projectId,
+                                                        "Error building artifact repository for id: " + repo.getId(),
+                                                        e );
                 }
-            } else {
-                throw new ProjectBuildingException(projectId, "Error building artifact repository from non-repository information item: " + item);
+            }
+            else
+            {
+                throw new ProjectBuildingException( projectId,
+                                                    "Error building artifact repository from non-repository information item: " +
+                                                        item );
             }
         }
 
-        if (normalizationNeeded) {
+        if ( normalizationNeeded )
+        {
             return normalized;
-        } else {
+        }
+        else
+        {
             return remoteArtifactRepositories;
         }
     }
 
-    private String safeVersionlessKey(String groupId,
-                                      String artifactId) {
+    private String safeVersionlessKey( String groupId, String artifactId )
+    {
         String gid = groupId;
 
-        if (StringUtils.isEmpty(gid)) {
+        if ( StringUtils.isEmpty( gid ) )
+        {
             gid = "unknown";
         }
 
         String aid = artifactId;
 
-        if (StringUtils.isEmpty(aid)) {
+        if ( StringUtils.isEmpty( aid ) )
+        {
             aid = "unknown";
         }
 
-        return ArtifactUtils.versionlessKey(gid, aid);
+        return ArtifactUtils.versionlessKey( gid, aid );
     }
 
-    private void checkModelVersion(String modelSource,
-                                   String projectId,
-                                   File file)
-            throws InvalidProjectModelException {
-        if (modelSource.indexOf("<modelVersion>4.0.0") < 0) {
-            throw new InvalidProjectModelException(projectId, "Not a v" + MAVEN_MODEL_VERSION + " POM.", file);
+    private void checkModelVersion( String modelSource, String projectId, File file )
+        throws InvalidProjectModelException
+    {
+        if ( modelSource.indexOf( "<modelVersion>4.0.0" ) < 0 )
+        {
+            throw new InvalidProjectModelException( projectId, "Not a v" + MAVEN_MODEL_VERSION + " POM.", file );
         }
     }
 
-    private Model readModelLegacy(String projectId,
-                                  File file,
-                                  boolean strict)
-            throws ProjectBuildingException {
+    private Model readModelLegacy( String projectId, File file, boolean strict )
+        throws ProjectBuildingException
+    {
         Reader reader = null;
-        try {
-            reader = ReaderFactory.newXmlReader(file);
+        try
+        {
+            reader = ReaderFactory.newXmlReader( file );
 
-            String modelSource = IOUtil.toString(reader);
+            String modelSource = IOUtil.toString( reader );
 
-            checkModelVersion(modelSource, projectId, file);
+            checkModelVersion( modelSource, projectId, file );
 
-            StringReader sReader = new StringReader(modelSource);
+            StringReader sReader = new StringReader( modelSource );
 
-            try {
-                return new MavenXpp3Reader().read(sReader, strict);
+            try
+            {
+                return new MavenXpp3Reader().read( sReader, strict );
             }
-            catch (XmlPullParserException e) {
-                throw new InvalidProjectModelException(projectId, "Parse error reading POM. Reason: " + e.getMessage(),
-                        file, e);
+            catch ( XmlPullParserException e )
+            {
+                throw new InvalidProjectModelException( projectId, "Parse error reading POM. Reason: " + e.getMessage(),
+                                                        file, e );
             }
         }
-        catch (FileNotFoundException e) {
-            throw new ProjectBuildingException(projectId,
-                    "Could not find the model file '" + file.getAbsolutePath() + "'.", file, e);
+        catch ( FileNotFoundException e )
+        {
+            throw new ProjectBuildingException( projectId,
+                                                "Could not find the model file '" + file.getAbsolutePath() + "'.", file,
+                                                e );
         }
-        catch (IOException e) {
-            throw new ProjectBuildingException(projectId, "Failed to build model from file '" +
-                    file.getAbsolutePath() + "'.\nError: \'" + e.getLocalizedMessage() + "\'", file, e);
+        catch ( IOException e )
+        {
+            throw new ProjectBuildingException( projectId, "Failed to build model from file '" +
+                file.getAbsolutePath() + "'.\nError: \'" + e.getLocalizedMessage() + "\'", file, e );
         }
-        finally {
-            IOUtil.close(reader);
+        finally
+        {
+            IOUtil.close( reader );
         }
     }
 
-    private void collectInitialRepositoriesFromModel(LinkedHashSet collected,
-                                                     Model model,
-                                                     File pomFile,
-                                                     boolean validProfilesXmlLocation,
-                                                     ProfileActivationContext profileActivationContext)
-            throws ProjectBuildingException {
+    private void collectInitialRepositoriesFromModel( LinkedHashSet collected, Model model, File pomFile,
+                                                      boolean validProfilesXmlLocation,
+                                                      ProfileActivationContext profileActivationContext )
+        throws ProjectBuildingException
+    {
 
-        Set reposFromProfiles = profileAdvisor.getArtifactRepositoriesFromActiveProfiles(model, pomFile, validProfilesXmlLocation, profileActivationContext);
+        Set reposFromProfiles = profileAdvisor.getArtifactRepositoriesFromActiveProfiles( model, pomFile,
+                                                                                          validProfilesXmlLocation,
+                                                                                          profileActivationContext );
 
-        if ((reposFromProfiles != null) && !reposFromProfiles.isEmpty()) {
-            collected.addAll(reposFromProfiles);
+        if ( ( reposFromProfiles != null ) && !reposFromProfiles.isEmpty() )
+        {
+            collected.addAll( reposFromProfiles );
         }
 
         List modelRepos = model.getRepositories();
 
-        if ((modelRepos != null) && !modelRepos.isEmpty()) {
-            try {
-                collected.addAll(mavenTools.buildArtifactRepositories(modelRepos));
+        if ( ( modelRepos != null ) && !modelRepos.isEmpty() )
+        {
+            try
+            {
+                collected.addAll( mavenTools.buildArtifactRepositories( modelRepos ) );
             }
-            catch (InvalidRepositoryException e) {
-                throw new ProjectBuildingException(safeVersionlessKey(model.getGroupId(), model.getArtifactId()),
-                        "Failed to construct ArtifactRepository instances for repositories declared in: " +
-                                model.getId(), e);
+            catch ( InvalidRepositoryException e )
+            {
+                throw new ProjectBuildingException( safeVersionlessKey( model.getGroupId(), model.getArtifactId() ),
+                                                    "Failed to construct ArtifactRepository instances for repositories declared in: " +
+                                                        model.getId(), e );
             }
         }
     }
-        private void checkStatusAndUpdate( Artifact projectArtifact,
-                                       ArtifactStatus status,
-                                       File file,
-                                       List remoteArtifactRepositories,
-                                       ArtifactRepository localRepository )
+
+    private void checkStatusAndUpdate( Artifact projectArtifact, ArtifactStatus status, File file,
+                                       List remoteArtifactRepositories, ArtifactRepository localRepository )
         throws ArtifactNotFoundException
     {
         // TODO: configurable actions dependant on status
@@ -320,11 +373,14 @@ public class DefaultRepositoryHelper implements RepositoryHelper, Initializable,
     }
 
 
-    public void initialize() throws InitializationException {
+    public void initialize()
+        throws InitializationException
+    {
         modelReader = new MavenXpp3Reader();
     }
 
-    public void enableLogging(Logger logger) {
+    public void enableLogging( Logger logger )
+    {
         this.logger = logger;
     }
 }

@@ -42,7 +42,8 @@ public class DefaultMavenProjectHelper
 
     private ArtifactHandlerManager artifactHandlerManager;
 
-    public void attachArtifact( MavenProject project, String artifactType, String artifactClassifier, File artifactFile )
+    public void attachArtifact( MavenProject project, String artifactType, String artifactClassifier,
+                                File artifactFile )
     {
         String type = artifactType;
 
@@ -63,7 +64,7 @@ public class DefaultMavenProjectHelper
         artifact.setFile( artifactFile );
         artifact.setResolved( true );
 
-        attachArtifact(project, artifact);
+        attachArtifact( project, artifact );
     }
 
     public void attachArtifact( MavenProject project, String artifactType, File artifactFile )
@@ -75,33 +76,34 @@ public class DefaultMavenProjectHelper
         artifact.setFile( artifactFile );
         artifact.setResolved( true );
 
-        attachArtifact(project, artifact);
+        attachArtifact( project, artifact );
     }
 
     public void attachArtifact( MavenProject project, File artifactFile, String artifactClassifier )
     {
         Artifact projectArtifact = project.getArtifact();
 
-        Artifact artifact = new AttachedArtifact( projectArtifact, projectArtifact.getType(), artifactClassifier, projectArtifact.getArtifactHandler() );
+        Artifact artifact = new AttachedArtifact( projectArtifact, projectArtifact.getType(), artifactClassifier,
+                                                  projectArtifact.getArtifactHandler() );
 
         artifact.setFile( artifactFile );
         artifact.setResolved( true );
 
-        attachArtifact(project, artifact);
+        attachArtifact( project, artifact );
     }
 
-    public void attachArtifact(MavenProject project, Artifact artifact)
+    public void attachArtifact( MavenProject project, Artifact artifact )
     {
         try
         {
-        	project.addAttachedArtifact( artifact );
+            project.addAttachedArtifact( artifact );
         }
-        catch (DuplicateArtifactAttachmentException dae)
+        catch ( DuplicateArtifactAttachmentException dae )
         {
-        	getLogger().warn(dae.getMessage());
+            getLogger().warn( dae.getMessage() );
 
-        	// We can throw this because it's unchecked, and won't change the MavenProjectHelper API, which would break backward compat if it did.
-        	throw dae;
+            // We can throw this because it's unchecked, and won't change the MavenProjectHelper API, which would break backward compat if it did.
+            throw dae;
         }
     }
 
@@ -142,7 +144,9 @@ public class DefaultMavenProjectHelper
 
             if ( getId().equals( parent.getId() ) )
             {
-                throw new InvalidArtifactRTException( parent.getGroupId(), parent.getArtifactId(), parent.getVersion(), parent.getType(), "An attached artifact must have a different ID than its corresponding main artifact." );
+                throw new InvalidArtifactRTException( parent.getGroupId(), parent.getArtifactId(), parent.getVersion(),
+                                                      parent.getType(),
+                                                      "An attached artifact must have a different ID than its corresponding main artifact." );
             }
         }
 

@@ -19,27 +19,59 @@ package org.apache.maven.project;
  * under the License.
  */
 
-import org.apache.maven.model.*;
+import org.apache.maven.model.Activation;
+import org.apache.maven.model.ActivationFile;
+import org.apache.maven.model.ActivationProperty;
+import org.apache.maven.model.Build;
+import org.apache.maven.model.BuildBase;
+import org.apache.maven.model.Dependency;
+import org.apache.maven.model.DependencyManagement;
+import org.apache.maven.model.DeploymentRepository;
+import org.apache.maven.model.DistributionManagement;
+import org.apache.maven.model.Exclusion;
+import org.apache.maven.model.Extension;
+import org.apache.maven.model.Model;
+import org.apache.maven.model.Parent;
+import org.apache.maven.model.Plugin;
+import org.apache.maven.model.PluginContainer;
+import org.apache.maven.model.PluginExecution;
+import org.apache.maven.model.PluginManagement;
+import org.apache.maven.model.Profile;
+import org.apache.maven.model.Relocation;
+import org.apache.maven.model.ReportPlugin;
+import org.apache.maven.model.ReportSet;
+import org.apache.maven.model.Reporting;
+import org.apache.maven.model.Repository;
+import org.apache.maven.model.RepositoryBase;
+import org.apache.maven.model.RepositoryPolicy;
+import org.apache.maven.model.Resource;
+import org.apache.maven.model.Site;
 import org.apache.maven.project.inheritance.DefaultModelInheritanceAssembler;
 import org.apache.maven.project.inheritance.ModelInheritanceAssembler;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.TreeMap;
 
 public final class ModelUtils
 {
 
     /**
      * This should be the resulting ordering of plugins after merging:
-     *
+     * <p/>
      * Given:
-     *
-     *   parent: X -> A -> B -> D -> E
-     *   child: Y -> A -> C -> D -> F
-     *
+     * <p/>
+     * parent: X -> A -> B -> D -> E
+     * child: Y -> A -> C -> D -> F
+     * <p/>
      * Result:
-     *
-     *   X -> Y -> A -> B -> C -> D -> E -> F
+     * <p/>
+     * X -> Y -> A -> B -> C -> D -> E -> F
      */
     public static void mergePluginLists( PluginContainer childContainer, PluginContainer parentContainer,
                                          boolean handleAsInheritance )
@@ -114,9 +146,8 @@ public final class ModelUtils
 
                 // very important to use the parentPlugins List, rather than parentContainer.getPlugins()
                 // since this list is a local one, and may have been modified during processing.
-                List results = ModelUtils.orderAfterMerge( assembledPlugins, parentPlugins,
-                                                                        childContainer.getPlugins() );
-
+                List results =
+                    ModelUtils.orderAfterMerge( assembledPlugins, parentPlugins, childContainer.getPlugins() );
 
                 childContainer.setPlugins( results );
 
@@ -231,7 +262,8 @@ public final class ModelUtils
 
                 String inherited = parentExecution.getInherited();
 
-                boolean parentExecInherited = parentIsInherited && ( ( inherited == null ) || Boolean.valueOf( inherited ).booleanValue() );
+                boolean parentExecInherited =
+                    parentIsInherited && ( ( inherited == null ) || Boolean.valueOf( inherited ).booleanValue() );
 
                 if ( !handleAsInheritance || parentExecInherited )
                 {
@@ -251,21 +283,21 @@ public final class ModelUtils
                     }
 
                     assembledExecutions.put( assembled.getId(), assembled );
-                    mergedExecutions.add(assembled);
+                    mergedExecutions.add( assembled );
                 }
             }
 
             for ( Iterator it = child.getExecutions().iterator(); it.hasNext(); )
             {
-                PluginExecution childExecution = (PluginExecution)it.next();
+                PluginExecution childExecution = (PluginExecution) it.next();
 
                 if ( !assembledExecutions.containsKey( childExecution.getId() ) )
                 {
-                    mergedExecutions.add(childExecution);
+                    mergedExecutions.add( childExecution );
                 }
             }
 
-            child.setExecutions(mergedExecutions);
+            child.setExecutions( mergedExecutions );
 
             child.flushExecutionMap();
         }

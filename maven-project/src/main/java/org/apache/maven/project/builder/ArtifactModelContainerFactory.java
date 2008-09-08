@@ -24,7 +24,11 @@ import org.apache.maven.shared.model.ModelContainerAction;
 import org.apache.maven.shared.model.ModelContainerFactory;
 import org.apache.maven.shared.model.ModelProperty;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 
 public final class ArtifactModelContainerFactory
     implements ModelContainerFactory
@@ -32,8 +36,7 @@ public final class ArtifactModelContainerFactory
 
     private static final Collection<String> uris = Collections.unmodifiableList( Arrays.asList(
 
-        ProjectUri.DependencyManagement.Dependencies.Dependency.xUri,
-        ProjectUri.Dependencies.Dependency.xUri,
+        ProjectUri.DependencyManagement.Dependencies.Dependency.xUri, ProjectUri.Dependencies.Dependency.xUri,
 
         ProjectUri.Build.PluginManagement.Plugins.Plugin.xUri,
         ProjectUri.Build.PluginManagement.Plugins.Plugin.Dependencies.Dependency.xUri,
@@ -69,12 +72,12 @@ public final class ArtifactModelContainerFactory
 
         private List<ModelProperty> properties;
 
-        private static String findBaseUriFrom(List<ModelProperty> modelProperties)
+        private static String findBaseUriFrom( List<ModelProperty> modelProperties )
         {
             String baseUri = null;
-            for(ModelProperty mp : modelProperties)
+            for ( ModelProperty mp : modelProperties )
             {
-                if(baseUri == null || mp.getUri().length() < baseUri.length())
+                if ( baseUri == null || mp.getUri().length() < baseUri.length() )
                 {
                     baseUri = mp.getUri();
                 }
@@ -86,9 +89,7 @@ public final class ArtifactModelContainerFactory
         {
             this.properties = new ArrayList<ModelProperty>( properties );
             this.properties = Collections.unmodifiableList( this.properties );
-            String uri = findBaseUriFrom( this.properties  );
-
-            
+            String uri = findBaseUriFrom( this.properties );
 
             for ( ModelProperty mp : this.properties )
             {
@@ -104,7 +105,7 @@ public final class ArtifactModelContainerFactory
                 {
                     this.groupId = mp.getValue();
                 }
-                else if ( mp.getUri().equals( ProjectUri.Dependencies.Dependency.type ) && type == null)
+                else if ( mp.getUri().equals( ProjectUri.Dependencies.Dependency.type ) && type == null )
                 {
                     this.type = mp.getValue();
                 }
@@ -119,11 +120,12 @@ public final class ArtifactModelContainerFactory
             if ( artifactId == null )
             {
                 StringBuffer sb = new StringBuffer();
-                for(ModelProperty mp: properties) {
-                    sb.append(mp).append("\r\n");
+                for ( ModelProperty mp : properties )
+                {
+                    sb.append( mp ).append( "\r\n" );
                 }
-                throw new IllegalArgumentException(
-                    "Properties does not contain artifact id. Group ID = " + groupId + ", Version = " + version + ":" + sb);
+                throw new IllegalArgumentException( "Properties does not contain artifact id. Group ID = " + groupId +
+                    ", Version = " + version + ":" + sb );
             }
 
             if ( type == null )

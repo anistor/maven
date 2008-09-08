@@ -20,7 +20,16 @@ package org.apache.maven.project.validation;
  */
 
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.model.*;
+import org.apache.maven.model.Build;
+import org.apache.maven.model.Dependency;
+import org.apache.maven.model.DependencyManagement;
+import org.apache.maven.model.Model;
+import org.apache.maven.model.Parent;
+import org.apache.maven.model.Plugin;
+import org.apache.maven.model.ReportPlugin;
+import org.apache.maven.model.Reporting;
+import org.apache.maven.model.Repository;
+import org.apache.maven.model.Resource;
 import org.codehaus.plexus.util.StringUtils;
 
 import java.io.File;
@@ -54,14 +63,14 @@ public class DefaultModelValidator
         if ( !model.getModules().isEmpty() && !"pom".equals( model.getPackaging() ) )
         {
             result.addMessage( "Packaging '" + model.getPackaging() + "' is invalid. Aggregator projects " +
-                    "require 'pom' as packaging." );
+                "require 'pom' as packaging." );
         }
 
         Parent parent = model.getParent();
         if ( parent != null )
         {
             if ( parent.getGroupId().equals( model.getGroupId() ) &&
-                    parent.getArtifactId().equals( model.getArtifactId() ) )
+                parent.getArtifactId().equals( model.getArtifactId() ) )
             {
                 result.addMessage( "The parent element cannot have the same ID as the project." );
             }
@@ -79,7 +88,8 @@ public class DefaultModelValidator
 
             validateStringNotEmpty( "dependencies.dependency.type", result, d.getType(), dependencySourceHint( d ) );
 
-            validateStringNotEmpty( "dependencies.dependency.version", result, d.getVersion(), dependencySourceHint( d ) );
+            validateStringNotEmpty( "dependencies.dependency.version", result, d.getVersion(),
+                                    dependencySourceHint( d ) );
 
             if ( Artifact.SCOPE_SYSTEM.equals( d.getScope() ) )
             {
@@ -91,10 +101,10 @@ public class DefaultModelValidator
                 }
                 else
                 {
-                    if ( ! new File( systemPath ).isAbsolute() )
+                    if ( !new File( systemPath ).isAbsolute() )
                     {
                         result.addMessage( "For dependency " + d + ": system-scoped dependency must " +
-                                "specify an absolute path systemPath." );
+                            "specify an absolute path systemPath." );
                     }
                 }
             }
@@ -124,14 +134,15 @@ public class DefaultModelValidator
 
                     if ( StringUtils.isEmpty( systemPath ) )
                     {
-                        result.addMessage( "For managed dependency " + d + ": system-scoped dependency must specify systemPath." );
+                        result.addMessage(
+                            "For managed dependency " + d + ": system-scoped dependency must specify systemPath." );
                     }
                     else
                     {
-                        if ( ! new File( systemPath ).isAbsolute() )
+                        if ( !new File( systemPath ).isAbsolute() )
                         {
                             result.addMessage( "For managed dependency " + d + ": system-scoped dependency must " +
-                                    "specify an absolute path systemPath." );
+                                "specify an absolute path systemPath." );
                         }
                     }
                 }
@@ -249,7 +260,6 @@ public class DefaultModelValidator
         }
     }
 
-
     // ----------------------------------------------------------------------
     // Field validation
     // ----------------------------------------------------------------------
@@ -280,7 +290,8 @@ public class DefaultModelValidator
      * <li><code>string.length > 0</code>
      * </ul>
      */
-    private boolean validateStringNotEmpty( String fieldName, ModelValidationResult result, String string, String sourceHint )
+    private boolean validateStringNotEmpty( String fieldName, ModelValidationResult result, String string,
+                                            String sourceHint )
     {
         if ( !validateNotNull( fieldName, result, string, sourceHint ) )
         {
@@ -300,7 +311,6 @@ public class DefaultModelValidator
         {
             result.addMessage( "'" + fieldName + "' is missing." );
         }
-
 
         return false;
     }

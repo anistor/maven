@@ -6,8 +6,7 @@ public class MissingRepositoryElementException
     extends InvalidRepositoryException
 {
 
-    public MissingRepositoryElementException( String message,
-                                              String repositoryId )
+    public MissingRepositoryElementException( String message, String repositoryId )
     {
         super( message, repositoryId );
     }

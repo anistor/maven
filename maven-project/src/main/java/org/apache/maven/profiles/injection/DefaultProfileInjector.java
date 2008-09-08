@@ -19,21 +19,41 @@ package org.apache.maven.profiles.injection;
  * under the License.
  */
 
-import org.apache.maven.model.*;
+import org.apache.maven.model.Build;
+import org.apache.maven.model.BuildBase;
+import org.apache.maven.model.ConfigurationContainer;
+import org.apache.maven.model.Dependency;
+import org.apache.maven.model.DependencyManagement;
+import org.apache.maven.model.DistributionManagement;
+import org.apache.maven.model.Model;
+import org.apache.maven.model.Plugin;
+import org.apache.maven.model.PluginContainer;
+import org.apache.maven.model.PluginExecution;
+import org.apache.maven.model.PluginManagement;
+import org.apache.maven.model.Profile;
+import org.apache.maven.model.ReportPlugin;
+import org.apache.maven.model.ReportSet;
+import org.apache.maven.model.Reporting;
 import org.apache.maven.project.ModelUtils;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
 
 /**
  * Inject profile data into a Model, using the profile as the dominant data source, and
  * persisting results of the injection in the Model.
- *
+ * <p/>
  * This will look similar to the ModelUtils/DefaultModelInheritanceAssembler code, but
  * they are distinct. In model inheritance, the child provides data dominance AND persists
  * the results of the merge...sort of a 'merge-out' system.
- *
+ * <p/>
  * In this system, the profile is dominant, but the model receives the merge result...sort
  * of a 'merge-in' system. The two pieces of code look like they could be combined with a
  * set of flags to determine which direction to merge 'to', but there are enough differences
@@ -122,15 +142,15 @@ public class DefaultProfileInjector
 
     /**
      * This should be the resulting ordering of plugins after injection:
-     *
+     * <p/>
      * Given:
-     *
-     *   model: X -> A -> B -> D -> E
-     *   profile: Y -> A -> C -> D -> F
-     *
+     * <p/>
+     * model: X -> A -> B -> D -> E
+     * profile: Y -> A -> C -> D -> F
+     * <p/>
      * Result:
-     *
-     *   X -> Y -> A -> B -> C -> D -> E -> F
+     * <p/>
+     * X -> Y -> A -> B -> C -> D -> E -> F
      */
     protected void injectPlugins( PluginContainer profileContainer, PluginContainer modelContainer )
     {
@@ -194,7 +214,8 @@ public class DefaultProfileInjector
             modelPlugin.setVersion( profilePlugin.getVersion() );
         }
 
-        modelPlugin.setDependencies( injectDependencies( profilePlugin.getDependencies(), modelPlugin.getDependencies() ) );
+        modelPlugin.setDependencies(
+            injectDependencies( profilePlugin.getDependencies(), modelPlugin.getDependencies() ) );
 
         // merge the lists of goals that are not attached to an <execution/>
         injectConfigurationContainer( profilePlugin, modelPlugin );
@@ -277,13 +298,13 @@ public class DefaultProfileInjector
 
     /**
      * Merge two DOMs. Copy the dominant DOM so the original one is left unchanged.
-     * <p>
+     * <p/>
      * Use this method instead of a direct call to {@link Xpp3Dom#mergeXpp3Dom(Xpp3Dom, Xpp3Dom)}.
      * Profiles are dominant, thus they are merge targets, but they may be merged in several times
      * (e.g. if they are inherited). So with the second merge, you don't get the profile's original
      * DOM, but an already merged one.
      *
-     * @param dominant Dominant DOM
+     * @param dominant  Dominant DOM
      * @param recessive Recessive DOM
      * @return Merged DOM
      */
