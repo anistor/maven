@@ -10,7 +10,7 @@
   </parent>
 
   <artifactId>maven</artifactId>
-  <version>2.1.0-M1-RC15-SNAPSHOT</version>
+  <version>2.1.0-M1-RC15</version>
   <packaging>pom</packaging>
 
   <name>Maven</name>
@@ -98,9 +98,9 @@
   </mailingLists>
 
   <scm>
-    <connection>scm:svn:http://svn.apache.org/repos/asf/maven/components/branches/maven-2.0.x</connection>
-    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/maven/components/branches/maven-2.0.x</developerConnection>
-    <url>http://svn.apache.org/viewvc/maven/components/branches/maven-2.0.x</url>
+    <connection>scm:svn:http://svn.apache.org/repos/asf/maven/components/tags/maven-2.1.0-M1-RC15</connection>
+    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/maven/components/tags/maven-2.1.0-M1-RC15</developerConnection>
+    <url>http://svn.apache.org/viewvc/maven/components/tags/maven-2.1.0-M1-RC15</url>
   </scm>
 
   <build>
@@ -246,7 +246,7 @@
   </modules>
 
   <properties>
-    <mavenVersion>2.1.0-M1-RC14</mavenVersion>
+    <mavenVersion>2.1.0-M1-RC15</mavenVersion>
     <wagonVersion>1.0-beta-4</wagonVersion>
   </properties>
 
