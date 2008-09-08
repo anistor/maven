@@ -258,6 +258,7 @@
     <module>maven-reporting-api</module>
     <module>maven-embedder</module>
     <module>maven-workspace</module>
+    <module>maven-shared-model</module>
     <module>maven-toolchain</module>
   </modules>
   <properties>
