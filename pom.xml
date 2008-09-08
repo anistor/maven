@@ -246,7 +246,7 @@
   </modules>
 
   <properties>
-    <mavenVersion>2.1.0-M1-RC15</mavenVersion>
+    <mavenVersion>2.1.0-M1-RC16-SNAPSHOT</mavenVersion>
     <wagonVersion>1.0-beta-4</wagonVersion>
   </properties>
 
@@ -373,7 +373,7 @@
       <dependency>
         <groupId>org.codehaus.plexus</groupId>
         <artifactId>plexus-interpolation</artifactId>
-        <version>1.4</version>
+        <version>1.5</version>
       </dependency>
       <dependency>
         <groupId>org.codehaus.plexus</groupId>

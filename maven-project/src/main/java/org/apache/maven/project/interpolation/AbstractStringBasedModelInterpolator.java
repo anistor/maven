@@ -246,6 +246,8 @@ public abstract class AbstractStringBasedModelInterpolator
         // NOTE: Order counts here!
         valueSources.add( basedirValueSource );
         valueSources.add( new BuildTimestampValueSource( config.getBuildStartTime(), timestampFormat ) );
+        valueSources.add( modelValueSource1 );
+        valueSources.add( new PrefixedValueSourceWrapper( new MapBasedValueSource( modelProperties ), PROJECT_PREFIXES, true ) );
         valueSources.add( new MapBasedValueSource( config.getExecutionProperties() ) );
         valueSources.add( new AbstractValueSource( false )
         {
@@ -254,8 +256,6 @@ public abstract class AbstractStringBasedModelInterpolator
                 return config.getExecutionProperties().getProperty( "env." + expression );
             }
         } );
-        valueSources.add( modelValueSource1 );
-        valueSources.add( new PrefixedValueSourceWrapper( new MapBasedValueSource( modelProperties ), PROJECT_PREFIXES, true ) );
         valueSources.add( modelValueSource2 );
         valueSources.add( new MapBasedValueSource( config.getUserProperties() ) );
         
