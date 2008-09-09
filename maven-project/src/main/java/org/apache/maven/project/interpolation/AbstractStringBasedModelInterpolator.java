@@ -264,7 +264,7 @@ public abstract class AbstractStringBasedModelInterpolator
     
     protected List createPostProcessors( final Model model, final File projectDir, final ProjectBuilderConfiguration config )
     {
-        return Collections.singletonList( new PathTranslatingPostProcessor( TRANSLATED_PATH_EXPRESSIONS, projectDir, pathTranslator ) );
+        return Collections.singletonList( new PathTranslatingPostProcessor( PROJECT_PREFIXES, TRANSLATED_PATH_EXPRESSIONS, projectDir, pathTranslator ) );
     }
     
     protected String interpolateInternal( String src, List valueSources, List postProcessors, boolean debug )
