@@ -24,11 +24,12 @@ import java.io.IOException;
 import org.apache.maven.model.Activation;
 import org.apache.maven.model.ActivationFile;
 import org.apache.maven.model.Profile;
+import org.codehaus.plexus.interpolation.EnvarBasedValueSource;
+import org.codehaus.plexus.interpolation.InterpolationException;
+import org.codehaus.plexus.interpolation.MapBasedValueSource;
+import org.codehaus.plexus.interpolation.RegexBasedInterpolator;
 import org.codehaus.plexus.util.FileUtils;
 import org.codehaus.plexus.util.StringUtils;
-import org.codehaus.plexus.util.interpolation.EnvarBasedValueSource;
-import org.codehaus.plexus.util.interpolation.MapBasedValueSource;
-import org.codehaus.plexus.util.interpolation.RegexBasedInterpolator;
 
 public class FileProfileActivator
     extends DetectedProfileActivator
@@ -62,7 +63,16 @@ public class FileProfileActivator
 
             if ( StringUtils.isNotEmpty( fileString ) )
             {
-                fileString = StringUtils.replace( interpolator.interpolate( fileString, "" ), "\\", "/" );
+                try
+                {
+                    fileString = interpolator.interpolate( fileString, "" );
+                }
+                catch ( InterpolationException e )
+                {
+                    getLogger().debug( "Failed to interpolate path in file profile activator: " + fileString, e );
+                }
+                
+                fileString = StringUtils.replace( fileString, "\\", "/" );
                 return FileUtils.fileExists( fileString );
             }
 
@@ -71,7 +81,16 @@ public class FileProfileActivator
 
             if ( StringUtils.isNotEmpty( fileString ) )
             {
-                fileString = StringUtils.replace( interpolator.interpolate( fileString, "" ), "\\", "/" );
+                try
+                {
+                    fileString = interpolator.interpolate( fileString, "" );
+                }
+                catch ( InterpolationException e )
+                {
+                    getLogger().debug( "Failed to interpolate path in file profile activator: " + fileString, e );
+                }
+                
+                fileString = StringUtils.replace( fileString, "\\", "/" );
                 return !FileUtils.fileExists( fileString );
             }
         }

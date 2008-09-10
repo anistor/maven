@@ -291,7 +291,9 @@ public class DefaultArtifactCollector
                 // We leave in optional ones, but don't pick up its dependencies
                 if ( !child.isResolved() && ( !child.getArtifact().isOptional() || child.isChildOfRootNode() ) )
                 {
+                    List childRemoteRepositories = child.getRemoteRepositories();
                     Artifact artifact = child.getArtifact();
+                    
                     try
                     {
                         Object childKey;

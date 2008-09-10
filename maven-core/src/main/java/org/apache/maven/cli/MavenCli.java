@@ -86,6 +86,15 @@ public class MavenCli
 
     private static Embedder embedder;
 
+    public static void main( String[] args )
+    {
+        ClassWorld classWorld = new ClassWorld( "plexus.core", Thread.currentThread().getContextClassLoader() );
+
+        int result = main( args, classWorld );
+
+        System.exit( result );
+    }
+
     /**
      * @noinspection ConfusingMainMethod
      */

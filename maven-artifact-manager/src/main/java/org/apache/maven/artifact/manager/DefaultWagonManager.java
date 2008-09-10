@@ -474,21 +474,6 @@ public class DefaultWagonManager
                         downloaded = true;
                     }
                 }
-                catch ( NoSuchAlgorithmException e )
-                {
-                    throw new TransferFailedException( "Unable to add checksum methods: " + e.getMessage(), e );
-                }
-                finally
-                {
-                    if ( md5ChecksumObserver != null )
-                    {
-                        wagon.removeTransferListener( md5ChecksumObserver );
-                    }
-                    if ( sha1ChecksumObserver != null )
-                    {
-                        wagon.removeTransferListener( sha1ChecksumObserver );
-                    }
-                }
 
                 if ( downloaded )
                 {
