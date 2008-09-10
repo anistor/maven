@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -417,13 +418,17 @@ public class DefaultWagonManager
         // TODO: configure on repository
         ChecksumObserver md5ChecksumObserver;
         ChecksumObserver sha1ChecksumObserver;
+        
+        List checksumObservers = new ArrayList( 2 );
         try
         {
             md5ChecksumObserver = new ChecksumObserver( "MD5" );
             wagon.addTransferListener( md5ChecksumObserver );
+            checksumObservers.add( md5ChecksumObserver );
 
             sha1ChecksumObserver = new ChecksumObserver( "SHA-1" );
             wagon.addTransferListener( sha1ChecksumObserver );
+            checksumObservers.add( sha1ChecksumObserver );
         }
         catch ( NoSuchAlgorithmException e )
         {
@@ -474,6 +479,11 @@ public class DefaultWagonManager
                         downloaded = true;
                     }
                 }
+                else
+                {
+                    wagon.get( remotePath, temp );
+                    downloaded = true;
+                }
 
                 if ( downloaded )
                 {
@@ -486,7 +496,7 @@ public class DefaultWagonManager
                     // try to verify the SHA-1 checksum for this file.
                     try
                     {
-                        verifyChecksum( sha1ChecksumObserver, destination, temp, remotePath, ".sha1", wagon );
+                        verifyChecksum( sha1ChecksumObserver, destination, temp, remotePath, ".sha1", wagon, checksumObservers );
                     }
                     catch ( ChecksumFailedException e )
                     {
@@ -512,7 +522,7 @@ public class DefaultWagonManager
                         // file...we'll try again with the MD5 checksum.
                         try
                         {
-                            verifyChecksum( md5ChecksumObserver, destination, temp, remotePath, ".md5", wagon );
+                            verifyChecksum( md5ChecksumObserver, destination, temp, remotePath, ".md5", wagon, checksumObservers );
                         }
                         catch ( ChecksumFailedException e )
                         {
@@ -645,9 +655,19 @@ public class DefaultWagonManager
                                  File tempDestination,
                                  String remotePath,
                                  String checksumFileExtension,
-                                 Wagon wagon )
+                                 Wagon wagon, 
+                                 List checksumObservers )
         throws ResourceDoesNotExistException, TransferFailedException, AuthorizationException
     {
+        // FIXME: We need to be able to disable/retrieve/manipulate existing checksum observers on wagon instances.
+        // Otherwise, each time a checksum GET throws ResourceNotFoundException, all other checksum data in other
+        // observers for the main artifact have their actual checksums destroyed.
+        for ( Iterator it = checksumObservers.iterator(); it.hasNext(); )
+        {
+            ChecksumObserver observer = (ChecksumObserver) it.next();
+            wagon.removeTransferListener( observer );
+        }
+        
         try
         {
             // grab it first, because it's about to change...
@@ -696,6 +716,14 @@ public class DefaultWagonManager
         catch ( IOException e )
         {
             throw new ChecksumFailedException( "Invalid checksum file", e );
+        }
+        finally
+        {
+            for ( Iterator it = checksumObservers.iterator(); it.hasNext(); )
+            {
+                ChecksumObserver observer = (ChecksumObserver) it.next();
+                wagon.addTransferListener( observer );
+            }
         }
     }
 

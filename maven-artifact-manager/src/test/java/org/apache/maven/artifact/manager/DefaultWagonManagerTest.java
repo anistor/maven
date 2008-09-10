@@ -41,6 +41,7 @@ import org.apache.maven.wagon.events.TransferListener;
 import org.apache.maven.wagon.observers.Debug;
 import org.apache.maven.wagon.repository.Repository;
 import org.codehaus.plexus.PlexusTestCase;
+import org.codehaus.plexus.logging.Logger;
 import org.codehaus.plexus.util.FileUtils;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 import org.easymock.MockControl;
@@ -62,6 +63,8 @@ public class DefaultWagonManagerTest
         throws Exception
     {
         super.setUp();
+        
+        getContainer().getLoggerManager().setThreshold( Logger.LEVEL_DEBUG );
 
         wagonManager = (DefaultWagonManager) lookup( WagonManager.ROLE );
         
@@ -395,6 +398,7 @@ public class DefaultWagonManagerTest
         }
         catch ( ChecksumFailedException e )
         {
+            e.printStackTrace();
             fail( "Checksum verification did not pass: " + e.getMessage() );
         }
 
