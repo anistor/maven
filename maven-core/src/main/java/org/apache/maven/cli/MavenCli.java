@@ -251,7 +251,7 @@ public class MavenCli
                         {
                             String profileAction = profileTokens.nextToken().trim();
 
-                            if ( profileAction.startsWith( "-" ) )
+                            if ( profileAction.startsWith( "-" ) || profileAction.startsWith( "!" ) )
                             {
                                 profileManager.explicitlyDeactivate( profileAction.substring( 1 ) );
                             }
@@ -261,7 +261,6 @@ public class MavenCli
                             }
                             else
                             {
-                                // TODO: deprecate this eventually!
                                 profileManager.explicitlyActivate( profileAction );
                             }
                         }
