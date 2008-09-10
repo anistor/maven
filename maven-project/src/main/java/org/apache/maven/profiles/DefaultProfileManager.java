@@ -265,7 +265,10 @@ public class DefaultProfileManager
 
                 if ( activator.canDetermineActivation( profile ) )
                 {
-                    return activator.isActive( profile );
+                    if ( activator.isActive( profile ) )
+                    {
+                        return true;
+                    }
                 }
             }
 
