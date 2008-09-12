@@ -74,7 +74,6 @@ import org.apache.maven.settings.io.xpp3.SettingsXpp3Writer;
 import org.apache.maven.settings.validation.DefaultSettingsValidator;
 import org.apache.maven.settings.validation.SettingsValidationResult;
 import org.apache.maven.settings.validation.SettingsValidator;
-import org.apache.maven.workspace.MavenWorkspaceStore;
 import org.codehaus.plexus.ContainerConfiguration;
 import org.codehaus.plexus.DefaultContainerConfiguration;
 import org.codehaus.plexus.DefaultPlexusContainer;
