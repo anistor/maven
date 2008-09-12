@@ -345,6 +345,7 @@ public class DefaultWagonManagerTest
 
         StringWagon wagon = (StringWagon) wagonManager.getWagon( "string" );
         
+        artifact.getFile().delete();
         wagon.clearExpectedContent();
         wagon.addExpectedContent( "path", "lower-case-checksum" );
         wagon.addExpectedContent( "path.sha1", "2a25dc564a3b34f68237fc849066cbc7bb7a36a1" );
@@ -358,6 +359,7 @@ public class DefaultWagonManagerTest
             fail( "Checksum verification did not pass: " + e.getMessage() );
         }
 
+        artifact.getFile().delete();
         wagon.clearExpectedContent();
         wagon.addExpectedContent( "path", "upper-case-checksum" );
         wagon.addExpectedContent( "path.sha1", "B7BB97D7D0B9244398D9B47296907F73313663E6" );
@@ -371,6 +373,7 @@ public class DefaultWagonManagerTest
             fail( "Checksum verification did not pass: " + e.getMessage() );
         }
 
+        artifact.getFile().delete();
         wagon.clearExpectedContent();
         wagon.addExpectedContent( "path", "expected-failure" );
         wagon.addExpectedContent( "path.sha1", "b7bb97d7d0b9244398d9b47296907f73313663e6" );
@@ -385,6 +388,7 @@ public class DefaultWagonManagerTest
             // expected
         }
 
+        artifact.getFile().delete();
         wagon.clearExpectedContent();
         wagon.addExpectedContent( "path", "lower-case-checksum" );
         wagon.addExpectedContent( "path.md5", "50b2cf50a103a965efac62b983035cac" );
@@ -398,6 +402,7 @@ public class DefaultWagonManagerTest
             fail( "Checksum verification did not pass: " + e.getMessage() );
         }
 
+        artifact.getFile().delete();
         wagon.clearExpectedContent();
         wagon.addExpectedContent( "path", "upper-case-checksum" );
         wagon.addExpectedContent( "path.md5", "842F568FCCFEB7E534DC72133D42FFDC" );
@@ -411,6 +416,7 @@ public class DefaultWagonManagerTest
             fail( "Checksum verification did not pass: " + e.getMessage() );
         }
 
+        artifact.getFile().delete();
         wagon.clearExpectedContent();
         wagon.addExpectedContent( "path", "expected-failure" );
         wagon.addExpectedContent( "path.md5", "b7bb97d7d0b9244398d9b47296907f73313663e6" );
