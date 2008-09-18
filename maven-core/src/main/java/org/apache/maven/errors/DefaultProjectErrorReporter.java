@@ -11,9 +11,11 @@ import org.apache.maven.model.Model;
 import org.apache.maven.model.Parent;
 import org.apache.maven.model.Profile;
 import org.apache.maven.model.Repository;
+/*
 import org.apache.maven.profiles.activation.ProfileActivationContext;
 import org.apache.maven.profiles.activation.ProfileActivationException;
 import org.apache.maven.profiles.activation.ProfileActivator;
+*/
 import org.apache.maven.execution.DuplicateProjectException;
 import org.apache.maven.project.InvalidProjectModelException;
 import org.apache.maven.project.InvalidProjectVersionException;
@@ -75,9 +77,6 @@ public class DefaultProjectErrorReporter
         return new ArrayList( formattedMessages.keySet() );
     }
 
-    /**
-     * @see ProjectErrorReporter#hasInformationFor(java.lang.Throwable)
-     */
     public Throwable findReportedException( Throwable error )
     {
         if ( formattedMessages.containsKey( error ) )
@@ -139,9 +138,7 @@ public class DefaultProjectErrorReporter
         formattedMessages.put( error, formattedMessage );
     }
 
-    /**
-     * @see ProjectErrorReporter#reportActivatorErrorWhileApplyingProfiles(org.apache.maven.profiles.activation.ProfileActivator, org.apache.maven.model.Model, java.io.File, org.apache.maven.model.Profile, org.apache.maven.profiles.activation.ProfileActivationContext, org.apache.maven.profiles.activation.ProfileActivationException)
-     */
+  /*
     public void reportActivatorError( ProfileActivator activator,
                                       Model model,
                                       File pomFile,
@@ -176,11 +173,10 @@ public class DefaultProjectErrorReporter
                                                             cause ), writer );
 
         registerBuildError( cause, writer.toString(), cause.getCause() );
-    }
 
-    /**
-     * @see ProjectErrorReporter#reportActivatorLookupError(java.lang.String, java.io.File, org.apache.maven.model.Profile, org.codehaus.plexus.component.repository.exception.ComponentLookupException)
-     */
+    }
+      */
+/*
     public void reportActivatorLookupError( Model model,
                                             File pomFile,
                                             Profile profile,
@@ -211,7 +207,7 @@ public class DefaultProjectErrorReporter
 
         registerBuildError( cause, writer.toString(), cause.getCause() );
     }
-
+ */
     /**
      * @see ProjectErrorReporter#reportErrorLoadingExternalProfilesFromFile(org.apache.maven.model.Model, java.io.File, java.io.File, java.io.IOException)
      */
@@ -277,9 +273,7 @@ public class DefaultProjectErrorReporter
         registerBuildError( cause, writer.toString(), cause.getCause() );
     }
 
-    /**
-     * @see ProjectErrorReporter#reportInvalidRepositoryWhileGettingRepositoriesFromProfiles(org.apache.maven.model.Repository, java.lang.String, java.io.File, org.apache.maven.artifact.InvalidRepositoryException)
-     */
+
     public void reportInvalidRepositoryWhileGettingRepositoriesFromProfiles( Repository repo,
                                                                              Model model,
                                                                              File pomFile,

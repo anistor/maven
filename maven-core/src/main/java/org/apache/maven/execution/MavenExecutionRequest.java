@@ -24,8 +24,8 @@ import org.apache.maven.artifact.repository.ArtifactRepositoryPolicy;
 import org.apache.maven.errors.CoreErrorReporter;
 import org.apache.maven.monitor.event.EventMonitor;
 import org.apache.maven.monitor.event.MavenWorkspaceMonitor;
-import org.apache.maven.profiles.ProfileManager;
-import org.apache.maven.profiles.activation.ProfileActivationContext;
+//import org.apache.maven.profiles.ProfileManager;
+//import org.apache.maven.profiles.activation.ProfileActivationContext;
 import org.apache.maven.project.ProjectBuilderConfiguration;
 import org.apache.maven.realm.MavenRealmManager;
 import org.apache.maven.settings.Settings;
@@ -195,13 +195,13 @@ public interface MavenExecutionRequest
     // Setting
     Settings getSettings();
     MavenExecutionRequest setSettings( Settings settings );
-
+    /*
     ProfileManager getProfileManager();
     MavenExecutionRequest setProfileManager( ProfileManager profileManager );
 
     ProfileActivationContext getProfileActivationContext();
     MavenExecutionRequest setProfileActivationContext( ProfileActivationContext profileActivationContext );
-
+    */
     boolean isProjectPresent();
     MavenExecutionRequest setProjectPresent( boolean isProjectPresent );
 

@@ -8,9 +8,11 @@ import org.apache.maven.model.Model;
 import org.apache.maven.model.Parent;
 import org.apache.maven.model.Profile;
 import org.apache.maven.model.Repository;
+/*
 import org.apache.maven.profiles.activation.ProfileActivationContext;
 import org.apache.maven.profiles.activation.ProfileActivationException;
 import org.apache.maven.profiles.activation.ProfileActivator;
+*/
 import org.apache.maven.execution.DuplicateProjectException;
 import org.apache.maven.project.InvalidProjectModelException;
 import org.apache.maven.project.InvalidProjectVersionException;
@@ -57,12 +59,14 @@ public interface ProjectErrorReporter
      * &lt;------ ProjectBuildingException
      * </pre>
      */
+    /*
     void reportActivatorError( ProfileActivator activator,
                                Model model,
                                File pomFile,
                                Profile profile,
                                ProfileActivationContext context,
                                ProfileActivationException cause );
+                               */
 
     /**
      * <b>Call Stack:</b>
@@ -80,11 +84,13 @@ public interface ProjectErrorReporter
      * &lt;------ ProjectBuildingException
      * </pre>
      */
+    /*
     void reportActivatorLookupError( Model model,
                                      File pomFile,
                                      Profile profile,
                                      ProfileActivationContext context,
                                      ComponentLookupException cause );
+                                     */
 
     /**
      * <b>Call Stack:</b>
