@@ -93,9 +93,6 @@ under the License.
              <role>org.apache.maven.project.builder.ProjectBuilder</role>
         </requirement>
         <requirement>
-          <role>org.apache.maven.project.workspace.ProjectWorkspace</role>
-        </requirement>
-        <requirement>
           <role>org.apache.maven.artifact.metadata.ArtifactMetadataSource</role>
         </requirement>
         <requirement>
@@ -278,17 +275,5 @@ under the License.
         </requirement>
       </requirements>
     </component>
-    
-    <component>
-      <role>org.apache.maven.project.workspace.ProjectWorkspace</role>
-      <role-hint>default</role-hint>
-      <implementation>org.apache.maven.project.workspace.DefaultProjectWorkspace</implementation>
-      <requirements>
-        <requirement>
-          <role>org.apache.maven.workspace.MavenWorkspaceStore</role>
-        </requirement>
-      </requirements>
-    </component>
-
   </components>
 </component-set>

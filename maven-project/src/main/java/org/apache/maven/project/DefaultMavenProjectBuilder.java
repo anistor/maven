@@ -48,7 +48,6 @@ import org.apache.maven.project.builder.PomInterpolatorTag;
 import org.apache.maven.project.builder.PomClassicTransformer;
 import org.apache.maven.project.validation.ModelValidationResult;
 import org.apache.maven.project.validation.ModelValidator;
-import org.apache.maven.project.workspace.ProjectWorkspace;
 import org.codehaus.plexus.logging.LogEnabled;
 import org.codehaus.plexus.logging.Logger;
 import org.codehaus.plexus.personality.plexus.lifecycle.phase.Initializable;
@@ -92,8 +91,6 @@ public class DefaultMavenProjectBuilder
 
     private MavenTools mavenTools;
 
-    private ProjectWorkspace projectWorkspace;
-
     private ProjectBuilder projectBuilder;
 
     private RepositoryHelper repositoryHelper;
@@ -132,11 +129,7 @@ public class DefaultMavenProjectBuilder
     public MavenProject build( File projectDescriptor, ProjectBuilderConfiguration config )
         throws ProjectBuildingException
     {
-        MavenProject project = projectWorkspace.getProject( projectDescriptor );
-
-        if ( project == null )
-        {
-            project = readModelFromLocalPath( "unknown", projectDescriptor, new PomArtifactResolver(
+            MavenProject project = readModelFromLocalPath( "unknown", projectDescriptor, new PomArtifactResolver(
                 config.getLocalRepository(), repositoryHelper.buildArtifactRepositories(
                 getSuperProject( config, projectDescriptor, true ).getModel() ), artifactResolver ), config );
 
@@ -153,7 +146,6 @@ public class DefaultMavenProjectBuilder
 
             setBuildOutputDirectoryOnParent( project );
 
-        }
         return project;
     }
 
@@ -176,12 +168,7 @@ public class DefaultMavenProjectBuilder
         throws ProjectBuildingException
     {
         MavenProject project = null;
-        if ( !Artifact.LATEST_VERSION.equals( artifact.getVersion() ) &&
-            !Artifact.RELEASE_VERSION.equals( artifact.getVersion() ) )
-        {
-            project =
-                projectWorkspace.getProject( artifact.getGroupId(), artifact.getArtifactId(), artifact.getVersion() );
-        }
+        
         File f = artifact.getFile();
         if ( project == null )
         {
@@ -439,9 +426,6 @@ public class DefaultMavenProjectBuilder
         projectProfiles.addAll( profileAdvisor.applyActivatedExternalProfiles( project.getModel(), project.getFile(),
                                                                                externalProfileManager ) );
         project.setActiveProfiles( projectProfiles );
-
-        projectWorkspace.storeProjectByCoordinate( project );
-        projectWorkspace.storeProjectByFile( project );
 
         return project;
     }
