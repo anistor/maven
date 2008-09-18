@@ -25,9 +25,13 @@ import org.apache.maven.artifact.repository.layout.ArtifactRepositoryLayout;
 import org.apache.maven.model.Build;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.model.Resource;
+import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
 import org.codehaus.plexus.util.FileUtils;
+import org.codehaus.plexus.util.WriterFactory;
 
 import java.io.File;
+import java.io.ByteArrayOutputStream;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -39,8 +43,6 @@ public class DefaultMavenProjectBuilderTest
     private List filesToDelete = new ArrayList();
 
     private File localRepoDir;
-
-    private DefaultMavenProjectBuilder projectBuilder;
 
     @Override
     public void setUp()
@@ -105,36 +107,13 @@ public class DefaultMavenProjectBuilderTest
         File f1 = getTestFile( "src/test/resources/projects/duplicate-plugins-merged-pom.xml" );
 
         MavenProject project = getProject( f1 );
-
+        Writer out = WriterFactory.newXmlWriter( System.out );
+        MavenXpp3Writer writer = new MavenXpp3Writer();
+        writer.write( out, project.getModel() );
+        out.close();
         assertEquals( 2, ( (Plugin) project.getBuildPlugins().get( 0 ) ).getDependencies().size() );
     }
 
-    public void testBuildDirectoryExpressionInterpolatedWithTranslatedValue()
-        throws Exception
-    {
-        File pom = getTestFile( "src/test/resources/projects/build-path-expression-pom.xml" );
-
-        MavenProject project = getProject( pom );
-
-        projectBuilder.calculateConcreteState( project, new DefaultProjectBuilderConfiguration() );
-
-        Build build = project.getBuild();
-        assertNotNull( "Project should have a build section containing the test resource.", build );
-
-        String sourceDirectory = build.getSourceDirectory();
-        assertNotNull( "Project build should contain a valid source directory.", sourceDirectory );
-
-        List resources = build.getResources();
-        assertNotNull( "Project should contain a build resource.", resources );
-        assertEquals( "Project should contain exactly one build resource.", 1, resources.size() );
-
-        Resource res = (Resource) resources.get( 0 );
-        assertEquals( "Project resource should be the same directory as the source directory.",
-                      sourceDirectory,
-                      res.getDirectory() );
-
-        System.out.println( "Interpolated, translated resource directory is: " + res.getDirectory() );
-    }
 
     @Override
     protected ArtifactRepository getLocalRepository()

@@ -22,18 +22,14 @@ package org.apache.maven.profiles;
 import org.apache.maven.model.Activation;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.Profile;
+import org.apache.maven.model.Parent;
 import org.apache.maven.profiles.activation.DefaultProfileActivationContext;
 import org.apache.maven.profiles.activation.ProfileActivationContext;
 import org.apache.maven.profiles.activation.ProfileActivationException;
 import org.apache.maven.profiles.activation.ProfileActivator;
-import org.apache.maven.project.ModelUtils;
-import org.apache.maven.realm.DefaultMavenRealmManager;
-import org.apache.maven.realm.MavenRealmManager;
 import org.codehaus.plexus.PlexusContainer;
-import org.codehaus.plexus.classworlds.realm.ClassRealm;
 import org.codehaus.plexus.component.repository.exception.ComponentLifecycleException;
 import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
-import org.codehaus.plexus.logging.Logger;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -54,7 +50,6 @@ public class DefaultProfileManager
     /**
      * the properties passed to the profile manager are the props that
      * are passed to maven, possibly containing profile activator properties
-     *
      */
     public DefaultProfileManager( PlexusContainer container, ProfileActivationContext profileActivationContext )
     {
@@ -82,11 +77,8 @@ public class DefaultProfileManager
 
     private ProfileActivationContext createDefaultActivationContext()
     {
-        // create the necessary bits to get a skeletal profile manager running.
-        Logger logger = container.getLoggerManager().getLoggerForComponent( DefaultProfileManager.class.getName() );
-        MavenRealmManager manager = new DefaultMavenRealmManager( container, logger );
 
-        return new DefaultProfileActivationContext( manager, System.getProperties(), false );
+        return new DefaultProfileActivationContext(System.getProperties(), false );
     }
 
     public ProfileActivationContext getProfileActivationContext()
@@ -185,22 +177,12 @@ public class DefaultProfileManager
     public List getActiveProfiles()
         throws ProfileActivationException
     {
-         return getActiveProfiles( null );
+        return getActiveProfiles( null );
     }
 
     public List getActiveProfiles( Model model )
         throws ProfileActivationException
     {
-        MavenRealmManager realmManager = profileActivationContext.getRealmManager();
-
-        ClassRealm projectRealm = null;
-        ClassRealm oldLookupRealm = null;
-
-        if ( ( model != null ) && ( realmManager != null ) )
-        {
-            projectRealm = realmManager.getProjectRealm( ModelUtils.getGroupId( model ), model.getArtifactId(), ModelUtils.getVersion( model ) );
-            oldLookupRealm = container.setLookupRealm( projectRealm );
-        }
 
         try
         {
@@ -241,18 +223,18 @@ public class DefaultProfileManager
             {
                 List defaultIds = profileActivationContext.getActiveByDefaultProfileIds();
 
-				List deactivatedIds = profileActivationContext.getExplicitlyInactiveProfileIds();
-				
+                List deactivatedIds = profileActivationContext.getExplicitlyInactiveProfileIds();
+
                 for ( Iterator it = defaultIds.iterator(); it.hasNext(); )
                 {
                     String profileId = (String) it.next();
-					
-					// If this profile was excluded, don't add it back in
-					// Fixes MNG-3545
-					if (deactivatedIds.contains(profileId)) 
-					{
-						continue;
-					}
+
+                    // If this profile was excluded, don't add it back in
+                    // Fixes MNG-3545
+                    if ( deactivatedIds.contains( profileId ) )
+                    {
+                        continue;
+                    }
                     Profile profile = (Profile) profilesById.get( profileId );
 
                     if ( profile != null )
@@ -271,10 +253,6 @@ public class DefaultProfileManager
         }
         finally
         {
-            if ( projectRealm != null )
-            {
-                container.setLookupRealm( oldLookupRealm );
-            }
         }
     }
 
@@ -295,7 +273,8 @@ public class DefaultProfileManager
                 {
                     if ( activator.isActive( profile, context ) )
                     {
-                        container.getLogger().debug( "Profile: " + profile.getId() + " is active. (source: " + profile.getSource() + ")" );
+                        container.getLogger().debug(
+                            "Profile: " + profile.getId() + " is active. (source: " + profile.getSource() + ")" );
                         return true;
                     }
                 }
@@ -309,7 +288,7 @@ public class DefaultProfileManager
         }
         finally
         {
-            container.getContext().put("SystemProperties", null);
+            container.getContext().put( "SystemProperties", null );
             if ( activators != null )
             {
                 try
@@ -360,5 +339,31 @@ public class DefaultProfileManager
     public List getIdsActivatedByDefault()
     {
         return profileActivationContext.getActiveByDefaultProfileIds();
+    }
+
+    private static String getVersion( Model model )
+    {
+        Parent parent = model.getParent();
+
+        String version = model.getVersion();
+        if ( ( parent != null ) && ( version == null ) )
+        {
+            version = parent.getVersion();
+        }
+
+        return version;
+    }
+
+    public static String getGroupId( Model model )
+    {
+        Parent parent = model.getParent();
+
+        String groupId = model.getGroupId();
+        if ( ( parent != null ) && ( groupId == null ) )
+        {
+            groupId = parent.getGroupId();
+        }
+
+        return groupId;
     }
 }

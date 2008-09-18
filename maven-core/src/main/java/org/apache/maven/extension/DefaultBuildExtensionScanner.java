@@ -35,26 +35,22 @@ import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.MavenProjectBuilder;
 import org.apache.maven.project.ProjectBuilderConfiguration;
 import org.apache.maven.project.ProjectBuildingException;
-import org.apache.maven.project.build.model.ModelLineage;
-import org.apache.maven.project.build.model.ModelLineageBuilder;
-import org.apache.maven.project.build.model.ModelLineageIterator;
-import org.apache.maven.project.interpolation.ModelInterpolationException;
-import org.apache.maven.project.interpolation.ModelInterpolator;
+import org.apache.maven.project.builder.PomClassicTransformer;
+import org.apache.maven.project.builder.PomInterpolatorTag;
+import org.apache.maven.extension.lineage.ModelLineage;
+import org.apache.maven.extension.lineage.ModelLineageBuilder;
+import org.apache.maven.extension.lineage.ModelLineageIterator;
+import org.apache.maven.extension.ModelInterpolationException;
 import org.apache.maven.reactor.MissingModuleException;
+import org.apache.maven.shared.model.InterpolatorProperty;
 import org.codehaus.plexus.logging.LogEnabled;
 import org.codehaus.plexus.logging.Logger;
 import org.codehaus.plexus.logging.console.ConsoleLogger;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
+import java.util.*;
+import java.text.SimpleDateFormat;
 
 public class DefaultBuildExtensionScanner
     implements BuildExtensionScanner, LogEnabled
@@ -68,26 +64,11 @@ public class DefaultBuildExtensionScanner
 
     private ModelLineageBuilder modelLineageBuilder;
 
-    private ModelInterpolator modelInterpolator;
-
     // cached.
     private MavenProject basicSuperProject;
 
     public DefaultBuildExtensionScanner()
     {
-    }
-
-    protected DefaultBuildExtensionScanner( ExtensionManager extensionManager,
-                                            MavenProjectBuilder projectBuilder,
-                                            ModelLineageBuilder modelLineageBuilder,
-                                            ModelInterpolator modelInterpolator,
-                                            Logger logger )
-    {
-        this.extensionManager = extensionManager;
-        this.projectBuilder = projectBuilder;
-        this.modelLineageBuilder = modelLineageBuilder;
-        this.modelInterpolator = modelInterpolator;
-        this.logger = logger;
     }
 
     public void scanForBuildExtensions( List files,
@@ -176,7 +157,21 @@ public class DefaultBuildExtensionScanner
 
                 config.setExecutionProperties( execProps );
 
-                model = modelInterpolator.interpolate( model, modelPom.getParentFile(), config, getLogger().isDebugEnabled() );
+                //INTERPOLATION
+                List<InterpolatorProperty> interpolatorProperties = new ArrayList<InterpolatorProperty>();
+                    interpolatorProperties.addAll( InterpolatorProperty.toInterpolatorProperties( config.getExecutionProperties(), 
+                PomInterpolatorTag.SYSTEM_PROPERTIES.name()));
+                    interpolatorProperties.addAll( InterpolatorProperty.toInterpolatorProperties( config.getUserProperties(),
+                PomInterpolatorTag.USER_PROPERTIES.name()));
+                if(config.getBuildStartTime() != null)
+                {
+                    interpolatorProperties.add(new InterpolatorProperty("${build.timestamp}",
+                        new SimpleDateFormat("yyyyMMdd-hhmm").format( config.getBuildStartTime() ),
+                        PomInterpolatorTag.PROJECT_PROPERTIES.name()));
+                }
+
+
+                model = PomClassicTransformer.interpolateModel( model, interpolatorProperties, modelPom.getParentFile());
 
                 grabManagedPluginsWithExtensionsFlagTurnedOn( model, managedPluginsWithExtensionsFlag );
 
@@ -218,12 +213,13 @@ public class DefaultBuildExtensionScanner
                 }
             }
         }
-        catch ( ModelInterpolationException e )
+        catch ( IOException e )
         {
             throw new ExtensionScanningException( "Failed to interpolate model from: " + pom
-                + " prior to scanning for extensions.", pom, e );
+                + " prior to scanning for extensions.", pom, new ModelInterpolationException(e.getMessage()) );
         }
     }
+
 
     private void grabManagedPluginsWithExtensionsFlagTurnedOn( Model model,
                                                                Set managedPluginsWithExtensionsFlag )

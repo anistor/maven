@@ -20,6 +20,8 @@ package org.apache.maven.plugin;
  */
 
 import org.apache.maven.ArtifactFilterManager;
+import org.apache.maven.path.PathTranslator;
+import org.apache.maven.shared.model.InterpolatorProperty;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.factory.ArtifactFactory;
 import org.apache.maven.artifact.metadata.ArtifactMetadataRetrievalException;
@@ -41,6 +43,7 @@ import org.apache.maven.execution.RuntimeInformation;
 import org.apache.maven.lifecycle.statemgmt.StateManagementUtils;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.model.ReportPlugin;
+import org.apache.maven.model.Model;
 import org.apache.maven.monitor.event.EventDispatcher;
 import org.apache.maven.monitor.event.MavenEvents;
 import org.apache.maven.monitor.logging.DefaultLog;
@@ -56,11 +59,11 @@ import org.apache.maven.project.DuplicateArtifactAttachmentException;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.MavenProjectBuilder;
 import org.apache.maven.project.ProjectBuildingException;
+import org.apache.maven.project.ModelUtils;
+import org.apache.maven.project.builder.PomClassicTransformer;
+import org.apache.maven.project.builder.PomInterpolatorTag;
 import org.apache.maven.project.artifact.InvalidDependencyVersionException;
 import org.apache.maven.project.artifact.MavenMetadataSource;
-import org.apache.maven.project.interpolation.ModelInterpolationException;
-import org.apache.maven.project.interpolation.ModelInterpolator;
-import org.apache.maven.project.path.PathTranslator;
 import org.apache.maven.realm.MavenRealmManager;
 import org.apache.maven.realm.RealmManagementException;
 import org.apache.maven.reporting.MavenReport;
@@ -139,8 +142,6 @@ public class DefaultPluginManager
     protected RuntimeInformation runtimeInformation;
 
     protected MavenProjectBuilder mavenProjectBuilder;
-
-    protected ModelInterpolator modelInterpolator;
 
     protected PluginMappingManager pluginMappingManager;
 
@@ -514,17 +515,9 @@ public class DefaultPluginManager
             getLogger().warn( "Mojo: " + mojoDescriptor.getGoal() + " is deprecated.\n" + mojoDescriptor.getDeprecated() );
         }
 
-        if ( !project.isConcrete() )
-        {
-            try
-            {
-                mavenProjectBuilder.calculateConcreteState( project, session.getProjectBuilderConfiguration() );
-            }
-            catch ( ModelInterpolationException e )
-            {
-                throw new PluginManagerException( mojoDescriptor, project, "Failed to calculate concrete state for project.", e );
-            }
-        }
+        Model model = ModelUtils.cloneModel( project.getModel() );
+        pathTranslator.alignToBaseDirectory( model, project.getBasedir() );
+        project.setBuild( model.getBuild() );
 
         if ( mojoDescriptor.isDependencyResolutionRequired() != null )
         {
@@ -564,23 +557,15 @@ public class DefaultPluginManager
         if ( dom != null )
         {
             try
-            {
-                String interpolatedDom = modelInterpolator.interpolate( String.valueOf( dom ),
-                                                                        project.getModel(),
-                                                                        project.getBasedir(),
-                                                                        session.getProjectBuilderConfiguration(),
-                                                                        getLogger().isDebugEnabled() );
-
+            {  
+                List<InterpolatorProperty> interpolatorProperties = new ArrayList<InterpolatorProperty>();
+                interpolatorProperties.addAll( InterpolatorProperty.toInterpolatorProperties( session.getProjectBuilderConfiguration().getExecutionProperties(),
+                        PomInterpolatorTag.SYSTEM_PROPERTIES.name()));
+                interpolatorProperties.addAll( InterpolatorProperty.toInterpolatorProperties( session.getProjectBuilderConfiguration().getUserProperties(),
+                        PomInterpolatorTag.USER_PROPERTIES.name()));
+                String interpolatedDom  =
+                        PomClassicTransformer.interpolateXmlString( String.valueOf( dom ), interpolatorProperties );
                 dom = Xpp3DomBuilder.build( new StringReader( interpolatedDom ) );
-            }
-            catch ( ModelInterpolationException e )
-            {
-                throw new PluginManagerException(
-                                                  mojoDescriptor,
-                                                  project,
-                                                  "Failed to calculate concrete state for configuration of: "
-                                                                  + mojoDescriptor.getHumanReadableKey(),
-                                                  e );
             }
             catch ( XmlPullParserException e )
             {
@@ -732,15 +717,6 @@ public class DefaultPluginManager
             }
 
             Thread.currentThread().setContextClassLoader( oldClassLoader );
-        }
-
-        try
-        {
-            mavenProjectBuilder.restoreDynamicState( project, session.getProjectBuilderConfiguration() );
-        }
-        catch ( ModelInterpolationException e )
-        {
-            throw new PluginManagerException( mojoDescriptor, project, "Failed to restore dynamic state for project.", e );
         }
     }
 

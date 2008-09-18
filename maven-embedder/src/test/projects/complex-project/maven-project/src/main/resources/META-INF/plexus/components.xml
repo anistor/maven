@@ -73,9 +73,9 @@ under the License.
     
     
     <component>
-      <role>org.apache.maven.project.build.model.ModelLineageBuilder</role>
+      <role>org.apache.maven.extension.lineage.ModelLineageBuilder</role>
       <role-hint>default</role-hint>
-      <implementation>org.apache.maven.project.build.model.DefaultModelLineageBuilder</implementation>
+      <implementation>org.apache.maven.extension.lineage.DefaultModelLineageBuilder</implementation>
       <requirements>
         <requirement>
           <role>org.apache.maven.profiles.build.ProfileAdvisor</role>
@@ -97,6 +97,30 @@ under the License.
         </requirement>
       </requirements>
     </component>
+
+    <component>
+      <role>org.apache.maven.extension.lineage.ModelLineageBuilder</role>
+      <role-hint>default</role-hint>
+      <implementation>org.apache.maven.extension.lineage.DefaultModelLineageBuilder</implementation>
+      <requirements>
+        <requirement>
+          <role>org.apache.maven.project.workspace.ProjectWorkspace</role>
+        </requirement>
+        <requirement>
+          <role>org.apache.maven.profiles.build.ProfileAdvisor</role>
+          <role-hint>default</role-hint>
+        </requirement>
+        <requirement>
+          <role>org.apache.maven.artifact.factory.ArtifactFactory</role>
+        </requirement>
+        <requirement>
+          <role>org.apache.maven.MavenTools</role>
+        </requirement>
+        <requirement>
+          <role>org.apache.maven.artifact.resolver.ArtifactResolver</role>
+        </requirement>
+      </requirements>
+    </component>      
 <!--
      |
      |
@@ -111,24 +135,7 @@ under the License.
         </requirement>
       </requirements>
     </component>
-<!--
-     |
-     |
-     |
-     -->
-    <component>
-      <role>org.apache.maven.project.interpolation.ModelInterpolator</role>
-      <implementation>org.apache.maven.project.interpolation.RegexBasedModelInterpolator</implementation>
-    </component>
-<!--
-     |
-     |
-     |
-     -->
-    <component>
-      <role>org.apache.maven.project.injection.ModelDefaultsInjector</role>
-      <implementation>org.apache.maven.project.injection.DefaultModelDefaultsInjector</implementation>
-    </component>
+
 <!--
      |
      |
@@ -148,10 +155,6 @@ under the License.
       <implementation>org.apache.maven.project.DefaultMavenProjectBuilder</implementation>
       <requirements>
         <requirement>
-          <role>org.apache.maven.project.build.model.ModelLineageBuilder</role>
-          <role-hint>default</role-hint>
-        </requirement>
-        <requirement>
           <role>org.apache.maven.profiles.build.ProfileAdvisor</role>
           <role-hint>default</role-hint>
         </requirement>
@@ -159,19 +162,10 @@ under the License.
           <role>org.apache.maven.profiles.MavenProfilesBuilder</role>
         </requirement>
         <requirement>
-          <role>org.apache.maven.project.injection.ModelDefaultsInjector</role>
-        </requirement>
-        <requirement>
-          <role>org.apache.maven.project.interpolation.ModelInterpolator</role>
-        </requirement>
-        <requirement>
-          <role>org.apache.maven.project.inheritance.ModelInheritanceAssembler</role>
-        </requirement>
-        <requirement>
           <role>org.apache.maven.project.validation.ModelValidator</role>
         </requirement>
         <requirement>
-          <role>org.apache.maven.project.path.PathTranslator</role>
+          <role>org.apache.maven.path.PathTranslator</role>
         </requirement>
         <requirement>
           <role>org.apache.maven.artifact.factory.ArtifactFactory</role>
@@ -294,8 +288,8 @@ under the License.
 | I realize this is duplicated but allows the project builder to work by itself
 -->
     <component>
-      <role>org.apache.maven.project.path.PathTranslator</role>
-      <implementation>org.apache.maven.project.path.DefaultPathTranslator</implementation>
+      <role>org.apache.maven.path.PathTranslator</role>
+      <implementation>org.apache.maven.path.DefaultPathTranslator</implementation>
     </component>
     
     <component>
