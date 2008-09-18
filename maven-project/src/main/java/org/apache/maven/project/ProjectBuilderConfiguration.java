@@ -5,6 +5,7 @@ import org.apache.maven.profiles.ProfileManager;
 
 import java.util.Date;
 import java.util.Properties;
+import java.util.List;
 
 public interface ProjectBuilderConfiguration
 {
@@ -28,5 +29,9 @@ public interface ProjectBuilderConfiguration
     Date getBuildStartTime();
 
     ProjectBuilderConfiguration setBuildStartTime( Date buildStartTime );
+
+    List<String> getActiveProfileIds();
+
+    void setActiveProfileIds(List<String> activeProfileIds);
 
 }

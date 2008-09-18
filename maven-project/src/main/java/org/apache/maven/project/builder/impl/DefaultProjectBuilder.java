@@ -175,16 +175,9 @@ public final class DefaultProjectBuilder
 
 
         PomClassicTransformer transformer;
-      //  try
-      //  {
-        List<Profile> activeProfiles =  new ArrayList<Profile>();
-                //( projectBuilderConfiguration.getGlobalProfileManager() != null)
-                //? projectBuilderConfiguration.getGlobalProfileManager().getActiveProfiles(domainModel.getModel()) : new ArrayList<Profile>() ;
-            transformer = new PomClassicTransformer(activeProfiles);
-    //    } catch (ProfileActivationException e)
-    //    {
-    //        throw new IOException(e.getMessage());
-    //    }
+
+            transformer = new PomClassicTransformer(projectBuilderConfiguration.getActiveProfileIds());
+
         ModelTransformerContext ctx = new ModelTransformerContext(
             Arrays.asList( new ArtifactModelContainerFactory(), new IdModelContainerFactory() ) );
 

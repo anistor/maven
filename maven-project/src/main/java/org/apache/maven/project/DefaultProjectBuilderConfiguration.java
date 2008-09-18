@@ -24,6 +24,7 @@ import org.apache.maven.profiles.ProfileManager;
 
 import java.util.Date;
 import java.util.Properties;
+import java.util.List;
 
 public class DefaultProjectBuilderConfiguration
     implements ProjectBuilderConfiguration
@@ -38,6 +39,16 @@ public class DefaultProjectBuilderConfiguration
     private Properties executionProperties = System.getProperties();
 
     private Date buildStartTime;
+
+    public List<String> getActiveProfileIds() {
+        return activeProfileIds;
+    }
+
+    public void setActiveProfileIds(List<String> activeProfileIds) {
+        this.activeProfileIds = activeProfileIds;
+    }
+
+    private List<String> activeProfileIds;
 
     public DefaultProjectBuilderConfiguration()
     {
@@ -102,5 +113,6 @@ public class DefaultProjectBuilderConfiguration
         this.buildStartTime = buildStartTime;
         return this;
     }
+
 
 }

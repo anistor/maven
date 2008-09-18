@@ -28,12 +28,10 @@ import org.apache.maven.model.Parent;
 import org.apache.maven.model.Profile;
 import org.apache.maven.model.Repository;
 import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
-/*
 import org.apache.maven.profiles.DefaultProfileManager;
 import org.apache.maven.profiles.ProfileManager;
 import org.apache.maven.profiles.activation.DefaultProfileActivationContext;
 import org.apache.maven.profiles.activation.ProfileActivationContext;
-*/
 import org.apache.maven.project.DefaultProjectBuilderConfiguration;
 import org.apache.maven.project.ProjectBuildingException;
 import org.apache.maven.errors.ProjectErrorReporter;
@@ -395,7 +393,7 @@ public class DefaultModelLineageBuilderTest
         assertEquals( current.getId(), ( (Model) modelIterator.next() ).getId() );
         assertEquals( parent.getId(), ( (Model) modelIterator.next() ).getId() );
     }
-    /*
+
     public void testReadPOMWithParentInRepoBroughtInViaExternalProfile()
         throws Exception
     {
@@ -468,7 +466,7 @@ public class DefaultModelLineageBuilderTest
         assertEquals( current.getId(), ( (Model) modelIterator.next() ).getId() );
         assertEquals( parent.getId(), ( (Model) modelIterator.next() ).getId() );
     }
-    */
+
     private File createTempDir( String basename )
         throws IOException
     {

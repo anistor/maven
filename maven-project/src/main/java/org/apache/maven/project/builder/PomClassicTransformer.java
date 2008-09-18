@@ -104,20 +104,16 @@ public final class
 
     private static Map<String, List<ModelProperty>> cache = new HashMap<String, List<ModelProperty>>();
 
-    private List<Profile> profiles;
+    private List<String> profiles;
 
     //private static List<DomainModel> cache = new ArrayList<DomainModel>();
 
     /**
      * Default constructor
      */
-    public PomClassicTransformer( List<Profile> profiles )
+    public PomClassicTransformer( List<String> profiles )
     {
-        if(profiles == null)
-        {
-            throw new IllegalArgumentException("profiles: null");
-        }
-        this.profiles = profiles;
+        this.profiles = (profiles != null) ? profiles : new ArrayList<String>();
     }
 
     /**
@@ -492,11 +488,6 @@ public final class
             //Profiles
             if(domainModels.indexOf(domainModel) == 0)
             {
-                List<String> profileIds = new ArrayList<String>();
-                for(Profile profile : profiles)
-                {
-                    profileIds.add(profile.getId());
-                }
                 List<ModelProperty> activeProfileModelProperties = new ArrayList<ModelProperty>();
                 ModelDataSource source = new DefaultModelDataSource();
                 source.init( tmp, Arrays.asList( new ArtifactModelContainerFactory(), new IdModelContainerFactory() ) );
@@ -506,9 +497,9 @@ public final class
                 {
                     for(ModelProperty mp : container.getProperties())
                     {
-                        if(mp.getUri().equals(ProjectUri.Profiles.Profile.id) && mp.getValue() != null)
+                        if( mp.getValue() != null)
                         {
-                            for(String profileId : profileIds) {
+                            for(String profileId : profiles) {
                                 if(mp.getValue().equals(profileId))
                                 {
                                     activeProfileModelProperties.addAll(transformProfile(container.getProperties()));

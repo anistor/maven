@@ -5,11 +5,9 @@ import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.Profile;
 import org.apache.maven.model.RepositoryBase;
-/*
 import org.apache.maven.profiles.activation.ProfileActivationContext;
 import org.apache.maven.profiles.activation.ProfileActivationException;
 import org.apache.maven.profiles.activation.ProfileActivator;
-*/
 import org.apache.maven.execution.DuplicateProjectException;
 import org.apache.maven.project.InvalidProjectVersionException;
 import org.apache.maven.project.MavenProject;
@@ -34,7 +32,7 @@ public final class ProjectErrorTips
     private ProjectErrorTips()
     {
     }
-    /*
+
     public static List getTipsForActivatorError( ProfileActivator activator,
                                                  String projectId,
                                                  File pomFile,
@@ -48,7 +46,7 @@ public final class ProjectErrorTips
                        "XSD location for settings.xml: http://maven.apache.org/xsd/settings-1.0.0.xsd",
                        "XSD location for profiles.xml: http://maven.apache.org/xsd/profiles-1.0.0.xsd" } );
     }
-    */
+
     public static List getTipsForActivatorLookupError( String projectId,
                                                        File pomFile,
                                                        Profile profile,

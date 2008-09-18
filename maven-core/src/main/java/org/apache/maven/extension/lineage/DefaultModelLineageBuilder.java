@@ -29,11 +29,9 @@ import org.apache.maven.artifact.resolver.ArtifactResolver;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.Parent;
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
-/*
 import org.apache.maven.profiles.activation.DefaultProfileActivationContext;
 import org.apache.maven.profiles.activation.ProfileActivationContext;
 import org.apache.maven.profiles.build.ProfileAdvisor;
-*/
 import org.apache.maven.project.ProjectBuilderConfiguration;
 import org.apache.maven.project.ProjectBuildingException;
 import org.apache.maven.project.ModelAndFile;
@@ -69,7 +67,7 @@ public class DefaultModelLineageBuilder
 
     private MavenTools mavenTools;
 
-  //  private ProfileAdvisor profileAdvisor;
+    private ProfileAdvisor profileAdvisor;
 
     private ProjectWorkspace projectWorkspace;
 
@@ -86,6 +84,9 @@ public class DefaultModelLineageBuilder
         this.artifactFactory = artifactFactory;
     }
 
+    /**
+     * @see ModelLineageBuilder#buildModelLineage(java.io.File, org.apache.maven.artifact.repository.ArtifactRepository, java.util.List)
+     */
     public ModelLineage buildModelLineage( File pom,
                                            ProjectBuilderConfiguration config,
                                            List remoteRepositories,
@@ -182,6 +183,7 @@ public class DefaultModelLineageBuilder
      * Update the remote repository set used to resolve parent POMs, by adding those declared in
      * the given model to the HEAD of a new list, then appending the old remote repositories list.
      * The specified pomFile is used for error reporting.
+     * @param profileManager
      */
     private List updateRepositorySet( Model model,
                                       List oldArtifactRepositories,
@@ -234,7 +236,6 @@ public class DefaultModelLineageBuilder
 //        getLogger().debug( "Grabbing profile-injected repositories for: " + model.getId() );
 
         // FIXME: Find a way to pass in this context, so it's never null!
-        /*
         ProfileActivationContext context;
 
         if ( config.getGlobalProfileManager() != null )
@@ -245,7 +246,7 @@ public class DefaultModelLineageBuilder
         {
             context = new DefaultProfileActivationContext( config.getExecutionProperties(), false );
         }
-        /*
+
         LinkedHashSet profileRepos = profileAdvisor.getArtifactRepositoriesFromActiveProfiles( model,
                                                                                                pomFile,
                                                                                                config.getGlobalProfileManager() );
@@ -265,12 +266,14 @@ public class DefaultModelLineageBuilder
         {
             repositories.addAll( profileRepos );
         }
-        */
     }
 
     /**
      * Pull the parent specification out of the given model, construct an Artifact instance, and
      * resolve that artifact...then, return the resolved POM file for the parent.
+     * @param projectBuildCache
+     * @param allowStubs
+     * @param childIsReactorProject
      */
     private ModelAndFile resolveParentPom( ModelAndFile child,
                                            List remoteRepositories,

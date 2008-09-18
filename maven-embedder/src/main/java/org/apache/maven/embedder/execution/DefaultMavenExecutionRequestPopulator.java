@@ -37,12 +37,10 @@ import org.apache.maven.monitor.event.EventMonitor;
 import org.apache.maven.monitor.event.MavenWorkspaceMonitor;
 import org.apache.maven.monitor.event.PerCallWorkspaceMonitor;
 import org.apache.maven.plugin.Mojo;
-/*
 import org.apache.maven.profiles.DefaultProfileManager;
 import org.apache.maven.profiles.ProfileManager;
 import org.apache.maven.profiles.activation.DefaultProfileActivationContext;
 import org.apache.maven.profiles.activation.ProfileActivationContext;
-*/
 import org.apache.maven.realm.DefaultMavenRealmManager;
 import org.apache.maven.settings.MavenSettingsBuilder;
 import org.apache.maven.settings.Mirror;
@@ -134,7 +132,7 @@ public class DefaultMavenExecutionRequestPopulator
         profileManager( request, configuration );
 
         processSettings( request, configuration );
-
+        
         return request;
     }
 
@@ -247,7 +245,7 @@ public class DefaultMavenExecutionRequestPopulator
 
     private void processSettings( MavenExecutionRequest request,
                                   Configuration configuration )
-    {  /*
+    {
         ProfileManager profileManager = request.getProfileManager();
 
         Settings settings = request.getSettings();
@@ -311,7 +309,6 @@ public class DefaultMavenExecutionRequestPopulator
                 }
             }
         }
-        */
     }
 
     // ------------------------------------------------------------------------
@@ -741,7 +738,7 @@ public class DefaultMavenExecutionRequestPopulator
         //
         //
         // ------------------------------------------------------------------------
-           /*
+
         ProfileActivationContext activationContext = request.getProfileActivationContext();
         if ( activationContext == null )
         {
@@ -756,7 +753,6 @@ public class DefaultMavenExecutionRequestPopulator
 
         request.setProfileManager( globalProfileManager );
         request.setProfileActivationContext( activationContext );
-        */
     }
 
     // ----------------------------------------------------------------------------

@@ -23,8 +23,8 @@ import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.errors.CoreErrorReporter;
 import org.apache.maven.monitor.event.EventMonitor;
 import org.apache.maven.monitor.event.MavenWorkspaceMonitor;
-//import org.apache.maven.profiles.ProfileManager;
-//import org.apache.maven.profiles.activation.ProfileActivationContext;
+import org.apache.maven.profiles.ProfileManager;
+import org.apache.maven.profiles.activation.ProfileActivationContext;
 import org.apache.maven.project.DefaultProjectBuilderConfiguration;
 import org.apache.maven.project.ProjectBuilderConfiguration;
 import org.apache.maven.realm.MavenRealmManager;
@@ -116,7 +116,7 @@ public class DefaultMavenExecutionRequest
 
     private boolean updateSnapshots = false;
 
-    //private ProfileManager profileManager;
+    private ProfileManager profileManager;
 
     private List remoteRepositories;
 
@@ -164,7 +164,7 @@ public class DefaultMavenExecutionRequest
         loggingLevel = original.getLoggingLevel();
         globalChecksumPolicy = original.getGlobalChecksumPolicy();
         updateSnapshots = original.isUpdateSnapshots();
-        //profileManager = original.getProfileManager();
+        profileManager = original.getProfileManager();
         remoteRepositories = original.getRemoteRepositories();
         noSnapshotUpdates = original.isNoSnapshotUpdates();
         realmManager = original.getRealmManager();
@@ -588,7 +588,7 @@ public class DefaultMavenExecutionRequest
 
     private CoreErrorReporter errorReporter;
 
-    //private ProfileActivationContext profileActivationContext;
+    private ProfileActivationContext profileActivationContext;
 
     // calculated from request attributes.
     private ProjectBuilderConfiguration projectBuildingConfiguration;
@@ -604,7 +604,7 @@ public class DefaultMavenExecutionRequest
     {
         return settings;
     }
-    /*
+
     public ProfileManager getProfileManager()
     {
         return profileManager;
@@ -616,7 +616,7 @@ public class DefaultMavenExecutionRequest
 
         return this;
     }
-    */
+
     public boolean isProjectPresent()
     {
         return isProjectPresent;
@@ -700,7 +700,7 @@ public class DefaultMavenExecutionRequest
         errorReporter = reporter;
         return this;
     }
-    /*
+
     public ProfileActivationContext getProfileActivationContext()
     {
         return profileActivationContext;
@@ -711,7 +711,7 @@ public class DefaultMavenExecutionRequest
         this.profileActivationContext = profileActivationContext;
         return this;
     }
-    */
+
     public MavenWorkspaceMonitor getWorkspaceMonitor()
     {
         return workspaceMonitor;
@@ -741,9 +741,10 @@ public class DefaultMavenExecutionRequest
             projectBuildingConfiguration = new DefaultProjectBuilderConfiguration();
             projectBuildingConfiguration.setLocalRepository( getLocalRepository() );
             projectBuildingConfiguration.setExecutionProperties( getProperties() );
-           // projectBuildingConfiguration.setGlobalProfileManager( getProfileManager() );
+            projectBuildingConfiguration.setGlobalProfileManager( getProfileManager() );
             projectBuildingConfiguration.setUserProperties( getUserProperties() );
             projectBuildingConfiguration.setBuildStartTime( getStartTime() );
+            projectBuildingConfiguration.setActiveProfileIds(activeProfiles);
         }
 
         return projectBuildingConfiguration;

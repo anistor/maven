@@ -52,7 +52,7 @@ public interface ProjectBuilder
      * @throws IOException if there is a problem in the construction of the maven project
      */
     MavenProject buildFromLocalPath( InputStream pom, List<Model> inheritedModels, Collection<ImportModel> importModels,
-                                     Collection<InterpolatorProperty> interpolatorProperties,
+                                     Collection<InterpolatorProperty> interpolatorProperties, 
                                      PomArtifactResolver resolver, File baseDirectory,
                                      ProjectBuilderConfiguration projectBuilderConfiguration )
         throws IOException;

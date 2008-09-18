@@ -121,13 +121,14 @@ public class DefaultProfileAdvisor
 
                 throw new ProjectBuildingException( projectId, e.getMessage(), pomFile, e );
             }
-
+           /*
             for ( Iterator it = activeProfiles.iterator(); it.hasNext(); )
             {
                 Profile profile = (Profile) it.next();
 
                 profileInjector.inject( profile, model );
             }
+            */
         }
         else
         {

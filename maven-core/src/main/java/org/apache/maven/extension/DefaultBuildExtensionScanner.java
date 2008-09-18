@@ -28,11 +28,9 @@ import org.apache.maven.model.Model;
 import org.apache.maven.model.Parent;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.model.PluginManagement;
-/*
 import org.apache.maven.profiles.ProfileManager;
 import org.apache.maven.profiles.activation.DefaultProfileActivationContext;
 import org.apache.maven.profiles.activation.ProfileActivationContext;
-*/
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.MavenProjectBuilder;
 import org.apache.maven.project.ProjectBuilderConfiguration;
@@ -414,7 +412,7 @@ public class DefaultBuildExtensionScanner
     private ModelLineage buildModelLineage( File pom, ProjectBuilderConfiguration config,
                                             List originalRemoteRepositories )
         throws ExtensionScanningException
-    {   /*
+    {
         ProfileManager profileManager = config.getGlobalProfileManager();
 
         ProfileActivationContext profileActivationContext = profileManager == null
@@ -422,7 +420,7 @@ public class DefaultBuildExtensionScanner
                         : profileManager.getProfileActivationContext();
 
         boolean suppressActivatorFailure = profileActivationContext.isCustomActivatorFailureSuppressed();
-        */
+
         ModelLineage lineage;
         try
         {
@@ -432,7 +430,7 @@ public class DefaultBuildExtensionScanner
             // not for POMs from the repository...otherwise, we would need to be more careful with
             // the last parameter here and determine whether it's appropriate for the POM to have
             // an accompanying profiles.xml file.
-         //   profileActivationContext.setCustomActivatorFailureSuppressed( true );
+            profileActivationContext.setCustomActivatorFailureSuppressed( true );
 
             lineage = modelLineageBuilder.buildModelLineage( pom, config, originalRemoteRepositories, false, true );
         }
@@ -443,7 +441,7 @@ public class DefaultBuildExtensionScanner
         }
         finally
         {
-          //  profileActivationContext.setCustomActivatorFailureSuppressed( suppressActivatorFailure );
+            profileActivationContext.setCustomActivatorFailureSuppressed( suppressActivatorFailure );
         }
 
         return lineage;
