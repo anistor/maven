@@ -23,6 +23,7 @@ import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
 import org.apache.maven.model.Model;
 import org.apache.maven.shared.model.*;
 import org.apache.maven.shared.model.impl.DefaultModelDataSource;
+import org.apache.maven.profiles.Profile;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
 import java.io.IOException;
@@ -34,7 +35,8 @@ import java.util.*;
 /**
  * Provides methods for transforming model properties into a domain model for the pom classic format and vice versa.
  */
-public final class PomClassicTransformer
+public final class
+        PomClassicTransformer
     implements ModelTransformer
 {
 
@@ -102,15 +104,19 @@ public final class PomClassicTransformer
 
     private static Map<String, List<ModelProperty>> cache = new HashMap<String, List<ModelProperty>>();
 
-    private Collection<Profile> profiles;
+    private List<Profile> profiles;
 
     //private static List<DomainModel> cache = new ArrayList<DomainModel>();
 
     /**
      * Default constructor
      */
-    public PomClassicTransformer( Collection<Profile> profiles )
+    public PomClassicTransformer( List<Profile> profiles )
     {
+        if(profiles == null)
+        {
+            throw new IllegalArgumentException("profiles: null");
+        }
         this.profiles = profiles;
     }
 
@@ -126,6 +132,9 @@ public final class PomClassicTransformer
         }
 
         List<ModelProperty> props = new ArrayList<ModelProperty>( properties );
+
+
+        //Profiles
 
         //dependency management
         ModelDataSource source = new DefaultModelDataSource();
@@ -223,6 +232,11 @@ public final class PomClassicTransformer
             }
         }
         props.removeAll( removeProperties );
+
+
+
+
+
         String xml = null;
         try
         {
@@ -238,8 +252,7 @@ public final class PomClassicTransformer
     /**
      * @see ModelTransformer#transformToModelProperties(java.util.List
      */
-    public List<ModelProperty> transformToModelProperties(List<DomainModel> domainModels
-    )
+    public List<ModelProperty> transformToModelProperties(List<DomainModel> domainModels)
         throws IOException
     {
         if ( domainModels == null || domainModels.isEmpty() )
@@ -475,6 +488,39 @@ public final class PomClassicTransformer
             tmp.removeAll( clearedProperties );
             modelProperties.addAll( tmp );
             modelProperties.removeAll( clearedProperties );
+
+            //Profiles
+            if(domainModels.indexOf(domainModel) == 0)
+            {
+                List<String> profileIds = new ArrayList<String>();
+                for(Profile profile : profiles)
+                {
+                    profileIds.add(profile.getId());
+                }
+                List<ModelProperty> activeProfileModelProperties = new ArrayList<ModelProperty>();
+                ModelDataSource source = new DefaultModelDataSource();
+                source.init( tmp, Arrays.asList( new ArtifactModelContainerFactory(), new IdModelContainerFactory() ) );
+                List<ModelContainer> containers =
+                    source.queryFor( ProjectUri.Profiles.Profile.xUri );
+                for ( ModelContainer container : containers )
+                {
+                    for(ModelProperty mp : container.getProperties())
+                    {
+                        if(mp.getUri().equals(ProjectUri.Profiles.Profile.id) && mp.getValue() != null)
+                        {
+                            for(String profileId : profileIds) {
+                                if(mp.getValue().equals(profileId))
+                                {
+                                    activeProfileModelProperties.addAll(transformProfile(container.getProperties()));
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                modelProperties.addAll(activeProfileModelProperties);
+            }
         }
 
         return modelProperties;
@@ -645,7 +691,7 @@ public final class PomClassicTransformer
 
         //THIRD PASS - Use build directories as interpolator properties
         List<InterpolatorProperty> ips2 = new ArrayList<InterpolatorProperty>(interpolatorProperties);
-        ips2.addAll(standardInterpolatorProperties);        
+        ips2.addAll(standardInterpolatorProperties);
         ips2.addAll(ModelTransformerContext.createInterpolatorProperties(secondPassModelProperties, ProjectUri.baseUri, aliases,
                         PomInterpolatorTag.PROJECT_PROPERTIES.name(), false, false));
         ips2.addAll(interpolatorProperties);
@@ -731,6 +777,22 @@ public final class PomClassicTransformer
             }
         }
         return null;
+    }
+
+    private static List<ModelProperty> transformProfile( List<ModelProperty> modelProperties )
+    {
+        List<ModelProperty> transformedProperties = new ArrayList<ModelProperty>();
+        for ( ModelProperty mp : modelProperties )
+        {
+            if ( mp.getUri().startsWith( ProjectUri.Profiles.Profile.xUri )
+                    && !mp.getUri().startsWith( ProjectUri.Profiles.Profile.Activation.xUri)
+                    && !mp.getUri().startsWith( ProjectUri.Profiles.Profile.id ))
+            {
+                transformedProperties.add( new ModelProperty(
+                    mp.getUri().replace( ProjectUri.Profiles.Profile.xUri, ProjectUri.xUri ), mp.getResolvedValue() ) );
+            }
+        }
+        return transformedProperties;
     }
 
     private static List<ModelProperty> transformDependencyManagement( List<ModelProperty> modelProperties )

@@ -20,6 +20,8 @@ package org.apache.maven.project.builder.impl;
  */
 
 import org.apache.maven.MavenTools;
+import org.apache.maven.profiles.activation.ProfileActivationException;
+import org.apache.maven.profiles.Profile;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.InvalidRepositoryException;
 import org.apache.maven.artifact.factory.ArtifactFactory;
@@ -113,11 +115,6 @@ public final class DefaultProjectBuilder
             throw new IllegalArgumentException( "resolver: null" );
         }
 
-        if ( projectDirectory == null )
-        {
-            throw new IllegalArgumentException( "projectDirectory: null" );
-        }
-
         if ( inheritedModels == null )
         {
             inheritedModels = new ArrayList<Model>();
@@ -148,9 +145,13 @@ public final class DefaultProjectBuilder
         if ( domainModel.getModel().getParent() != null )
         {
             List<DomainModel> mavenParents;
-            if ( isParentLocal( domainModel.getModel().getParent(), projectDirectory ) )
+            if ( projectDirectory != null && isParentLocal( domainModel.getModel().getParent(), projectDirectory ) )
             {
                 mavenParents = getDomainModelParentsFromLocalPath( domainModel, resolver, projectDirectory );
+            }
+            else if(projectDirectory == null)//superpom
+            {
+                mavenParents = new ArrayList<DomainModel>();
             }
             else
             {
@@ -172,7 +173,18 @@ public final class DefaultProjectBuilder
             domainModels.add( new PomClassicDomainModel( model ) );
         }
 
-        PomClassicTransformer transformer = new PomClassicTransformer( null );
+
+        PomClassicTransformer transformer;
+      //  try
+      //  {
+        List<Profile> activeProfiles =  new ArrayList<Profile>();
+                //( projectBuilderConfiguration.getGlobalProfileManager() != null)
+                //? projectBuilderConfiguration.getGlobalProfileManager().getActiveProfiles(domainModel.getModel()) : new ArrayList<Profile>() ;
+            transformer = new PomClassicTransformer(activeProfiles);
+    //    } catch (ProfileActivationException e)
+    //    {
+    //        throw new IOException(e.getMessage());
+    //    }
         ModelTransformerContext ctx = new ModelTransformerContext(
             Arrays.asList( new ArtifactModelContainerFactory(), new IdModelContainerFactory() ) );
 
