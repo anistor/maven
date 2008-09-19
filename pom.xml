@@ -273,8 +273,9 @@ under the License.
   </modules>
 
   <properties>
-    <mavenVersion>2.1.0-M2-SNAPSHOT</mavenVersion>
+    <mavenVersion>2.2.0-M1-SNAPSHOT</mavenVersion>
     <wagonVersion>1.0-beta-4</wagonVersion>
+    <mercuryVersion>1.0.0-alpha-1-SNAPSHOT</mercuryVersion>
   </properties>
 
   <!--start-->
@@ -429,6 +430,13 @@ under the License.
         <artifactId>wagon-file</artifactId>
         <version>${wagonVersion}</version>
       </dependency>
+    
+    <dependency>
+      <groupId>org.apache.maven.wagon</groupId>
+      <artifactId>wagon-mercury</artifactId>
+      <version>${mercuryVersion}</version>
+    </dependency>
+<!-- 
       <dependency>
         <groupId>org.apache.maven.wagon</groupId>
         <artifactId>wagon-webdav-jackrabbit</artifactId>
@@ -439,6 +447,7 @@ under the License.
         <artifactId>wagon-http-lightweight</artifactId>
         <version>${wagonVersion}</version>
       </dependency>
+ -->
       <dependency>
         <groupId>easymock</groupId>
         <artifactId>easymock</artifactId>
