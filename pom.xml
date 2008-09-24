@@ -18,7 +18,7 @@
   <parent>
     <groupId>org.apache.maven</groupId>
     <artifactId>maven-parent</artifactId>
-    <version>10-SNAPSHOT</version>
+    <version>9</version>
     <relativePath>../pom/maven/pom.xml</relativePath>
   </parent>    
   <modelVersion>4.0.0</modelVersion>
@@ -276,6 +276,7 @@
     <wagonVersion>1.0-beta-4</wagonVersion>
     <mavenSharedModel>1.0-SNAPSHOT</mavenSharedModel>
     <woodstoxVersion>3.2.6</woodstoxVersion>
+    <mercuryVersion>1.0.0-alpha-1-SNAPSHOT</mercuryVersion>
   </properties>
 
   <!--start-->
@@ -388,8 +389,8 @@
       </dependency>
       <dependency>
         <groupId>org.apache.maven.wagon</groupId>
-        <artifactId>wagon-http-lightweight</artifactId>
-        <version>${wagonVersion}</version>
+        <artifactId>wagon-mercury</artifactId>
+        <version>${mercuryVersion}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.maven.wagon</groupId>
