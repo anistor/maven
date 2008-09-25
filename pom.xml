@@ -122,6 +122,15 @@ under the License.
 
   <build>
     <plugins>
+
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <source>1.5</source>
+          <target>1.5</target>
+        </configuration>
+      </plugin>
+    
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>clirr-maven-plugin</artifactId>
@@ -434,6 +443,18 @@ under the License.
     <dependency>
       <groupId>org.apache.maven.wagon</groupId>
       <artifactId>wagon-mercury</artifactId>
+      <version>${mercuryVersion}</version>
+    </dependency>
+    
+    <dependency>
+      <groupId>org.apache.maven.mercury</groupId>
+      <artifactId>mercury-transport-http</artifactId>
+      <version>${mercuryVersion}</version>
+    </dependency>
+    
+    <dependency>
+      <groupId>org.apache.maven.mercury</groupId>
+      <artifactId>mercury-util</artifactId>
       <version>${mercuryVersion}</version>
     </dependency>
 <!-- 

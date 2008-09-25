@@ -57,7 +57,12 @@ TODO:
     <property name="maven.home.basename.expected" value="apache-maven-${pom.project.version}"/>
     <property name="maven.assembly" location="apache-maven/target/${maven.home.basename.expected}-bin.zip"/>
     <property name="maven.repo.local" value="${user.home}/.m2/repository"/>
-    <property name="surefire.useFile" value="true"/>    
+    <property name="surefire.useFile" value="true"/>
+    <artifact:remoteRepository id="remote.repo.ms"
+            url="http://repository.sonatype.org/content/repositories/maven.snapshots" />
+    <artifact:remoteRepository id="remote.repo.p"
+            url="http://repository.sonatype.org/content/groups/public" />
+    
     <echo>maven.home = ${maven.home}</echo>
     <echo>maven.assembly = ${maven.assembly}</echo>
   </target>
@@ -75,13 +80,15 @@ TODO:
     <artifact:pom file="${basedir}/dependencies.xml" id="pom"/>                                                                                                     
     <artifact:dependencies pathId="pom.pathid" filesetId="pom.fileset" verbose="${verbose}" useScope="compile">
        <localRepository path="${maven.repo.local}"/>
+      <remoteRepository refid="remote.repo.ms"/>
+      <remoteRepository refid="remote.repo.p"/>
        <pom refid="pom"/>                                                                                                                                       
     </artifact:dependencies>      
     <delete file="${basedir}/dependencies.xml"/>
     
     <!-- Pull the dependencies for Modello -->
     <artifact:dependencies pathId="modello.pathid" filesetId="modello.fileset" verbose="${verbose}">
-       <localRepository path="${maven.repo.local}"/>
+      <localRepository path="${maven.repo.local}"/>
        <dependency groupId="org.codehaus.modello" artifactId="modello-maven-plugin" version="1.0-alpha-20"/>
        <dependency groupId="org.codehaus.modello" artifactId="modello-core" version="1.0-alpha-20"/>
     </artifact:dependencies>          
@@ -162,6 +169,7 @@ TODO:
       <jvmarg value="-Xmx256M"/>
       <classpath refid="maven.classpath"/>
       <arg value="-B"/>
+      <arg value="-X"/>
       <arg value="clean"/>
       <arg value="install"/>
       <arg value="-Dmaven.repo.local=${maven.repo.local}"/>
