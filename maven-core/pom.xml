@@ -52,9 +52,10 @@
     <dependency>
       <groupId>org.apache.maven.wagon</groupId>
       <artifactId>wagon-mercury</artifactId>
-      <scope>runtime</scope>
     </dependency>
-    
+<!--    
+      <scope>runtime</scope>
+
     <dependency>
       <groupId>org.apache.maven.mercury</groupId>
       <artifactId>mercury-transport-http</artifactId>
@@ -66,7 +67,7 @@
       <artifactId>mercury-util</artifactId>
       <scope>runtime</scope>
     </dependency>
-<!-- 
+ 
     <dependency>
       <groupId>org.apache.maven.wagon</groupId>
       <artifactId>wagon-webdav-jackrabbit</artifactId>

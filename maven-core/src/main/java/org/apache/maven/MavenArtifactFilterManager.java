@@ -37,6 +37,7 @@ public class MavenArtifactFilterManager
         Set artifacts = createBaseArtifactSet();
 
         artifacts.add( "wagon-file" );
+        artifacts.add( "wagon-mercury" );
         artifacts.add( "wagon-http-lightweight" );
         artifacts.add( "wagon-webdav" );
         artifacts.add( "wagon-ssh" );
