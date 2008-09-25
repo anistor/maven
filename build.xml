@@ -167,7 +167,6 @@ TODO:
   <target name="maven-compile" depends="compile-boot" description="compiles Maven using the bootstrap Maven, skipping automated tests">
     <java fork="true" classname="org.apache.maven.cli.MavenCli" failonerror="true">
       <jvmarg value="-Xmx256M"/>
-      <jvmarg value="-Dmaven.mercury.wagon.debug.transfer=true"/>
       <classpath refid="maven.classpath"/>
       <arg value="-B"/>
       <arg value="-X"/>
@@ -175,6 +174,7 @@ TODO:
       <arg value="install"/>
       <arg value="-Dmaven.repo.local=${maven.repo.local}"/>
       <arg value="-Dsurefire.useFile=${surefire.useFile}"/>
+      <arg value="-Dmaven.mercury.wagon.debug.transfer=true"/>
     </java>
   </target>
 
