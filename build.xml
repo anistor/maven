@@ -80,8 +80,8 @@ TODO:
     <artifact:pom file="${basedir}/dependencies.xml" id="pom"/>                                                                                                     
     <artifact:dependencies pathId="pom.pathid" filesetId="pom.fileset" verbose="${verbose}" useScope="compile">
        <localRepository path="${maven.repo.local}"/>
-      <remoteRepository refid="remote.repo.ms"/>
-      <remoteRepository refid="remote.repo.p"/>
+       <remoteRepository refid="remote.repo.ms"/>
+       <remoteRepository refid="remote.repo.p"/>
        <pom refid="pom"/>                                                                                                                                       
     </artifact:dependencies>      
     <delete file="${basedir}/dependencies.xml"/>

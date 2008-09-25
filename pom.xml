@@ -445,7 +445,7 @@ under the License.
       <artifactId>wagon-mercury</artifactId>
       <version>${mercuryVersion}</version>
     </dependency>
-    
+<!--    
     <dependency>
       <groupId>org.apache.maven.mercury</groupId>
       <artifactId>mercury-transport-http</artifactId>
@@ -457,7 +457,7 @@ under the License.
       <artifactId>mercury-util</artifactId>
       <version>${mercuryVersion}</version>
     </dependency>
-<!-- 
+ 
       <dependency>
         <groupId>org.apache.maven.wagon</groupId>
         <artifactId>wagon-webdav-jackrabbit</artifactId>
