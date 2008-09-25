@@ -68,18 +68,28 @@
                   <exclude>xml-apis:xml-apis</exclude>
                   <exclude>junit:junit</exclude>
                   <exclude>jmock:jmock</exclude>
+                   <!--
+                    |
+                    | Mercury
+                    | 
+                     -->                  
+                  <exclude>org.bouncycastle:bcprov-jdk15</exclude>
+                  <exclude>org.bouncycastle:bcpg-jdk15</exclude>
+                  <exclude>bouncycastle:bcprov-jdk15</exclude>
+                  <exclude>bouncycastle:bcpg-jdk15</exclude>
                 </excludes>
               </artifactSet>
               <relocations>
-                <!-- for jackrabbit webdav wagon -->
+                <!-- for jackrabbit webdav wagon 
                 <relocation>
                   <pattern>org.apache.jackrabbit</pattern>
                 </relocation>
                 <relocation>
                   <pattern>org.slf4j</pattern>
                 </relocation>
+-->
                 
-                <!-- For http/webdav wagons -->
+                <!-- For http/webdav wagons 
                 <relocation>
                   <pattern>org.apache.commons.httpclient</pattern>
                 </relocation>
@@ -89,7 +99,7 @@
                 <relocation>
                   <pattern>org.apache.commons.codec</pattern>
                 </relocation>
-
+-->
                 <!-- For jsch wagon -->
                 <relocation>
                   <pattern>com.jcraft</pattern>
