@@ -82,9 +82,6 @@ under the License.
             <requirement>
               <role>org.apache.maven.MavenTools</role>
             </requirement>
-            <requirement>
-                 <role>org.apache.maven.project.RepositoryHelper</role>
-            </requirement>
         </requirements>
     </component>
     <component>
@@ -203,16 +200,6 @@ under the License.
       <role-hint>custom</role-hint>
       <implementation>org.apache.maven.profiles.activation.CustomActivator</implementation>
     </component>
-<!--
-     |
-     |
-     |
-     -->
-    <component>
-      <role>org.apache.maven.project.inheritance.ModelInheritanceAssembler</role>
-      <implementation>org.apache.maven.project.inheritance.DefaultModelInheritanceAssembler</implementation>
-    </component>
-
 <!--
      |
      |
