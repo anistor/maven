@@ -258,6 +258,7 @@
     <module>maven-embedder</module>
     <module>maven-shared-model</module>
     <module>maven-toolchain</module>
+    <module>maven-compat</module>
   </modules>
   <properties>
     <artifactVersion>3.0-alpha-2-SNAPSHOT</artifactVersion>
