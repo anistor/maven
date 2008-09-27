@@ -121,9 +121,6 @@ under the License.
              <role>org.apache.maven.project.builder.ProjectBuilder</role>
         </requirement>
         <requirement>
-          <role>org.apache.maven.project.workspace.ProjectWorkspace</role>
-        </requirement>
-        <requirement>
           <role>org.apache.maven.profiles.build.ProfileAdvisor</role>
           <role-hint>default</role-hint>
         </requirement>
