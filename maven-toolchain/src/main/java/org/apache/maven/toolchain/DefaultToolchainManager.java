@@ -156,7 +156,7 @@ public class DefaultToolchainManager extends AbstractLogEnabled
         try 
         {
             Method meth = session.getClass().getMethod("getCurrentProject", new Class[0]);
-            return (MavenProject) meth.invoke(session, null);
+            return (MavenProject) meth.invoke(session, (Object [])null);
         } catch (Exception ex) 
         {
             //just ignore, we're running in pre- 3.0.9
