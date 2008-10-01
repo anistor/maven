@@ -107,7 +107,7 @@ under the License.
     <dependency>
       <groupId>org.apache.maven</groupId>
       <artifactId>wagon-mercury</artifactId>
-      <version>1.0.0-alpha-1-20081001.164407-3</version>
+      <version>1.0.0-alpha-1-SNAPSHOT</version>
       <type>jar</type>
       <scope>compile</scope>
     </dependency>
