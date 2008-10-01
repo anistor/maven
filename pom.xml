@@ -285,7 +285,11 @@ under the License.
   <properties>
     <mavenVersion>2.2.0-M1-SNAPSHOT</mavenVersion>
     <wagonVersion>1.0-beta-4</wagonVersion>
+    
+    <mercuryVersion>1.0.0-alpha-1-20081001.164407-3</mercuryVersion>
+<!-- 
     <mercuryVersion>1.0.0-alpha-1-SNAPSHOT</mercuryVersion>
+ -->
   </properties>
 
   <!--start-->
