@@ -47,19 +47,8 @@
     </dependency>
     <dependency>
       <groupId>org.apache.maven.wagon</groupId>
-      <artifactId>wagon-http-lightweight</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.maven.wagon</groupId>
-      <artifactId>wagon-ssh</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.maven.wagon</groupId>
-      <artifactId>wagon-ssh-external</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.maven.wagon</groupId>
       <artifactId>wagon-file</artifactId>
+      <scope>test</scope>
     </dependency>
     <!-- Needed for compat and cache-control aspects. -->
     <dependency>
