@@ -55,7 +55,7 @@ TODO:
     <dirname file="${maven.home}" property="maven.home.dirname"/>
     <!-- Initialize properties -->
     <property name="maven.home.basename.expected" value="apache-maven-${pom.project.version}"/>
-    <property name="maven.assembly" location="apache-maven/target/${maven.home.basename.expected}-bin.zip"/>
+    <property name="maven.assembly" location="maven-distribution/target/${maven.home.basename.expected}-bin.zip"/>
     <property name="maven.repo.local" value="${user.home}/.m2/repository"/>
     <property name="surefire.useFile" value="true"/>
     <artifact:remoteRepository id="remote.repo.ms"
@@ -169,12 +169,15 @@ TODO:
       <jvmarg value="-Xmx256M"/>
       <classpath refid="maven.classpath"/>
       <arg value="-B"/>
+<!--
+      <arg value="-U"/>
       <arg value="-X"/>
+      <arg value="-Dmaven.mercury.wagon.debug.transfer=true"/>
+-->
       <arg value="clean"/>
       <arg value="install"/>
       <arg value="-Dmaven.repo.local=${maven.repo.local}"/>
       <arg value="-Dsurefire.useFile=${surefire.useFile}"/>
-      <arg value="-Dmaven.mercury.wagon.debug.transfer=true"/>
     </java>
   </target>
 
