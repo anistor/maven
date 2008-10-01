@@ -59,7 +59,7 @@ TODO:
     <property name="maven.repo.local" value="${user.home}/.m2/repository"/>
     <property name="surefire.useFile" value="true"/>
     <artifact:remoteRepository id="remote.repo.ms"
-            url="http://repository.sonatype.org/content/repositories/maven.snapshots" />
+            url="http://people.apache.org/repo/m2-snapshot-repository" />
     <artifact:remoteRepository id="remote.repo.p"
             url="http://repository.sonatype.org/content/groups/public" />
     
