@@ -18,7 +18,6 @@ package org.apache.maven.embedder;
  * under the License.
  */
 
-import org.apache.maven.errors.CoreErrorReporter;
 import org.apache.maven.monitor.event.EventMonitor;
 import org.apache.maven.realm.MavenRealmManager;
 import org.codehaus.plexus.PlexusContainer;
@@ -137,10 +136,6 @@ public interface Configuration
     // ----------------------------------------------------------------------------
     // Error Reporter
     // ----------------------------------------------------------------------------
-
-    Configuration setErrorReporter( CoreErrorReporter errorReporter );
-
-    CoreErrorReporter getErrorReporter();
 
     // ----------------------------------------------------------------------------
     // Event Monitors

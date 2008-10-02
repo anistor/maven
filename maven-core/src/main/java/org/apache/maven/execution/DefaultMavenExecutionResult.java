@@ -20,7 +20,6 @@ package org.apache.maven.execution;
  */
 
 import org.apache.maven.artifact.resolver.ArtifactResolutionResult;
-import org.apache.maven.lifecycle.plan.BuildPlan;
 import org.apache.maven.project.MavenProject;
 
 import java.util.ArrayList;
@@ -112,20 +111,5 @@ public class DefaultMavenExecutionResult
         this.reactorManager = reactorManager;
 
         return this;
-    }
-
-    public BuildPlan getBuildPlan( String projectId )
-    {
-        return (BuildPlan) buildPlans.get( projectId );
-    }
-
-    public BuildPlan getBuildPlan( MavenProject project )
-    {
-        return (BuildPlan) buildPlans.get( project.getId() );
-    }
-
-    public void setBuildPlans( Map buildPlans )
-    {
-        this.buildPlans = buildPlans;
     }
 }

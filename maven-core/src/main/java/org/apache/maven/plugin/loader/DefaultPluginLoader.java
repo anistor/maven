@@ -4,7 +4,6 @@ import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.artifact.resolver.ArtifactNotFoundException;
 import org.apache.maven.artifact.resolver.ArtifactResolutionException;
 import org.apache.maven.execution.MavenSession;
-import org.apache.maven.lifecycle.model.MojoBinding;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.model.ReportPlugin;
 import org.apache.maven.plugin.InvalidPluginException;
@@ -33,34 +32,6 @@ public class DefaultPluginLoader
 
     // FIXME: Move the functionality used from this into the PluginLoader when PluginManager refactor is complete.
     private PluginManager pluginManager;
-
-    /**
-     * Load the {@link PluginDescriptor} instance for the plugin implied by the specified MojoBinding,
-     * using the project for {@link ArtifactRepository} and other supplemental plugin information as
-     * necessary.
-     */
-    public PluginDescriptor loadPlugin( MojoBinding mojoBinding, MavenProject project, MavenSession session )
-        throws PluginLoaderException
-    {
-        PluginDescriptor pluginDescriptor = null;
-
-        Plugin plugin = new Plugin();
-        plugin.setGroupId( mojoBinding.getGroupId() );
-        plugin.setArtifactId( mojoBinding.getArtifactId() );
-        plugin.setVersion( mojoBinding.getVersion() );
-
-        pluginDescriptor = loadPlugin( plugin, project, session );
-
-        // fill in any blanks once we know more about this plugin.
-        if ( pluginDescriptor != null )
-        {
-            mojoBinding.setGroupId( pluginDescriptor.getGroupId() );
-            mojoBinding.setArtifactId( pluginDescriptor.getArtifactId() );
-            mojoBinding.setVersion( pluginDescriptor.getVersion() );
-        }
-
-        return pluginDescriptor;
-    }
 
     /**
      * Load the {@link PluginDescriptor} instance for the specified plugin, using the project for
@@ -117,26 +88,6 @@ public class DefaultPluginLoader
     public void enableLogging( Logger logger )
     {
         this.logger = logger;
-    }
-
-    /**
-     * Load the {@link PluginDescriptor} instance for the report plugin implied by the specified MojoBinding,
-     * using the project for {@link ArtifactRepository} and other supplemental report/plugin information as
-     * necessary.
-     */
-    public PluginDescriptor loadReportPlugin( MojoBinding mojoBinding, MavenProject project, MavenSession session )
-        throws PluginLoaderException
-    {
-        ReportPlugin plugin = new ReportPlugin();
-        plugin.setGroupId( mojoBinding.getGroupId() );
-        plugin.setArtifactId( mojoBinding.getArtifactId() );
-        plugin.setVersion( mojoBinding.getVersion() );
-
-        PluginDescriptor pluginDescriptor = loadReportPlugin( plugin, project, session );
-
-        mojoBinding.setVersion( pluginDescriptor.getVersion() );
-
-        return pluginDescriptor;
     }
 
     /**

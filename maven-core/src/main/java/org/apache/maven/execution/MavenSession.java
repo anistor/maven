@@ -20,7 +20,6 @@ package org.apache.maven.execution;
  */
 
 import org.apache.maven.artifact.repository.ArtifactRepository;
-import org.apache.maven.lifecycle.plan.BuildPlan;
 import org.apache.maven.monitor.event.EventDispatcher;
 import org.apache.maven.plugin.descriptor.MojoDescriptor;
 import org.apache.maven.plugin.descriptor.PluginDescriptor;
@@ -255,26 +254,6 @@ public class MavenSession
         }
 
         return reports.keySet();
-    }
-
-    public BuildPlan getBuildPlan( String projectId )
-    {
-        return (BuildPlan) buildPlans.get( projectId );
-    }
-
-    public BuildPlan getBuildPlan( MavenProject project )
-    {
-        return (BuildPlan) buildPlans.get( project.getId() );
-    }
-
-    public void setBuildPlan( MavenProject project, BuildPlan buildPlan )
-    {
-        buildPlans.put( project.getId(), buildPlan );
-    }
-
-    public Map getBuildPlans()
-    {
-        return buildPlans;
     }
 
     public ProjectBuilderConfiguration getProjectBuilderConfiguration()

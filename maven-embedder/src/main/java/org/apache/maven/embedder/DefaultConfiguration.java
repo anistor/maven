@@ -18,7 +18,6 @@ package org.apache.maven.embedder;
  * under the License.
  */
 
-import org.apache.maven.errors.CoreErrorReporter;
 import org.apache.maven.monitor.event.EventMonitor;
 import org.apache.maven.realm.MavenRealmManager;
 import org.codehaus.plexus.PlexusContainer;
@@ -62,8 +61,6 @@ public class DefaultConfiguration
     private File localRepository;
 
     private MavenRealmManager realmManager;
-
-    private CoreErrorReporter errorReporter;
 
     /** List&lt;EventMonitor&gt;. */
     private List eventMonitors;
@@ -237,17 +234,6 @@ public class DefaultConfiguration
     public Configuration setRealmManager( MavenRealmManager realmManager )
     {
         this.realmManager = realmManager;
-        return this;
-    }
-
-    public CoreErrorReporter getErrorReporter()
-    {
-        return errorReporter;
-    }
-
-    public Configuration setErrorReporter( CoreErrorReporter errorReporter )
-    {
-        this.errorReporter = errorReporter;
         return this;
     }
 

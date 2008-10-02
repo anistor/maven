@@ -235,8 +235,6 @@ public class DefaultMaven
 
         result.setProject( reactorManager.getTopLevelProject() );
 
-        result.setBuildPlans( session.getBuildPlans() );
-
         dispatcher.dispatchEnd( event, request.getBaseDirectory() );
 
         return result;

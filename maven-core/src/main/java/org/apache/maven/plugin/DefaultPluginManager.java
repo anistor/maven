@@ -40,7 +40,6 @@ import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException
 import org.apache.maven.artifact.versioning.VersionRange;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.execution.RuntimeInformation;
-import org.apache.maven.lifecycle.statemgmt.StateManagementUtils;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.model.ReportPlugin;
 import org.apache.maven.model.Model;
@@ -107,17 +106,6 @@ public class DefaultPluginManager
     extends AbstractLogEnabled
     implements PluginManager, Contextualizable
 {
-    private static final List RESERVED_GROUP_IDS;
-
-    static
-    {
-        List rgids = new ArrayList();
-
-        rgids.add( StateManagementUtils.GROUP_ID );
-
-        RESERVED_GROUP_IDS = rgids;
-    }
-
     protected MutablePlexusContainer container;
 
     protected PluginDescriptorBuilder pluginDescriptorBuilder;
@@ -213,7 +201,7 @@ public class DefaultPluginManager
         try
         {
             // if the groupId is internal, don't try to resolve it...
-            if ( !RESERVED_GROUP_IDS.contains( plugin.getGroupId() ) )
+            if ( !"NOTHING".contains( plugin.getGroupId() ) )
             {
                 Artifact pluginArtifact = pluginManagerSupport.resolvePluginArtifact( plugin, project, session );
 

@@ -20,7 +20,6 @@ package org.apache.maven.execution;
  */
 
 import org.apache.maven.artifact.repository.ArtifactRepository;
-import org.apache.maven.errors.CoreErrorReporter;
 import org.apache.maven.monitor.event.EventMonitor;
 import org.apache.maven.profiles.ProfileManager;
 import org.apache.maven.profiles.activation.ProfileActivationContext;
@@ -583,8 +582,6 @@ public class DefaultMavenExecutionRequest
 
     private Settings settings;
 
-    private CoreErrorReporter errorReporter;
-
     private ProfileActivationContext profileActivationContext;
 
     // calculated from request attributes.
@@ -684,17 +681,6 @@ public class DefaultMavenExecutionRequest
     {
         realmManager.clear();
 
-        return this;
-    }
-
-    public CoreErrorReporter getErrorReporter()
-    {
-        return errorReporter;
-    }
-
-    public MavenExecutionRequest setErrorReporter( CoreErrorReporter reporter )
-    {
-        errorReporter = reporter;
         return this;
     }
 
