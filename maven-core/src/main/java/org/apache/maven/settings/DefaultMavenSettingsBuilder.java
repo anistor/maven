@@ -60,8 +60,7 @@ public class DefaultMavenSettingsBuilder
 
         if ( ( globalSettingsFile == null ) && ( userSettingsFile == null ) )
         {
-            getLogger().debug(
-                "No settings files provided, and default locations are disabled for this request. Returning empty Settings instance." );
+            getLogger().debug( "No settings files provided, and default locations are disabled for this request. Returning empty Settings instance." );
             return new Settings();
         }
 
