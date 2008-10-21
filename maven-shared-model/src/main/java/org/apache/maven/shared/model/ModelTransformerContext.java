@@ -211,7 +211,9 @@ public final class ModelTransformerContext
                                  Collection<ImportModel> importModels, List<InterpolatorProperty> interpolatorProperties)
         throws IOException
     {
-
+        if(interpolatorProperties == null) {
+            interpolatorProperties = new ArrayList<InterpolatorProperty>();
+        }
         List<ModelProperty> transformedProperties =
                 importModelProperties(importModels, fromModelTransformer.transformToModelProperties( domainModels));
 
