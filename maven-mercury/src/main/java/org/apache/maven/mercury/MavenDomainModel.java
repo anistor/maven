@@ -135,7 +135,7 @@ public final class MavenDomainModel implements DomainModel {
 
     private ArtifactBasicMetadata copyArtifactBasicMetadata(ArtifactBasicMetadata metadata) {
         ArtifactMetadata amd = new ArtifactMetadata();
-        amd.setArtifactId(metadata.getVersion());
+        amd.setArtifactId(metadata.getArtifactId());
         amd.setGroupId(metadata.getGroupId());
         amd.setVersion(metadata.getVersion());
         return amd;
