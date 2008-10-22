@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Hashtable;
 import java.util.List;
+import java.net.URL;
 
 import org.apache.maven.mercury.artifact.ArtifactBasicMetadata;
 import org.apache.maven.mercury.builder.api.DependencyProcessor;
@@ -15,9 +16,11 @@ import org.apache.maven.mercury.builder.api.MetadataReader;
 import org.apache.maven.mercury.builder.api.MetadataReaderException;
 import org.apache.maven.project.builder.ArtifactModelContainerFactory;
 import org.apache.maven.project.builder.IdModelContainerFactory;
+import org.apache.maven.project.builder.ProjectUri;
 import org.apache.maven.shared.model.DomainModel;
 import org.apache.maven.shared.model.ModelTransformerContext;
 import org.apache.maven.shared.model.ModelMarshaller;
+import org.apache.maven.shared.model.InterpolatorProperty;
 
 public final class MavenDependencyProcessor implements DependencyProcessor {
 
@@ -31,9 +34,12 @@ public final class MavenDependencyProcessor implements DependencyProcessor {
             throw new IllegalArgumentException("mdReader: null");
         }
 
-        //TODO: Add super model
         List<DomainModel> domainModels = new ArrayList<DomainModel>();
         try {
+            MavenDomainModel superPom =
+                    new MavenDomainModel(MavenDependencyProcessor.class.getResourceAsStream( "pom-4.0.0.xml" ));
+            domainModels.add(superPom);
+
             MavenDomainModel domainModel = new MavenDomainModel(mdReader.readMetadata(bmd));
             domainModels.add(domainModel);
             domainModels.addAll(getParentsOfDomainModel(domainModel, mdReader));
@@ -65,5 +71,10 @@ public final class MavenDependencyProcessor implements DependencyProcessor {
             domainModels.addAll(getParentsOfDomainModel(parentDomainModel, mdReader));
         }
         return domainModels;
-    }    
+    }
+/*
+    private static List<InterpolatorProperty> translaterInterpolatorPropertiesFromTable(Hashtable table) {
+        for()
+    }
+    */
 }
