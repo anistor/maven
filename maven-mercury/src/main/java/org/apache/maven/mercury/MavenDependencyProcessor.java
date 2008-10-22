@@ -4,10 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Hashtable;
-import java.util.List;
+import java.util.*;
 import java.net.URL;
 
 import org.apache.maven.mercury.artifact.ArtifactBasicMetadata;
@@ -24,7 +21,7 @@ import org.apache.maven.shared.model.InterpolatorProperty;
 
 public final class MavenDependencyProcessor implements DependencyProcessor {
 
-    public List<ArtifactBasicMetadata> getDependencies(ArtifactBasicMetadata bmd, MetadataReader mdReader, Hashtable env)
+    public List<ArtifactBasicMetadata> getDependencies(ArtifactBasicMetadata bmd, MetadataReader mdReader, Map system, Map user)
             throws MetadataReaderException {
         if (bmd == null) {
             throw new IllegalArgumentException("bmd: null");
