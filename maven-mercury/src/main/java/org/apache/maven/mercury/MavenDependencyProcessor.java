@@ -36,9 +36,9 @@ public final class MavenDependencyProcessor implements DependencyProcessor {
 
         List<DomainModel> domainModels = new ArrayList<DomainModel>();
         try {
-            MavenDomainModel superPom =
-                    new MavenDomainModel(MavenDependencyProcessor.class.getResourceAsStream( "pom-4.0.0.xml" ));
-            domainModels.add(superPom);
+//            MavenDomainModel superPom =
+//                    new MavenDomainModel(MavenDependencyProcessor.class.getResourceAsStream( "pom-4.0.0.xml" ));
+//            domainModels.add(superPom);
 
             MavenDomainModel domainModel = new MavenDomainModel(mdReader.readMetadata(bmd));
             domainModels.add(domainModel);
@@ -66,6 +66,7 @@ public final class MavenDependencyProcessor implements DependencyProcessor {
             throws IOException, MetadataReaderException {
         List<DomainModel> domainModels = new ArrayList<DomainModel>();
         if (domainModel.hasParent()) {
+            System.out.println("HAS PARENT");
             MavenDomainModel parentDomainModel = new MavenDomainModel(mdReader.readMetadata(domainModel.getParentMetadata()));
             domainModels.add(parentDomainModel);
             domainModels.addAll(getParentsOfDomainModel(parentDomainModel, mdReader));

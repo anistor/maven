@@ -110,6 +110,7 @@ public final class MavenDomainModel implements DomainModel {
         String groupId = null, artifactId = null, version = null;
 
         for (ModelProperty mp : modelProperties) {
+            System.out.println(mp);
             if (mp.getUri().equals(ProjectUri.Parent.version)) {
                 version = mp.getValue();
             } else if (mp.getUri().equals(ProjectUri.Parent.artifactId)) {
@@ -123,6 +124,7 @@ public final class MavenDomainModel implements DomainModel {
         }
 
         if (groupId == null || artifactId == null || version == null) {
+            System.out.println(groupId + ":" + artifactId + ":" + version);
             return null;
         }
         parentMetadata = new ArtifactBasicMetadata();
