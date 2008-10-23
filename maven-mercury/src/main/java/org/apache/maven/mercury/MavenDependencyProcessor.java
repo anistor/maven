@@ -6,6 +6,7 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.util.*;
 import java.net.URL;
+import java.text.SimpleDateFormat;
 
 import org.apache.maven.mercury.artifact.ArtifactBasicMetadata;
 import org.apache.maven.mercury.builder.api.DependencyProcessor;
@@ -14,6 +15,7 @@ import org.apache.maven.mercury.builder.api.MetadataReaderException;
 import org.apache.maven.project.builder.ArtifactModelContainerFactory;
 import org.apache.maven.project.builder.IdModelContainerFactory;
 import org.apache.maven.project.builder.ProjectUri;
+import org.apache.maven.project.builder.PomInterpolatorTag;
 import org.apache.maven.shared.model.DomainModel;
 import org.apache.maven.shared.model.ModelTransformerContext;
 import org.apache.maven.shared.model.ModelMarshaller;
@@ -31,6 +33,16 @@ public final class MavenDependencyProcessor implements DependencyProcessor {
             throw new IllegalArgumentException("mdReader: null");
         }
 
+        List<InterpolatorProperty> interpolatorProperties = new ArrayList<InterpolatorProperty>();
+        if(system != null) {
+            interpolatorProperties.addAll( InterpolatorProperty.toInterpolatorProperties( system,
+                    PomInterpolatorTag.SYSTEM_PROPERTIES.name()));
+        }
+        if(user != null) {
+            interpolatorProperties.addAll( InterpolatorProperty.toInterpolatorProperties( user,
+                    PomInterpolatorTag.USER_PROPERTIES.name()));
+        }
+        
         List<DomainModel> domainModels = new ArrayList<DomainModel>();
         try {
 //            MavenDomainModel superPom =
@@ -53,7 +65,7 @@ public final class MavenDependencyProcessor implements DependencyProcessor {
                     transformer,
                     transformer,
                     null,
-                    null)).getDependencyMetadata();
+                    interpolatorProperties)).getDependencyMetadata();
         } catch (IOException e) {
             throw new MetadataReaderException("Unable to transform model");
         }

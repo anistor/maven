@@ -157,4 +157,19 @@ public final class InterpolatorProperty
         }
         return interpolatorProperties;
     }
+
+    public static List<InterpolatorProperty> toInterpolatorProperties( Map<String, String> properties, String tag )
+    {
+        if( properties == null )
+        {
+            throw new IllegalArgumentException( "properties: null" );
+        }
+
+        List<InterpolatorProperty> interpolatorProperties = new ArrayList<InterpolatorProperty>();
+        for ( Map.Entry<String, String> e : properties.entrySet() )
+        {
+            interpolatorProperties.add( new InterpolatorProperty( "${" + e.getKey() +"}", e.getValue(), tag) );
+        }
+        return interpolatorProperties;
+    }
 }
