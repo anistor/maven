@@ -33,7 +33,7 @@ public class MavenDependencyProcessorTest {
 
         MavenDependencyProcessor processor = new MavenDependencyProcessor();
         List<ArtifactBasicMetadata> dependencies = processor.getDependencies(new ArtifactBasicMetadata(),
-                new MetadataReaderStub(files), null);
+                new MetadataReaderStub(files), null, null);
         assertEquals("Dependencies incorrect", 2, dependencies.size());
 
     }
@@ -46,7 +46,7 @@ public class MavenDependencyProcessorTest {
 
         MavenDependencyProcessor processor = new MavenDependencyProcessor();
         List<ArtifactBasicMetadata> dependencies = processor.getDependencies(new ArtifactBasicMetadata(),
-                new MetadataReaderStub(files), null);
+                new MetadataReaderStub(files), null, null);
         assertEquals("Dependencies incorrect", 2, dependencies.size());
     }
 
@@ -58,7 +58,7 @@ public class MavenDependencyProcessorTest {
 
         MavenDependencyProcessor processor = new MavenDependencyProcessor();
         List<ArtifactBasicMetadata> dependencies = processor.getDependencies(new ArtifactBasicMetadata(),
-                new MetadataReaderStub(files), null);
+                new MetadataReaderStub(files), null, null);
         assertEquals("Dependencies incorrect", 2, dependencies.size());
         assertTrue("Dependency Management", hasDependency(dependencies, "c-v-1"));
     }

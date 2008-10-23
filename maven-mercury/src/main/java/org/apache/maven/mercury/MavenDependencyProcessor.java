@@ -75,7 +75,6 @@ public final class MavenDependencyProcessor implements DependencyProcessor {
             throws IOException, MetadataReaderException {
         List<DomainModel> domainModels = new ArrayList<DomainModel>();
         if (domainModel.hasParent()) {
-            System.out.println("HAS PARENT");
             MavenDomainModel parentDomainModel = new MavenDomainModel(mdReader.readMetadata(domainModel.getParentMetadata()));
             domainModels.add(parentDomainModel);
             domainModels.addAll(getParentsOfDomainModel(parentDomainModel, mdReader));
