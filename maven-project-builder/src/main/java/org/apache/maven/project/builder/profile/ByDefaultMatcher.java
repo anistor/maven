@@ -9,7 +9,6 @@ import java.util.List;
 
 public class ByDefaultMatcher implements ActiveProfileMatcher {
 
-
     public boolean isMatch(ModelContainer modelContainer, List<InterpolatorProperty> properties) {
         if(modelContainer == null ) {
             throw new IllegalArgumentException("modelContainer: null");
