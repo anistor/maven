@@ -50,21 +50,21 @@ under the License.
   </pluginRepositories>
 
   <build>
-    <directory>${project.basedir}/target</directory>
-    <outputDirectory>${project.build.directory}/classes</outputDirectory>
+    <directory>target</directory>
+    <outputDirectory>target/classes</outputDirectory>
     <finalName>${project.artifactId}-${project.version}</finalName>
-    <testOutputDirectory>${project.build.directory}/test-classes</testOutputDirectory>
-    <sourceDirectory>${project.basedir}/src/main/java</sourceDirectory>
-    <scriptSourceDirectory>${project.basedir}/src/main/scripts</scriptSourceDirectory>
-    <testSourceDirectory>${project.basedir}/src/test/java</testSourceDirectory>
+    <testOutputDirectory>target/test-classes</testOutputDirectory>
+    <sourceDirectory>src/main/java</sourceDirectory>
+    <scriptSourceDirectory>src/main/scripts</scriptSourceDirectory>
+    <testSourceDirectory>src/test/java</testSourceDirectory>
     <resources>
       <resource>
-        <directory>${project.basedir}/src/main/resources</directory>
+        <directory>src/main/resources</directory>
       </resource>
     </resources>
     <testResources>
       <testResource>
-        <directory>${project.basedir}/src/test/resources</directory>
+        <directory>src/test/resources</directory>
       </testResource>
     </testResources>
     <pluginManagement>
@@ -150,7 +150,7 @@ under the License.
   </build>
 
   <reporting>
-    <outputDirectory>${project.build.directory}/site</outputDirectory>
+    <outputDirectory>target/site</outputDirectory>
   </reporting>
   <profiles>
     <profile>

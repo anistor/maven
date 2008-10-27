@@ -37,9 +37,11 @@ import org.apache.maven.monitor.event.EventDispatcher;
 import org.apache.maven.monitor.event.MavenEvents;
 import org.apache.maven.profiles.ProfileManager;
 import org.apache.maven.profiles.activation.ProfileActivationException;
+import org.apache.maven.project.DefaultProjectBuilderConfiguration;
 import org.apache.maven.project.DuplicateProjectException;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.MavenProjectBuilder;
+import org.apache.maven.project.ProjectBuilderConfiguration;
 import org.apache.maven.project.ProjectBuildingException;
 import org.apache.maven.reactor.MavenExecutionException;
 import org.apache.maven.settings.Mirror;
@@ -573,7 +575,12 @@ public class DefaultMaven
             }
         }
 
-        return projectBuilder.build( pom, request.getProjectBuilderConfiguration() );
+        ProjectBuilderConfiguration config = new DefaultProjectBuilderConfiguration();
+        config.setLocalRepository( request.getLocalRepository() )
+              .setGlobalProfileManager( request.getGlobalProfileManager() )
+              .setUserProperties( request.getUserProperties() );
+
+        return projectBuilder.build( pom, config );
     }
 
     // ----------------------------------------------------------------------
@@ -590,7 +597,7 @@ public class DefaultMaven
     {
         return new MavenSession( container, request.getSettings(), request.getLocalRepository(),
                                  request.getEventDispatcher(), rpm, request.getGoals(), request.getBaseDirectory(),
-                                 request.getExecutionProperties(), request.getUserProperties(), request.getStartTime() );
+                                 request.getExecutionProperties(), request.getStartTime() );
     }
 
     /**

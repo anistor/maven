@@ -26,12 +26,9 @@ import org.apache.maven.model.Organization;
 import org.apache.maven.model.Repository;
 import org.apache.maven.model.Resource;
 import org.apache.maven.model.Scm;
-import org.apache.maven.project.DefaultProjectBuilderConfiguration;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -213,9 +210,9 @@ public class RegexBasedModelInterpolatorTest
     public void testEnvars()
         throws Exception
     {
-        Map context = new HashMap();
+        Properties envars = new Properties();
 
-        context.put( "env.HOME", "/path/to/home" );
+        envars.setProperty( "HOME", "/path/to/home" );
 
         Model model = new Model();
 
@@ -225,7 +222,7 @@ public class RegexBasedModelInterpolatorTest
 
         model.setProperties( modelProperties );
 
-        Model out = new RegexBasedModelInterpolator().interpolate( model, context );
+        Model out = new RegexBasedModelInterpolator( envars ).interpolate( model, context );
 
         assertEquals( out.getProperties().getProperty( "outputDirectory" ), "/path/to/home" );
     }
@@ -297,25 +294,6 @@ public class RegexBasedModelInterpolatorTest
         assertEquals( build.getSourceDirectory(), ( (Resource) resIt.next() ).getDirectory() );
         assertEquals( build.getSourceDirectory(), ( (Resource) resIt.next() ).getDirectory() );
         assertEquals( build.getSourceDirectory(), ( (Resource) resIt.next() ).getDirectory() );
-    }
-
-    public void testShouldInterpolateUnprefixedBasedirExpression()
-        throws ModelInterpolationException, IOException
-    {
-        File basedir = new File( "/test/path" );
-        Model model = new Model();
-        Dependency dep = new Dependency();
-        dep.setSystemPath( "${basedir}/artifact.jar" );
-
-        model.addDependency( dep );
-
-        Model result = new RegexBasedModelInterpolator().interpolate( model, basedir, new DefaultProjectBuilderConfiguration(), true );
-
-        List rDeps = result.getDependencies();
-        assertNotNull( rDeps );
-        assertEquals( 1, rDeps.size() );
-        assertEquals( new File( basedir, "artifact.jar" ).getAbsolutePath(), new File( ( (Dependency) rDeps.get( 0 ) )
-            .getSystemPath() ).getAbsolutePath() );
     }
 
 //    public void testPOMExpressionDoesNotUseSystemProperty()

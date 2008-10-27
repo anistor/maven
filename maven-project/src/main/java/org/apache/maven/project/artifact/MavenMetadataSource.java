@@ -88,27 +88,28 @@ public class MavenMetadataSource
             return artifact;
         }
 
-        ProjectRelocation rel = retrieveRelocatedProject( artifact, localRepository, remoteRepositories );
-        
-        if ( rel == null )
-        {
-            return null;
-        }
-        
-        MavenProject project = rel.project;
+        MavenProject project = retrieveRelocatedProject( artifact, localRepository, remoteRepositories );
+
         if ( project == null || getRelocationKey( artifact ).equals( getRelocationKey( project.getArtifact() ) ) )
         {
             return artifact;
         }
 
+        
+        // NOTE: Using artifact information here, since some POMs are deployed 
+        // to central with one version in the filename, but another in the <version> string!
+        // Case in point: org.apache.ws.commons:XmlSchema:1.1:pom.
+        //
+        // Since relocation triggers a reconfiguration of the artifact's information
+        // in retrieveRelocatedProject(..), this is safe to do.
         Artifact result = null;
         if ( artifact.getClassifier() != null )
         {
-            result = artifactFactory.createArtifactWithClassifier( project.getGroupId(), project.getArtifactId(), project.getVersion(), artifact.getType(), artifact.getClassifier() );
+            result = artifactFactory.createArtifactWithClassifier( artifact.getGroupId(), artifact.getArtifactId(), artifact.getVersion(), artifact.getType(), artifact.getClassifier() );
         }
         else
         {
-            result = artifactFactory.createArtifact( project.getGroupId(), project.getArtifactId(), project.getVersion(), artifact.getScope(), artifact.getType() );
+            result = artifactFactory.createArtifact( artifact.getGroupId(), artifact.getArtifactId(), artifact.getVersion(), artifact.getScope(), artifact.getType() );
         }
 
         result.setResolved( artifact.isResolved() );
@@ -129,7 +130,7 @@ public class MavenMetadataSource
         return artifact.getGroupId() + ":" + artifact.getArtifactId() + ":" + artifact.getVersion();
     }
 
-    private ProjectRelocation retrieveRelocatedProject( Artifact artifact, ArtifactRepository localRepository, List remoteRepositories )
+    private MavenProject retrieveRelocatedProject( Artifact artifact, ArtifactRepository localRepository, List remoteRepositories )
         throws ArtifactMetadataRetrievalException
     {
         MavenProject project = null;
@@ -263,11 +264,7 @@ public class MavenMetadataSource
         }
         while ( !done );
 
-        ProjectRelocation rel = new ProjectRelocation();
-        rel.project = project;
-        rel.pomArtifact = pomArtifact;
-        
-        return rel;
+        return project;
     }
 
     /**
@@ -278,15 +275,20 @@ public class MavenMetadataSource
     public ResolutionGroup retrieve( Artifact artifact, ArtifactRepository localRepository, List remoteRepositories )
         throws ArtifactMetadataRetrievalException
     {
-        ProjectRelocation rel = retrieveRelocatedProject( artifact, localRepository, remoteRepositories );
-        
-        if ( rel == null )
+        MavenProject project = retrieveRelocatedProject( artifact, localRepository, remoteRepositories );
+        Artifact pomArtifact;
+        if ( project != null )
         {
-            return null;
+            pomArtifact = project.getArtifact();
         }
-        
-        MavenProject project = rel.project;
-        Artifact pomArtifact = rel.pomArtifact;
+        else
+        {
+            pomArtifact = artifactFactory.createProjectArtifact( artifact.getGroupId(),
+                                                   artifact.getArtifactId(),
+                                                   artifact.getVersion(),
+                                                   artifact.getScope() );
+        }
+
 
         // last ditch effort to try to get this set...
         if ( artifact.getDownloadUrl() == null && pomArtifact != null )
@@ -502,11 +504,4 @@ public class MavenMetadataSource
 
         return versions;
     }
-    
-    private static final class ProjectRelocation
-    {
-        private MavenProject project;
-        private Artifact pomArtifact;
-    }
-
 }

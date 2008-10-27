@@ -19,6 +19,20 @@ package org.apache.maven.artifact.manager;
  * under the License.
  */
 
+import java.io.File;
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.metadata.ArtifactMetadata;
 import org.apache.maven.artifact.repository.ArtifactRepository;
@@ -36,6 +50,7 @@ import org.apache.maven.wagon.authorization.AuthorizationException;
 import org.apache.maven.wagon.events.TransferListener;
 import org.apache.maven.wagon.observers.ChecksumObserver;
 import org.apache.maven.wagon.proxy.ProxyInfo;
+import org.apache.maven.wagon.proxy.ProxyInfoProvider;
 import org.apache.maven.wagon.repository.Repository;
 import org.apache.maven.wagon.repository.RepositoryPermissions;
 import org.codehaus.plexus.PlexusConstants;
@@ -53,25 +68,12 @@ import org.codehaus.plexus.personality.plexus.lifecycle.phase.Contextualizable;
 import org.codehaus.plexus.util.FileUtils;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 
-import java.io.File;
-import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.security.NoSuchAlgorithmException;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 public class DefaultWagonManager
     extends AbstractLogEnabled
     implements WagonManager, Contextualizable
 {
     private static final String WILDCARD = "*";
-
+    
     private static final String EXTERNAL_WILDCARD = "external:*";
 
     private PlexusContainer container;
@@ -239,7 +241,11 @@ public class DefaultWagonManager
                 }
             }
 
-            wagon.connect( artifactRepository, getAuthenticationInfo( repository.getId() ), getProxy( protocol ) );
+            wagon.connect( artifactRepository, getAuthenticationInfo( repository.getId() ), new ProxyInfoProvider(){
+                public ProxyInfo getProxyInfo(String protocol) {
+                    return (ProxyInfo) proxies.get( protocol );
+                }
+            });
 
             wagon.put( source, remotePath );
 
@@ -409,6 +415,26 @@ public class DefaultWagonManager
             wagon.addTransferListener( downloadMonitor );
         }
 
+        // TODO: configure on repository
+        ChecksumObserver md5ChecksumObserver;
+        ChecksumObserver sha1ChecksumObserver;
+        
+        List checksumObservers = new ArrayList( 2 );
+        try
+        {
+            md5ChecksumObserver = new ChecksumObserver( "MD5" );
+            wagon.addTransferListener( md5ChecksumObserver );
+            checksumObservers.add( md5ChecksumObserver );
+
+            sha1ChecksumObserver = new ChecksumObserver( "SHA-1" );
+            wagon.addTransferListener( sha1ChecksumObserver );
+            checksumObservers.add( sha1ChecksumObserver );
+        }
+        catch ( NoSuchAlgorithmException e )
+        {
+            throw new TransferFailedException( "Unable to add checksum methods: " + e.getMessage(), e );
+        }
+
         File temp = new File( destination + ".tmp" );
         temp.deleteOnExit();
 
@@ -417,7 +443,11 @@ public class DefaultWagonManager
         try
         {
             wagon.connect( new Repository( repository.getId(), repository.getUrl() ),
-                           getAuthenticationInfo( repository.getId() ), getProxy( protocol ) );
+                           getAuthenticationInfo( repository.getId() ), new ProxyInfoProvider(){
+                public ProxyInfo getProxyInfo(String protocol) {
+                    return (ProxyInfo) proxies.get( protocol );
+                }
+            });
 
             boolean firstRun = true;
             boolean retry = true;
@@ -430,56 +460,29 @@ public class DefaultWagonManager
                 // reset the retry flag.
                 retry = false;
 
-                // TODO: configure on repository
-                ChecksumObserver md5ChecksumObserver = null;
-                ChecksumObserver sha1ChecksumObserver = null;
-                try
+                // This should take care of creating destination directory now on
+                if ( destination.exists() && !force )
                 {
-                    md5ChecksumObserver = new ChecksumObserver( "MD5" );
-                    wagon.addTransferListener( md5ChecksumObserver );
-
-                    sha1ChecksumObserver = new ChecksumObserver( "SHA-1" );
-                    wagon.addTransferListener( sha1ChecksumObserver );
-
-                    // This should take care of creating destination directory now on
-                    if ( destination.exists() && !force )
+                    try
                     {
-                        try
+                        downloaded = wagon.getIfNewer( remotePath, temp, destination.lastModified() );
+                        if ( !downloaded )
                         {
-                            downloaded = wagon.getIfNewer( remotePath, temp, destination.lastModified() );
-                            if ( !downloaded )
-                            {
-                                // prevent additional checks of this artifact until it expires again
-                                destination.setLastModified( System.currentTimeMillis() );
-                            }
-                        }
-                        catch ( UnsupportedOperationException e )
-                        {
-                            // older wagons throw this. Just get() instead
-                            wagon.get( remotePath, temp );
-                            downloaded = true;
+                            // prevent additional checks of this artifact until it expires again
+                            destination.setLastModified( System.currentTimeMillis() );
                         }
                     }
-                    else
+                    catch ( UnsupportedOperationException e )
                     {
+                        // older wagons throw this. Just get() instead
                         wagon.get( remotePath, temp );
                         downloaded = true;
                     }
                 }
-                catch ( NoSuchAlgorithmException e )
+                else
                 {
-                    throw new TransferFailedException( "Unable to add checksum methods: " + e.getMessage(), e );
-                }
-                finally
-                {
-                    if ( md5ChecksumObserver != null )
-                    {
-                        wagon.removeTransferListener( md5ChecksumObserver );
-                    }
-                    if ( sha1ChecksumObserver != null )
-                    {
-                        wagon.removeTransferListener( sha1ChecksumObserver );
-                    }
+                    wagon.get( remotePath, temp );
+                    downloaded = true;
                 }
 
                 if ( downloaded )
@@ -493,7 +496,7 @@ public class DefaultWagonManager
                     // try to verify the SHA-1 checksum for this file.
                     try
                     {
-                        verifyChecksum( sha1ChecksumObserver, destination, temp, remotePath, ".sha1", wagon );
+                        verifyChecksum( sha1ChecksumObserver, destination, temp, remotePath, ".sha1", wagon, checksumObservers );
                     }
                     catch ( ChecksumFailedException e )
                     {
@@ -519,7 +522,7 @@ public class DefaultWagonManager
                         // file...we'll try again with the MD5 checksum.
                         try
                         {
-                            verifyChecksum( md5ChecksumObserver, destination, temp, remotePath, ".md5", wagon );
+                            verifyChecksum( md5ChecksumObserver, destination, temp, remotePath, ".md5", wagon, checksumObservers );
                         }
                         catch ( ChecksumFailedException e )
                         {
@@ -538,7 +541,7 @@ public class DefaultWagonManager
                         {
                             // this was a failed transfer, and we don't want to retry.
                             handleChecksumFailure( checksumPolicy, "Error retrieving checksum file for " + remotePath,
-                                md5TryException );
+                                                   md5TryException );
                         }
                     }
 
@@ -652,9 +655,19 @@ public class DefaultWagonManager
                                  File tempDestination,
                                  String remotePath,
                                  String checksumFileExtension,
-                                 Wagon wagon )
+                                 Wagon wagon, 
+                                 List checksumObservers )
         throws ResourceDoesNotExistException, TransferFailedException, AuthorizationException
     {
+        // FIXME: We need to be able to disable/retrieve/manipulate existing checksum observers on wagon instances.
+        // Otherwise, each time a checksum GET throws ResourceNotFoundException, all other checksum data in other
+        // observers for the main artifact have their actual checksums destroyed.
+        for ( Iterator it = checksumObservers.iterator(); it.hasNext(); )
+        {
+            ChecksumObserver observer = (ChecksumObserver) it.next();
+            wagon.removeTransferListener( observer );
+        }
+        
         try
         {
             // grab it first, because it's about to change...
@@ -704,9 +717,17 @@ public class DefaultWagonManager
         {
             throw new ChecksumFailedException( "Invalid checksum file", e );
         }
+        finally
+        {
+            for ( Iterator it = checksumObservers.iterator(); it.hasNext(); )
+            {
+                ChecksumObserver observer = (ChecksumObserver) it.next();
+                wagon.addTransferListener( observer );
+            }
+        }
     }
 
-
+    
     private void disconnectWagon( Wagon wagon )
     {
         try
@@ -746,7 +767,7 @@ public class DefaultWagonManager
     /**
      * This method finds a matching mirror for the selected repository. If there is an exact match, this will be used.
      * If there is no exact match, then the list of mirrors is examined to see if a pattern applies.
-     *
+     * 
      * @param originalRepository See if there is a mirror for this repository.
      * @return the selected mirror or null if none are found.
      */
@@ -775,13 +796,13 @@ public class DefaultWagonManager
     }
 
     /**
-     * This method checks if the pattern matches the originalRepository.
-     * Valid patterns:
+     * This method checks if the pattern matches the originalRepository. 
+     * Valid patterns: 
      * * = everything
      * external:* = everything not on the localhost and not file based.
      * repo,repo1 = repo or repo1
      * *,!repo1 = everything except repo1
-     *
+     * 
      * @param originalRepository to compare for a match.
      * @param pattern used for match. Currently only '*' is supported.
      * @return true if the repository is a match to this pattern.
@@ -838,7 +859,7 @@ public class DefaultWagonManager
 
     /**
      * Checks the URL to see if this repository refers to an external repository
-     *
+     * 
      * @param originalRepository
      * @return true if external.
      */
@@ -856,10 +877,10 @@ public class DefaultWagonManager
             return false;
         }
     }
-
+    
     /**
      * Set the proxy used for a particular protocol.
-     *
+     * 
      * @param protocol the protocol (required)
      * @param host the proxy host name (required)
      * @param port the proxy port (required)

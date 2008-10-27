@@ -21,7 +21,6 @@ package org.apache.maven.artifact.manager;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Date;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.DefaultArtifact;
@@ -78,19 +77,6 @@ public class DefaultWagonManagerTest
 
         Artifact artifact = artifactFactory.createProjectArtifact( "test", "test", "1.0" );
         artifact.setFile( new File( testData, "test-1.0.pom" ) );
-        assertFalse( artifact.getFile().exists() );
-        return artifact;
-    }
-    
-    private Artifact createTestArtifact( String directory, String type )
-        throws IOException
-    {
-        File testData = getTestFile( directory );
-        FileUtils.deleteDirectory( testData );
-        testData.mkdirs();
-
-        Artifact artifact = artifactFactory.createBuildArtifact( "test", "test", "1.0", type );
-        artifact.setFile( new File( testData, "test-1.0." + artifact.getArtifactHandler().getExtension() ) );
         assertFalse( artifact.getFile().exists() );
         return artifact;
     }
@@ -352,10 +338,14 @@ public class DefaultWagonManagerTest
         ArtifactRepository repo =
             new DefaultArtifactRepository( "id", "string://url", new ArtifactRepositoryLayoutStub(), policy, policy );
 
-        Artifact artifact = createTestArtifact( "target/test-data/sample-art", "jar" );
+        Artifact artifact =
+            new DefaultArtifact( "sample.group", "sample-art", VersionRange.createFromVersion( "1.0" ), "scope",
+                                 "jar", "classifier", null );
+        artifact.setFile( getTestFile( "target/sample-art" ) );            
 
         StringWagon wagon = (StringWagon) wagonManager.getWagon( "string" );
         
+        artifact.getFile().delete();
         wagon.clearExpectedContent();
         wagon.addExpectedContent( "path", "lower-case-checksum" );
         wagon.addExpectedContent( "path.sha1", "2a25dc564a3b34f68237fc849066cbc7bb7a36a1" );

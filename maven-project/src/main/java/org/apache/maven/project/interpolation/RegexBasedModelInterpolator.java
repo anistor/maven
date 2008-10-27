@@ -22,32 +22,20 @@ package org.apache.maven.project.interpolation;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
 import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
-import org.apache.maven.project.DefaultProjectBuilderConfiguration;
-import org.apache.maven.project.ProjectBuilderConfiguration;
-import org.apache.maven.project.path.PathTranslator;
-import org.codehaus.plexus.interpolation.InterpolationException;
-import org.codehaus.plexus.interpolation.MapBasedValueSource;
-import org.codehaus.plexus.interpolation.ObjectBasedValueSource;
-import org.codehaus.plexus.interpolation.PrefixAwareRecursionInterceptor;
-import org.codehaus.plexus.interpolation.PrefixedObjectValueSource;
-import org.codehaus.plexus.interpolation.PrefixedValueSourceWrapper;
-import org.codehaus.plexus.interpolation.RecursionInterceptor;
-import org.codehaus.plexus.interpolation.RegexBasedInterpolator;
-import org.codehaus.plexus.interpolation.ValueSource;
 import org.codehaus.plexus.logging.AbstractLogEnabled;
 import org.codehaus.plexus.logging.Logger;
+import org.codehaus.plexus.util.StringUtils;
+import org.codehaus.plexus.util.cli.CommandLineUtils;
+import org.codehaus.plexus.util.introspection.ReflectionValueExtractor;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Use a regular expression search to find and resolve expressions within the POM.
@@ -60,43 +48,19 @@ public class RegexBasedModelInterpolator
     extends AbstractLogEnabled
     implements ModelInterpolator
 {
-    private static final List PROJECT_PREFIXES = Arrays.asList( new String[]{ "pom.", "project." } );
+    private static final Pattern EXPRESSION_PATTERN = Pattern.compile( "\\$\\{(pom\\.|project\\.|env\\.)?([^}]+)\\}" );
 
-    private static final List TRANSLATED_PATH_EXPRESSIONS;
-
-    static
-    {
-        List translatedPrefixes = new ArrayList();
-
-        // MNG-1927, MNG-2124, MNG-3355:
-        // If the build section is present and the project directory is non-null, we should make
-        // sure interpolation of the directories below uses translated paths.
-        // Afterward, we'll double back and translate any paths that weren't covered during interpolation via the
-        // code below...
-        translatedPrefixes.add( "build.directory" );
-        translatedPrefixes.add( "build.outputDirectory" );
-        translatedPrefixes.add( "build.testOutputDirectory" );
-        translatedPrefixes.add( "build.sourceDirectory" );
-        translatedPrefixes.add( "build.testSourceDirectory" );
-        translatedPrefixes.add( "build.scriptSourceDirectory" );
-        translatedPrefixes.add( "reporting.outputDirectory" );
-
-        TRANSLATED_PATH_EXPRESSIONS = translatedPrefixes;
-    }
-
-    private PathTranslator pathTranslator;
+    private Properties envars;
 
     public RegexBasedModelInterpolator( Properties envars )
     {
+        this.envars = envars;
     }
 
-    /**
-     * @todo: Remove the throws clause.
-     * @throws IOException This exception is not thrown any more, and needs to be removed.
-     */
     public RegexBasedModelInterpolator()
         throws IOException
     {
+        envars = CommandLineUtils.getSystemEnvVars();
     }
 
     public Model interpolate( Model model, Map context )
@@ -114,25 +78,8 @@ public class RegexBasedModelInterpolator
      * @param model   The inbound Model instance, to serialize and reference for expression resolution
      * @param context The other context map to be used during resolution
      * @return The resolved instance of the inbound Model. This is a different instance!
-     *
-     * @deprecated Use {@link ModelInterpolator#interpolate(Model, File, ProjectBuilderConfiguration, boolean)} instead.
      */
     public Model interpolate( Model model, Map context, boolean strict )
-        throws ModelInterpolationException
-    {
-        Properties props = new Properties();
-        props.putAll( context );
-
-        return interpolate( model,
-                            null,
-                            new DefaultProjectBuilderConfiguration().setExecutionProperties( props ),
-                            true );
-    }
-
-    public Model interpolate( Model model,
-                              File projectDir,
-                              ProjectBuilderConfiguration config,
-                              boolean debugEnabled )
         throws ModelInterpolationException
     {
         StringWriter sWriter = new StringWriter();
@@ -148,7 +95,7 @@ public class RegexBasedModelInterpolator
         }
 
         String serializedModel = sWriter.toString();
-        serializedModel = interpolate( serializedModel, model, projectDir, config, debugEnabled );
+        serializedModel = interpolateInternal( serializedModel, model, context );
 
         StringReader sReader = new StringReader( serializedModel );
 
@@ -171,125 +118,79 @@ public class RegexBasedModelInterpolator
         return model;
     }
 
-    /**
-     * Interpolates all expressions in the src parameter.
-     * <p>
-     * The algorithm used for each expression is:
-     * <ul>
-     *   <li>If it starts with either "pom." or "project.", the expression is evaluated against the model.</li>
-     *   <li>If the value is null, get the value from the context.</li>
-     *   <li>If the value is null, but the context contains the expression, don't replace the expression string
-     *       with the value, and continue to find other expressions.</li>
-     *   <li>If the value is null, get it from the model properties.</li>
-     *   <li>
-     * @param overrideContext
-     * @param outputDebugMessages
-     */
-    public String interpolate( String src,
-                               Model model,
-                               final File projectDir,
-                               ProjectBuilderConfiguration config,
-                               boolean debug )
+    private String interpolateInternal( String src, Model model, Map context )
         throws ModelInterpolationException
     {
-        Logger logger = getLogger();
-
-        String timestampFormat = DEFAULT_BUILD_TIMESTAMP_FORMAT;
-
-        Properties modelProperties = model.getProperties();
-        if ( modelProperties != null )
-        {
-            timestampFormat = modelProperties.getProperty( BUILD_TIMESTAMP_FORMAT_PROPERTY, timestampFormat );
-        }
-
-        ValueSource baseModelValueSource1 = new PrefixedObjectValueSource( PROJECT_PREFIXES, model, false );
-        ValueSource modelValueSource1 = new PathTranslatingValueSource( baseModelValueSource1,
-                                                                       TRANSLATED_PATH_EXPRESSIONS,
-                                                                       projectDir, pathTranslator );
-
-        ValueSource baseModelValueSource2 = new ObjectBasedValueSource( model );
-        ValueSource modelValueSource2 = new PathTranslatingValueSource( baseModelValueSource2,
-                                                                       TRANSLATED_PATH_EXPRESSIONS,
-                                                                       projectDir, pathTranslator );
-
-        ValueSource basedirValueSource = new PrefixedValueSourceWrapper( new ValueSource(){
-            public Object getValue( String expression )
-            {
-                if ( projectDir != null && "basedir".equals( expression ) )
-                {
-                    return projectDir.getAbsolutePath();
-                }
-
-                return null;
-            }
-        },
-        PROJECT_PREFIXES, true );
-
-        RegexBasedInterpolator interpolator = new RegexBasedInterpolator();
-
-        // NOTE: Order counts here!
-        interpolator.addValueSource( basedirValueSource );
-        interpolator.addValueSource( new BuildTimestampValueSource( config.getBuildStartTime(), timestampFormat ) );
-        interpolator.addValueSource( new MapBasedValueSource( config.getExecutionProperties() ) );
-        interpolator.addValueSource( modelValueSource1 );
-        interpolator.addValueSource( new PrefixedValueSourceWrapper( new MapBasedValueSource( modelProperties ), PROJECT_PREFIXES, true ) );
-        interpolator.addValueSource( modelValueSource2 );
-        interpolator.addValueSource( new MapBasedValueSource( config.getUserProperties() ) );
-
-        RecursionInterceptor recursionInterceptor = new PrefixAwareRecursionInterceptor( PROJECT_PREFIXES );
-
         String result = src;
-        try
+        Matcher matcher = EXPRESSION_PATTERN.matcher( result );
+        while ( matcher.find() )
         {
-            result = interpolator.interpolate( result, "", recursionInterceptor );
-        }
-        catch( InterpolationException e )
-        {
-            throw new ModelInterpolationException( e.getMessage(), e );
-        }
+            String wholeExpr = matcher.group( 0 );
+            String realExpr = matcher.group( 2 );
 
-        if ( debug )
-        {
-            List feedback = interpolator.getFeedback();
-            if ( feedback != null && !feedback.isEmpty() )
+            Object value = context.get( realExpr );
+
+            if ( value == null )
             {
-                logger.debug( "Maven encountered the following problems during initial POM interpolation:" );
-
-                Object last = null;
-                for ( Iterator it = feedback.iterator(); it.hasNext(); )
+                // This may look out of place, but its here for the MNG-2124/MNG-1927 fix described in the project builder
+                if ( context.containsKey( realExpr ) )
                 {
-                    Object next = it.next();
-
-                    if ( next instanceof Throwable )
-                    {
-                        if ( last == null )
-                        {
-                            logger.debug( "", ( (Throwable) next ) );
-                        }
-                        else
-                        {
-                            logger.debug( String.valueOf( last ), ( (Throwable) next ) );
-                        }
-                    }
-                    else
-                    {
-                        if ( last != null )
-                        {
-                            logger.debug( String.valueOf( last ) );
-                        }
-
-                        last = next;
-                    }
+                    // It existed, but was null. Leave it alone.
+                    continue;
                 }
 
-                if ( last != null )
+                value = model.getProperties().getProperty( realExpr );
+            }
+
+            if ( value == null )
+            {
+                try
                 {
-                    logger.debug( String.valueOf( last ) );
+                    // NOTE: We've already trimmed off any leading expression parts like 'project.'
+                    // or 'pom.', and now we have to ensure that the ReflectionValueExtractor
+                    // doesn't try to do it again.
+                    value = ReflectionValueExtractor.evaluate( realExpr, model, false );
+                }
+                catch ( Exception e )
+                {
+                    Logger logger = getLogger();
+                    if ( logger != null )
+                    {
+                        logger.debug( "POM interpolation cannot proceed with expression: " + wholeExpr + ". Skipping...", e );
+                    }
                 }
             }
-        }
 
-        interpolator.clearFeedback();
+            if ( value == null )
+            {
+                value = envars.getProperty( realExpr );
+            }
+
+            // if the expression refers to itself, skip it.
+            if ( String.valueOf( value ).indexOf( wholeExpr ) > -1 )
+            {
+                throw new ModelInterpolationException( wholeExpr, "Expression value '" + value + "' references itself in '" + model.getId() + "'." );
+            }
+
+            if ( value != null )
+            {
+                result = StringUtils.replace( result, wholeExpr, String.valueOf( value ) );
+                // could use:
+                // result = matcher.replaceFirst( stringValue );
+                // but this could result in multiple lookups of stringValue, and replaceAll is not correct behaviour
+                matcher.reset( result );
+            }
+/*
+        // This is the desired behaviour, however there are too many crappy poms in the repo and an issue with the
+        // timing of executing the interpolation
+
+            else
+            {
+                throw new ModelInterpolationException(
+                    "Expression '" + wholeExpr + "' did not evaluate to anything in the model" );
+            }
+*/
+        }
 
         return result;
     }
