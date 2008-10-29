@@ -89,7 +89,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
@@ -1627,7 +1626,7 @@ public class DefaultMavenProjectBuilder
                                          List plugins )
         throws ProjectBuildingException
     {
-        Set pluginArtifacts = new HashSet();
+        Set pluginArtifacts = new LinkedHashSet();
 
         for ( Iterator i = plugins.iterator(); i.hasNext(); )
         {
@@ -1670,7 +1669,7 @@ public class DefaultMavenProjectBuilder
                                          List reports )
         throws ProjectBuildingException
     {
-        Set pluginArtifacts = new HashSet();
+        Set pluginArtifacts = new LinkedHashSet();
 
         if ( reports != null )
         {
@@ -1716,7 +1715,7 @@ public class DefaultMavenProjectBuilder
                                             List extensions )
         throws ProjectBuildingException
     {
-        Set extensionArtifacts = new HashSet();
+        Set extensionArtifacts = new LinkedHashSet();
 
         if ( extensions != null )
         {

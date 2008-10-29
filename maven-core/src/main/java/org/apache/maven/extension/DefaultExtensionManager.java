@@ -23,8 +23,8 @@ import java.io.File;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.jar.JarFile;
@@ -121,9 +121,10 @@ public class DefaultExtensionManager
             // not declare plexus-utils but need it. MNG-2900
             DefaultPluginManager.checkPlexusUtils( resolutionGroup, artifactFactory );
 
-            Set dependencies = new HashSet( resolutionGroup.getArtifacts() );
+            Set dependencies = new LinkedHashSet();
 
             dependencies.add( artifact );
+            dependencies.addAll( resolutionGroup.getArtifacts() );
 
             // Make sure that we do not influence the dependenecy resolution of extensions with the project's
             // dependencyManagement
