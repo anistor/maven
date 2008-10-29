@@ -137,29 +137,15 @@ public class PluginDescriptor
     {
         return groupId + ":" + artifactId + ":" + version;
     }
-    
-    private String lookupKey;
 
     public String getPluginLookupKey()
     {
-        if ( lookupKey == null )
-        {
-            lookupKey = groupId + ":" + artifactId.intern();
-        }
-        
-        return lookupKey;
+        return groupId + ":" + artifactId;
     }
-    
-    private String id;
 
     public String getId()
     {
-        if ( id == null )
-        {
-            id = constructPluginKey( groupId, artifactId, version ).intern();
-        }
-        
-        return id;
+        return constructPluginKey( groupId, artifactId, version );
     }
 
     public static String getDefaultPluginArtifactId( String id )

@@ -21,10 +21,8 @@ package org.apache.maven;
 
 
 import org.apache.maven.artifact.manager.WagonManager;
-import org.apache.maven.artifact.manager.DefaultWagonManager;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.artifact.resolver.ArtifactResolutionException;
-import org.apache.maven.artifact.versioning.ArtifactVersion;
 import org.apache.maven.artifact.versioning.DefaultArtifactVersion;
 import org.apache.maven.execution.BuildFailure;
 import org.apache.maven.execution.DefaultMavenExecutionRequest;
@@ -39,9 +37,11 @@ import org.apache.maven.monitor.event.EventDispatcher;
 import org.apache.maven.monitor.event.MavenEvents;
 import org.apache.maven.profiles.ProfileManager;
 import org.apache.maven.profiles.activation.ProfileActivationException;
+import org.apache.maven.project.DefaultProjectBuilderConfiguration;
 import org.apache.maven.project.DuplicateProjectException;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.MavenProjectBuilder;
+import org.apache.maven.project.ProjectBuilderConfiguration;
 import org.apache.maven.project.ProjectBuildingException;
 import org.apache.maven.reactor.MavenExecutionException;
 import org.apache.maven.settings.Mirror;
@@ -575,7 +575,12 @@ public class DefaultMaven
             }
         }
 
-        return projectBuilder.build( pom, request.getProjectBuilderConfiguration() );
+        ProjectBuilderConfiguration config = new DefaultProjectBuilderConfiguration();
+        config.setLocalRepository( request.getLocalRepository() )
+              .setGlobalProfileManager( request.getGlobalProfileManager() )
+              .setUserProperties( request.getUserProperties() );
+
+        return projectBuilder.build( pom, config );
     }
 
     // ----------------------------------------------------------------------
@@ -592,7 +597,7 @@ public class DefaultMaven
     {
         return new MavenSession( container, request.getSettings(), request.getLocalRepository(),
                                  request.getEventDispatcher(), rpm, request.getGoals(), request.getBaseDirectory(),
-                                 request.getExecutionProperties(), request.getUserProperties(), request.getStartTime() );
+                                 request.getExecutionProperties(), request.getStartTime() );
     }
 
     /**
@@ -604,49 +609,6 @@ public class DefaultMaven
     private void resolveParameters( Settings settings )
         throws ComponentLookupException, ComponentLifecycleException, SettingsConfigurationException
     {
-        // TODO: remove when components.xml can be used to configure this instead
-        try
-        {
-            DefaultWagonManager wagonManager = (DefaultWagonManager) container.lookup( WagonManager.ROLE );
-            
-            String oldUserAgent = wagonManager.getHttpUserAgent();
-            int firstSpace = oldUserAgent == null ? -1 : oldUserAgent.indexOf( " " );
-            
-            StringBuffer buffer = new StringBuffer();
-            
-            buffer.append( "Apache-Maven/" );
-            
-            ArtifactVersion version = runtimeInformation.getApplicationVersion();
-            if ( version != null )
-            {
-                buffer.append( version.getMajorVersion() );
-                buffer.append( '.' );
-                buffer.append( version.getMinorVersion() );
-            }
-            else
-            {
-                buffer.append( "unknown" );
-            }
-            
-            buffer.append( ' ' );
-            if ( firstSpace > -1 )
-            {
-                buffer.append( oldUserAgent.substring( firstSpace + 1 ) );
-                buffer.append( ' ' );
-                buffer.append( oldUserAgent.substring( 0, firstSpace ) );
-            }
-            else
-            {
-                buffer.append( oldUserAgent );
-            }
-            
-            wagonManager.setHttpUserAgent(  buffer.toString() );
-        }
-        catch ( ClassCastException e )
-        {
-            // ignore
-        }
-
         WagonManager wagonManager = (WagonManager) container.lookup( WagonManager.ROLE );
 
         try
@@ -670,13 +632,6 @@ public class DefaultMaven
 
                 wagonManager.addAuthenticationInfo( server.getId(), server.getUsername(), server.getPassword(),
                                                     server.getPrivateKey(), server.getPassphrase() );
-
-                // Remove once Wagon is upgraded to 1.0-beta-5
-                if ( server.getPassword() != null )
-                {
-                    // setting this globally is not ideal, but not harmful
-                    com.jcraft.jsch.JSch.setConfig( "PreferredAuthentications", "gssapi-with-mic,publickey,password,keyboard-interactive" );
-                }
 
                 wagonManager.addPermissionInfo( server.getId(), server.getFilePermissions(),
                                                 server.getDirectoryPermissions() );
