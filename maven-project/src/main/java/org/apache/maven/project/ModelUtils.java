@@ -51,8 +51,8 @@ import org.apache.maven.project.inheritance.ModelInheritanceAssembler;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -1150,7 +1150,7 @@ public final class ModelUtils
 
     public static List mergeDependencyList( List child, List parent )
     {
-        Map depsMap = new HashMap();
+        Map depsMap = new LinkedHashMap();
 
         if ( parent != null )
         {
