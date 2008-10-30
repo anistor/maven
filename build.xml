@@ -206,7 +206,8 @@ under the License.
     </exec>
     
     <echo>Running integration tests</echo>
-    <exec failonerror="true" dir="${basedir}/maven-integration-tests/tests" executable="cmd">
+    <!-- Hard-coding to /tmp/ to avoid long path names that will make windows scream. -->
+    <exec failonerror="true" dir="/tmp/maven-integration-tests" executable="cmd">
       <arg value="/c"/>
       <arg value="${maven.home}\bin\mvn.bat"/>
       <arg value="-B"/>
@@ -224,7 +225,8 @@ under the License.
     </exec>
     
     <echo>Running integration tests</echo>
-    <exec failonerror="true" dir="${basedir}/maven-integration-tests/tests" executable="${maven.home}/bin/mvn">
+    <!-- Hard-coding to /tmp/ to avoid long path names that will make windows scream. -->
+    <exec failonerror="true" dir="/tmp/maven-integration-tests" executable="${maven.home}/bin/mvn">
       <arg value="-Prun-its"/>
       <arg value="-B"/>
       <arg value="clean"/>

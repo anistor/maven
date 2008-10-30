@@ -89,7 +89,9 @@
         <version>1.1</version>
         <configuration>
           <connectionUrl>scm:svn:http://svn.apache.org/repos/asf/maven/core-integration-testing/${integrationTestSVNDir}</connectionUrl>
-          <checkoutDirectory>${pom.basedir}/tests</checkoutDirectory>
+          
+          <!-- Hard-coding to /tmp/ to avoid long path names that will make windows scream. -->
+          <checkoutDirectory>/tmp/${artifactId}</checkoutDirectory>
         </configuration>
       </plugin>
     </plugins>
