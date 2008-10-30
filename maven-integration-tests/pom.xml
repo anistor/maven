@@ -19,7 +19,7 @@
       <activation>
         <activeByDefault>true</activeByDefault>
         <file>
-          <exists>tests/pom.xml</exists>
+          <exists>/tmp/maven-integration-tests/pom.xml</exists>
         </file>
       </activation>
       <build>
@@ -43,7 +43,7 @@
       <id>checkout</id>
       <activation>
         <file>
-          <missing>tests/pom.xml</missing>
+          <missing>/tmp/maven-integration-tests/pom.xml</missing>
         </file>
       </activation>
       <build>
@@ -91,7 +91,7 @@
           <connectionUrl>scm:svn:http://svn.apache.org/repos/asf/maven/core-integration-testing/${integrationTestSVNDir}</connectionUrl>
           
           <!-- Hard-coding to /tmp/ to avoid long path names that will make windows scream. -->
-          <checkoutDirectory>/tmp/${artifactId}</checkoutDirectory>
+          <checkoutDirectory>/tmp/maven-integration-tests</checkoutDirectory>
         </configuration>
       </plugin>
     </plugins>
