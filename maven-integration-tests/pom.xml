@@ -19,7 +19,8 @@
       <activation>
         <activeByDefault>true</activeByDefault>
         <file>
-          <exists>/tmp/maven-integration-tests/pom.xml</exists>
+          <!-- NOT INTERPOLATED. These values must be explicit. -->
+          <exists>/tmp/maven-integration-tests-2.0.x/pom.xml</exists>
         </file>
       </activation>
       <build>
@@ -43,7 +44,8 @@
       <id>checkout</id>
       <activation>
         <file>
-          <missing>/tmp/maven-integration-tests/pom.xml</missing>
+          <!-- NOT INTERPOLATED. These values must be explicit. -->
+          <missing>/tmp/maven-integration-tests-2.0.x/pom.xml</missing>
         </file>
       </activation>
       <build>
@@ -91,7 +93,8 @@
           <connectionUrl>scm:svn:http://svn.apache.org/repos/asf/maven/core-integration-testing/${integrationTestSVNDir}</connectionUrl>
           
           <!-- Hard-coding to /tmp/ to avoid long path names that will make windows scream. -->
-          <checkoutDirectory>/tmp/maven-integration-tests</checkoutDirectory>
+          <!-- NOT INTERPOLATED DURING PROFILE ACTIVATION, so making these values explicit throughout to avoid confusion. -->
+          <checkoutDirectory>/tmp/maven-integration-tests-2.0.x</checkoutDirectory>
         </configuration>
       </plugin>
     </plugins>
