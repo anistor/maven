@@ -23,7 +23,6 @@ import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.monitor.event.EventDispatcher;
 import org.apache.maven.monitor.event.EventMonitor;
 import org.apache.maven.profiles.ProfileManager;
-import org.apache.maven.project.ProjectBuilderConfiguration;
 import org.apache.maven.settings.Settings;
 
 import java.util.Date;
@@ -77,6 +76,4 @@ public interface MavenExecutionRequest
     Date getStartTime();
 
     boolean isShowErrors();
-
-    ProjectBuilderConfiguration getProjectBuilderConfiguration();
 }

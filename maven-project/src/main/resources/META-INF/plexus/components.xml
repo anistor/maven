@@ -41,11 +41,6 @@ under the License.
     <component>
       <role>org.apache.maven.project.interpolation.ModelInterpolator</role>
       <implementation>org.apache.maven.project.interpolation.RegexBasedModelInterpolator</implementation>
-      <requirements>
-        <requirement>
-          <role>org.apache.maven.project.path.PathTranslator</role>
-        </requirement>
-      </requirements>
     </component>
 <!--
      |
@@ -185,6 +180,17 @@ under the License.
     <component>
       <role>org.apache.maven.project.path.PathTranslator</role>
       <implementation>org.apache.maven.project.path.DefaultPathTranslator</implementation>
+    </component>
+    
+    <component>
+      <role>org.apache.maven.project.ModelResolver</role>
+      <role-hint>default</role-hint>
+      <implementation>org.apache.maven.project.ModelResolver</implementation>
+      <requirements>
+        <requirement>
+		      <role>org.apache.maven.artifact.resolver.ArtifactResolver</role>
+        </requirement>
+      </requirements>
     </component>
     
     <component>
