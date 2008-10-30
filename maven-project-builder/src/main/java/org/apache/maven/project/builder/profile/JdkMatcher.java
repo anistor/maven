@@ -8,10 +8,14 @@ import org.apache.maven.project.builder.ProjectUri;
 import java.util.List;
 
 public class JdkMatcher implements ActiveProfileMatcher {
-
+    //TODO: Ranges
     public boolean isMatch(ModelContainer modelContainer, List<InterpolatorProperty> properties) {
         if(modelContainer == null ) {
             throw new IllegalArgumentException("modelContainer: null");
+        }
+
+        if(properties == null) {
+            return false;
         }
 
         for(InterpolatorProperty property : properties) {

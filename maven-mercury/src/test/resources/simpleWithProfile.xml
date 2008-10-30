@@ -1,0 +1,29 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>org.apache.maven</groupId>
+    <artifactId>maven-mercury</artifactId>
+    <version>1.0</version>
+    <name>Maven Mercury</name>
+    <dependencies>
+        <dependency>
+            <groupId>org.apache.maven.mercury</groupId>
+            <artifactId>mercury-artifact</artifactId>
+        </dependency>
+    </dependencies>
+    <profiles>
+        <profile>
+            <activation>
+                <file>
+                    <exists>/Users/brittonisbell/checkout/sisbell-maven-3.0-mercury/maven-mercury/src/test/resources/test.txt</exists>
+                </file>
+            </activation>
+            <dependencies>
+                <dependency>
+                    <groupId>org.apache.maven.mercury</groupId>
+                    <artifactId>mercury-external</artifactId>
+                </dependency>
+            </dependencies>
+        </profile>
+    </profiles>
+</project>

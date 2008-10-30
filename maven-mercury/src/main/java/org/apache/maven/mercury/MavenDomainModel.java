@@ -24,8 +24,8 @@ import org.apache.maven.shared.model.impl.DefaultModelDataSource;
 import org.apache.maven.project.builder.ProjectUri;
 import org.apache.maven.project.builder.ArtifactModelContainerFactory;
 import org.apache.maven.project.builder.IdModelContainerFactory;
+import org.apache.maven.project.builder.profile.ProfileContext;
 import org.apache.maven.mercury.artifact.ArtifactBasicMetadata;
-import org.apache.maven.mercury.artifact.ArtifactMetadata;
 import org.apache.maven.mercury.impl.ArtifactBasicMetadataImpl;
 
 import java.io.IOException;
@@ -34,6 +34,7 @@ import java.io.ByteArrayInputStream;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 
 /**
  * Provides a wrapper for the maven model.
@@ -51,8 +52,6 @@ public final class MavenDomainModel implements DomainModel {
     private String eventHistory;
 
     private ArtifactBasicMetadata parentMetadata;
-
-    private String modelId;
 
 
     /**
@@ -106,6 +105,12 @@ public final class MavenDomainModel implements DomainModel {
         return metadatas;
     }
 
+    public Collection<ModelContainer> getActiveProfileContainers(List<InterpolatorProperty> properties) throws DataSourceException {
+        ModelDataSource dataSource = new DefaultModelDataSource();
+        dataSource.init(modelProperties, Arrays.asList( new ArtifactModelContainerFactory(), new IdModelContainerFactory() ) );
+        return new ProfileContext(dataSource, properties).getActiveProfiles();
+    }
+
     public ArtifactBasicMetadata getParentMetadata() {
         if (parentMetadata != null) {
             return copyArtifactBasicMetadata(parentMetadata);
@@ -113,7 +118,6 @@ public final class MavenDomainModel implements DomainModel {
         String groupId = null, artifactId = null, version = null;
 
         for (ModelProperty mp : modelProperties) {
-            System.out.println(mp);
             if (mp.getUri().equals(ProjectUri.Parent.version)) {
                 version = mp.getValue();
             } else if (mp.getUri().equals(ProjectUri.Parent.artifactId)) {
@@ -127,7 +131,6 @@ public final class MavenDomainModel implements DomainModel {
         }
 
         if (groupId == null || artifactId == null || version == null) {
-            System.out.println(groupId + ":" + artifactId + ":" + version);
             return null;
         }
         parentMetadata = new ArtifactBasicMetadata();
@@ -143,7 +146,6 @@ public final class MavenDomainModel implements DomainModel {
         amd.setArtifactId(metadata.getArtifactId());
         amd.setGroupId(metadata.getGroupId());
         amd.setVersion(metadata.getVersion());
-        amd.setModelSource(getModelId());
         return amd;
     }
 
@@ -168,28 +170,6 @@ public final class MavenDomainModel implements DomainModel {
         return new ArrayList<ModelProperty>(modelProperties);
     }
 
-    private String getModelId() {
-        if(modelId != null) {
-            return modelId;
-        }
-        String groupId = null, artifactId = null, version = null;
-
-        for (ModelProperty mp : modelProperties) {
-            if (mp.getUri().equals(ProjectUri.version)) {
-                version = mp.getValue();
-            } else if (mp.getUri().equals(ProjectUri.artifactId)) {
-                artifactId = mp.getValue();
-            } else if (mp.getUri().equals(ProjectUri.groupId)) {
-                groupId = mp.getValue();
-            }
-            if (groupId != null && artifactId != null && version != null) {
-                break;
-            }
-        }
-        modelId = groupId + ":" + artifactId + ":" + version;
-        return modelId;
-    }
-
     private ArtifactBasicMetadata transformContainerToMetadata( ModelContainer container  )
     {
         List<ModelProperty> modelProperties = container.getProperties();
@@ -207,7 +187,6 @@ public final class MavenDomainModel implements DomainModel {
                 metadata.setClassifier(mp.getValue());
             }
         }
-        metadata.setModelSource(getModelId());
         return metadata;
     }
 }

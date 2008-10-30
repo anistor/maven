@@ -36,13 +36,24 @@ public final class ArtifactModelContainerFactory
 
     private static final Collection<String> uris = Collections.unmodifiableList( Arrays.asList(
 
-        ProjectUri.DependencyManagement.Dependencies.Dependency.xUri, ProjectUri.Dependencies.Dependency.xUri,
+        ProjectUri.DependencyManagement.Dependencies.Dependency.xUri,
+        ProjectUri.Dependencies.Dependency.xUri,
         ProjectUri.Reporting.Plugins.Plugin.xUri,
         ProjectUri.Build.PluginManagement.Plugins.Plugin.xUri,
         ProjectUri.Build.PluginManagement.Plugins.Plugin.Dependencies.Dependency.xUri,
 
         ProjectUri.Build.Plugins.Plugin.xUri, ProjectUri.Build.Plugins.Plugin.Dependencies.Dependency.xUri,
-        ProjectUri.Build.Plugins.Plugin.Dependencies.Dependency.Exclusions.Exclusion.xUri
+        ProjectUri.Build.Plugins.Plugin.Dependencies.Dependency.Exclusions.Exclusion.xUri,
+
+        ProjectUri.Profiles.Profile.Dependencies.Dependency.xUri,
+        ProjectUri.Profiles.Profile.DependencyManagement.Dependencies.Dependency.xUri,
+        ProjectUri.Profiles.Profile.Reporting.Plugins.Plugin.xUri,
+        ProjectUri.Profiles.Profile.Build.PluginManagement.Plugins.Plugin.xUri,
+        ProjectUri.Profiles.Profile.Build.PluginManagement.Plugins.Plugin.Dependencies.Dependency.xUri,
+
+        ProjectUri.Profiles.Profile.Build.Plugins.Plugin.xUri, ProjectUri.Build.Plugins.Plugin.Dependencies.Dependency.xUri,
+        ProjectUri.Profiles.Profile.Build.Plugins.Plugin.Dependencies.Dependency.Exclusions.Exclusion.xUri
+
          ) );
 
     public Collection<String> getUris()

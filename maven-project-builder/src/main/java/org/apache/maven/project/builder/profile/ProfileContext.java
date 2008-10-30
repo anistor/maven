@@ -24,7 +24,7 @@ public class ProfileContext {
         this.properties = new ArrayList<InterpolatorProperty>(properties);
     }
 
-    Collection<ModelContainer> getActiveProfiles() throws DataSourceException {
+    public Collection<ModelContainer> getActiveProfiles() throws DataSourceException {
         List<ModelContainer> matchedContainers = new ArrayList<ModelContainer>();
 
         List<ModelContainer> modelContainers  = modelDataSource.queryFor(ProjectUri.Profiles.Profile.xUri);

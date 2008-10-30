@@ -6,6 +6,7 @@ import org.junit.Before;
 
 import java.util.List;
 import java.util.Stack;
+import java.util.Map;
 import java.io.File;
 
 public class MavenDependencyProcessorTest {
@@ -30,6 +31,18 @@ public class MavenDependencyProcessorTest {
     public void testSinglePom() throws MetadataReaderException {
         Stack<File> files = new Stack<File>();
         files.add(new File(basedir, "src/test/resources/simple.xml"));
+
+        MavenDependencyProcessor processor = new MavenDependencyProcessor();
+        List<ArtifactBasicMetadata> dependencies = processor.getDependencies(new ArtifactBasicMetadata(),
+                new MetadataReaderStub(files), null, null);
+        assertEquals("Dependencies incorrect", 2, dependencies.size());
+
+    }
+
+    @org.junit.Test
+    public void testSinglePomWithProfile() throws MetadataReaderException {
+        Stack<File> files = new Stack<File>();
+        files.add(new File(basedir, "src/test/resources/simpleWithProfile.xml"));
 
         MavenDependencyProcessor processor = new MavenDependencyProcessor();
         List<ArtifactBasicMetadata> dependencies = processor.getDependencies(new ArtifactBasicMetadata(),

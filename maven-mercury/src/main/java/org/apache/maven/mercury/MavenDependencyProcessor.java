@@ -16,10 +16,7 @@ import org.apache.maven.project.builder.ArtifactModelContainerFactory;
 import org.apache.maven.project.builder.IdModelContainerFactory;
 import org.apache.maven.project.builder.ProjectUri;
 import org.apache.maven.project.builder.PomInterpolatorTag;
-import org.apache.maven.shared.model.DomainModel;
-import org.apache.maven.shared.model.ModelTransformerContext;
-import org.apache.maven.shared.model.ModelMarshaller;
-import org.apache.maven.shared.model.InterpolatorProperty;
+import org.apache.maven.shared.model.*;
 
 public final class MavenDependencyProcessor implements DependencyProcessor {
 
@@ -51,6 +48,13 @@ public final class MavenDependencyProcessor implements DependencyProcessor {
 
             MavenDomainModel domainModel = new MavenDomainModel(mdReader.readMetadata(bmd));
             domainModels.add(domainModel);
+
+            Collection<ModelContainer> activeProfiles = domainModel.getActiveProfileContainers(interpolatorProperties);
+
+            for(ModelContainer mc : activeProfiles) {
+                domainModels.add(new MavenDomainModel(transformProfiles(mc.getProperties())));
+            }
+
             domainModels.addAll(getParentsOfDomainModel(domainModel, mdReader));
         } catch (IOException e) {
             throw new MetadataReaderException("Failed to create domain model. Message = " + e.getMessage());
@@ -61,11 +65,12 @@ public final class MavenDependencyProcessor implements DependencyProcessor {
                 Arrays.asList(new ArtifactModelContainerFactory(), new IdModelContainerFactory()));
 
         try {
-            return ((MavenDomainModel) ctx.transform(domainModels,
+            MavenDomainModel model = ((MavenDomainModel) ctx.transform(domainModels,
                     transformer,
                     transformer,
                     null,
-                    interpolatorProperties)).getDependencyMetadata();
+                    interpolatorProperties));
+            return model.getDependencyMetadata();
         } catch (IOException e) {
             throw new MetadataReaderException("Unable to transform model");
         }
@@ -80,6 +85,19 @@ public final class MavenDependencyProcessor implements DependencyProcessor {
             domainModels.addAll(getParentsOfDomainModel(parentDomainModel, mdReader));
         }
         return domainModels;
+    }
+
+    private static List<ModelProperty> transformProfiles(List<ModelProperty> modelProperties) {
+        List<ModelProperty> properties = new ArrayList<ModelProperty>();
+        for(ModelProperty mp : modelProperties) {
+            if(mp.getUri().startsWith(ProjectUri.Profiles.Profile.xUri)
+                    && !mp.getUri().equals(ProjectUri.Profiles.Profile.id)
+                    && !mp.getUri().startsWith(ProjectUri.Profiles.Profile.Activation.xUri)) {
+                properties.add(new ModelProperty(mp.getUri().replace( ProjectUri.Profiles.Profile.xUri, ProjectUri.xUri ),
+                    mp.getResolvedValue() ));
+            }
+        }
+        return properties;
     }
 /*
     private static List<InterpolatorProperty> translaterInterpolatorPropertiesFromTable(Hashtable table) {

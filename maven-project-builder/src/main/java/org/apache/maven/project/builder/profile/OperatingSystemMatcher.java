@@ -14,29 +14,40 @@ public class OperatingSystemMatcher implements ActiveProfileMatcher {
             throw new IllegalArgumentException("modelContainer: null");
         }
 
-        String operatingSystem = null, version = null, arch = null, family = null;
+        if(!doTest(modelContainer)) {
+            return false;
+        }
 
         for(InterpolatorProperty property : properties) {
-            if(property.getKey().equals("${os.name}")) {
-                operatingSystem = property.getValue();
-            } else if(property.getKey().equals("${os.version}")) {
-               version = property.getValue();
-            } else if(property.getKey().equals("${os.arch}")) {
-                arch = property.getValue();
-            } else if(property.getKey().equals("${os.family}")) {
-                family = property.getValue();
+            if(!matches(modelContainer, property)) {
+                return false;
             }
         }
 
-        boolean matchesOs, matchesVersion, matchesArch, matchesFamily;
+        return true;
+    }
 
-        
-        for(ModelProperty property : modelContainer.getProperties()) {
-            if(arch !=null && property.getUri().equals(ProjectUri.Profiles.Profile.Activation.Os.arch)) {
-                
+    private static boolean doTest(ModelContainer modelContainer) {
+        for(ModelProperty mp : modelContainer.getProperties()) {
+            if(mp.getUri().startsWith(ProjectUri.Profiles.Profile.Activation.Os.xUri)) {
+                return true;
             }
         }
-
         return false;
+    }
+
+    private static boolean matches(ModelContainer modelContainer, InterpolatorProperty interpolatorProperty) {
+        String key = interpolatorProperty.getKey();
+
+        for(ModelProperty property : modelContainer.getProperties()) {
+            if((key.equals("${os.arch}") && property.getUri().equals(ProjectUri.Profiles.Profile.Activation.Os.arch))
+                    || (key.equals("${os.version}") && property.getUri().equals(ProjectUri.Profiles.Profile.Activation.Os.version))
+                    || (key.equals("${os.family}") && property.getUri().equals(ProjectUri.Profiles.Profile.Activation.Os.family))
+                    || (key.equals("${os.name}") && property.getUri().equals(ProjectUri.Profiles.Profile.Activation.Os.name)) )
+            {
+               return interpolatorProperty.getValue().equals(property.getResolvedValue());
+            }
+        }
+        return true;
     }
 }

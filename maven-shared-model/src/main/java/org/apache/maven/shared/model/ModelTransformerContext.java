@@ -314,6 +314,8 @@ public final class ModelTransformerContext
         return this.transform( domainModels, fromModelTransformer, toModelTransformer, null, systemInterpolatorProperties );
     }
 
+    //mixins
+    
     private static List<ModelProperty> importModelProperties(Collection<ImportModel> importModels,
                                                              List<ModelProperty> modelProperties) {
         List<ModelProperty> properties = new ArrayList<ModelProperty>();
