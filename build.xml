@@ -198,14 +198,14 @@ under the License.
   
   <target name="its-win32" if="its.win32">
     <echo>Retrieving integration tests</echo>
-    <exec dir="${basedir}/maven-integration-tests" executable="cmd">
+    <exec failonerror="true" dir="${basedir}/maven-integration-tests" executable="cmd">
       <arg value="/c"/>
       <arg value="${maven.home}\bin\mvn.bat"/>
       <arg value="initialize"/>
     </exec>
     
     <echo>Running integration tests</echo>
-    <exec dir="${basedir}/maven-integration-tests/tests" executable="cmd">
+    <exec failonerror="true" dir="${basedir}/maven-integration-tests/tests" executable="cmd">
       <arg value="/c"/>
       <arg value="${maven.home}\bin\mvn.bat"/>
       <arg value="-Prun-its"/>
@@ -216,12 +216,12 @@ under the License.
 
   <target name="its-unix" if="its.unix">
     <echo>Retrieving integration tests</echo>
-    <exec dir="${basedir}/maven-integration-tests" executable="${maven.home}/bin/mvn">
+    <exec failonerror="true" dir="${basedir}/maven-integration-tests" executable="${maven.home}/bin/mvn">
       <arg value="initialize"/>
     </exec>
     
     <echo>Running integration tests</echo>
-    <exec dir="${basedir}/maven-integration-tests/tests" executable="${maven.home}/bin/mvn">
+    <exec failonerror="true" dir="${basedir}/maven-integration-tests/tests" executable="${maven.home}/bin/mvn">
       <arg value="-Prun-its"/>
       <arg value="clean"/>
       <arg value="install"/>
