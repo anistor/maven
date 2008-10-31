@@ -15,7 +15,7 @@
         <profile>
             <activation>
                 <file>
-                    <exists>/Users/brittonisbell/checkout/sisbell-maven-3.0-mercury/maven-mercury/src/test/resources/test.txt</exists>
+                    <exists>src/test/resources/test.txt</exists>
                 </file>
             </activation>
             <dependencies>
