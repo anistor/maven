@@ -26,7 +26,6 @@ import org.apache.maven.project.builder.ArtifactModelContainerFactory;
 import org.apache.maven.project.builder.IdModelContainerFactory;
 import org.apache.maven.project.builder.profile.ProfileContext;
 import org.apache.maven.mercury.artifact.ArtifactBasicMetadata;
-import org.apache.maven.mercury.impl.ArtifactBasicMetadataImpl;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -142,7 +141,7 @@ public final class MavenDomainModel implements DomainModel {
     }
 
     private ArtifactBasicMetadata copyArtifactBasicMetadata(ArtifactBasicMetadata metadata) {
-        ArtifactBasicMetadataImpl amd = new ArtifactBasicMetadataImpl();
+        ArtifactBasicMetadata amd = new ArtifactBasicMetadata();
         amd.setArtifactId(metadata.getArtifactId());
         amd.setGroupId(metadata.getGroupId());
         amd.setVersion(metadata.getVersion());
@@ -174,7 +173,7 @@ public final class MavenDomainModel implements DomainModel {
     {
         List<ModelProperty> modelProperties = container.getProperties();
 
-        ArtifactBasicMetadataImpl metadata = new ArtifactBasicMetadataImpl();
+        ArtifactBasicMetadata metadata = new ArtifactBasicMetadata();
         for ( ModelProperty mp : modelProperties )
         {
             if(mp.getUri().equals(ProjectUri.Dependencies.Dependency.groupId)) {
