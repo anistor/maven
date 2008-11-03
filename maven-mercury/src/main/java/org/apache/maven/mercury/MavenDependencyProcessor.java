@@ -20,6 +20,10 @@ import org.apache.maven.shared.model.*;
 
 public final class MavenDependencyProcessor implements DependencyProcessor {
 
+    public MavenDependencyProcessor() {
+        
+    }
+
     public List<ArtifactBasicMetadata> getDependencies(ArtifactBasicMetadata bmd, MetadataReader mdReader, Map system, Map user)
             throws MetadataReaderException {
         if (bmd == null) {
@@ -29,7 +33,7 @@ public final class MavenDependencyProcessor implements DependencyProcessor {
         if (mdReader == null) {
             throw new IllegalArgumentException("mdReader: null");
         }
-
+        
         List<InterpolatorProperty> interpolatorProperties = new ArrayList<InterpolatorProperty>();
         if(system != null) {
             interpolatorProperties.addAll( InterpolatorProperty.toInterpolatorProperties( system,
@@ -45,7 +49,7 @@ public final class MavenDependencyProcessor implements DependencyProcessor {
 //            MavenDomainModel superPom =
 //                    new MavenDomainModel(MavenDependencyProcessor.class.getResourceAsStream( "pom-4.0.0.xml" ));
 //            domainModels.add(superPom);
-
+                                             
             MavenDomainModel domainModel = new MavenDomainModel(mdReader.readMetadata(bmd));
             domainModels.add(domainModel);
 
@@ -54,6 +58,7 @@ public final class MavenDependencyProcessor implements DependencyProcessor {
             for(ModelContainer mc : activeProfiles) {
                 domainModels.add(new MavenDomainModel(transformProfiles(mc.getProperties())));
             }
+
 
             domainModels.addAll(getParentsOfDomainModel(domainModel, mdReader));
         } catch (IOException e) {
@@ -99,9 +104,4 @@ public final class MavenDependencyProcessor implements DependencyProcessor {
         }
         return properties;
     }
-/*
-    private static List<InterpolatorProperty> translaterInterpolatorPropertiesFromTable(Hashtable table) {
-        for()
-    }
-    */
 }

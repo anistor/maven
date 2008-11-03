@@ -169,7 +169,7 @@ public final class MavenDomainModel implements DomainModel {
         return new ArrayList<ModelProperty>(modelProperties);
     }
 
-    private ArtifactBasicMetadata transformContainerToMetadata( ModelContainer container  )
+    private ArtifactBasicMetadata transformContainerToMetadata( ModelContainer container  ) throws DataSourceException
     {
         List<ModelProperty> modelProperties = container.getProperties();
 
@@ -184,8 +184,38 @@ public final class MavenDomainModel implements DomainModel {
                 metadata.setVersion(mp.getValue());
             } else if(mp.getUri().equals(ProjectUri.Dependencies.Dependency.classifier)) {
                 metadata.setClassifier(mp.getValue());
+            } else if(mp.getUri().equals(ProjectUri.Dependencies.Dependency.scope)) {
+                metadata.setScope(mp.getValue());
+            } else if(mp.getUri().equals(ProjectUri.Dependencies.Dependency.type)) {
+                metadata.setType(mp.getValue());
+            } else if(mp.getUri().equals(ProjectUri.Dependencies.Dependency.optional)) {
+                metadata.setOptional(mp.getValue());
             }
         }
+
+        if(metadata.getScope() == null) {
+            metadata.setScope("runtime");
+        }
+
+        ModelDataSource dataSource = new DefaultModelDataSource();
+        dataSource.init(container.getProperties(), Arrays.asList(new ArtifactModelContainerFactory(), new IdModelContainerFactory()) );
+        List<ArtifactBasicMetadata> exclusions = new ArrayList<ArtifactBasicMetadata>();
+
+        for(ModelContainer exclusion : dataSource.queryFor(ProjectUri.Dependencies.Dependency.Exclusions.Exclusion.xUri)) {
+            ArtifactBasicMetadata meta = new ArtifactBasicMetadata();
+            exclusions.add(meta);
+
+            for(ModelProperty mp : exclusion.getProperties()) {
+                if(mp.getUri().equals(ProjectUri.Dependencies.Dependency.Exclusions.Exclusion.artifactId)) {
+                    meta.setArtifactId(mp.getValue());
+                } else if(mp.getUri().equals(ProjectUri.Dependencies.Dependency.Exclusions.Exclusion.groupId)) {
+                    meta.setGroupId(mp.getValue());
+                }
+            }
+
+        }
+        metadata.setExclusions(exclusions);
+
         return metadata;
     }
 }
