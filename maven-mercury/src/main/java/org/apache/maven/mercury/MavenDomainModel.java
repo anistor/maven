@@ -24,6 +24,7 @@ import org.apache.maven.shared.model.impl.DefaultModelDataSource;
 import org.apache.maven.project.builder.ProjectUri;
 import org.apache.maven.project.builder.ArtifactModelContainerFactory;
 import org.apache.maven.project.builder.IdModelContainerFactory;
+import org.apache.maven.project.builder.ExclusionModelContainerFactory;
 import org.apache.maven.project.builder.profile.ProfileContext;
 import org.apache.maven.mercury.artifact.ArtifactBasicMetadata;
 
@@ -196,9 +197,9 @@ public final class MavenDomainModel implements DomainModel {
         if(metadata.getScope() == null) {
             metadata.setScope("runtime");
         }
-        /*
+
         ModelDataSource dataSource = new DefaultModelDataSource();
-        dataSource.init(container.getProperties(), Arrays.asList(new ArtifactModelContainerFactory(), new IdModelContainerFactory()) );
+        dataSource.init(container.getProperties(), Arrays.asList(new ArtifactModelContainerFactory(), new ExclusionModelContainerFactory()) );
         List<ArtifactBasicMetadata> exclusions = new ArrayList<ArtifactBasicMetadata>();
 
         for(ModelContainer exclusion : dataSource.queryFor(ProjectUri.Dependencies.Dependency.Exclusions.Exclusion.xUri)) {
@@ -215,7 +216,7 @@ public final class MavenDomainModel implements DomainModel {
 
         }
         metadata.setExclusions(exclusions);
-        */
+        
         return metadata;
     }
 }

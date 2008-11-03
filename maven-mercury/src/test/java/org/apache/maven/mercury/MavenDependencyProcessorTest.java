@@ -38,11 +38,11 @@ public class MavenDependencyProcessorTest {
         assertEquals("Dependencies incorrect", 2, dependencies.size());
 
     }
-    /*
+
     @org.junit.Test
     public void testSimplePomWithExclusions() throws MetadataReaderException {
         Stack<File> files = new Stack<File>();
-        files.add(new File("src/test/resources/simpleWithExclusions.xml"));
+        files.add(new File(basedir, "src/test/resources/simpleWithExclusions.xml"));
 
         MavenDependencyProcessor processor = new MavenDependencyProcessor();
         List<ArtifactBasicMetadata> dependencies = processor.getDependencies(new ArtifactBasicMetadata(),
@@ -53,7 +53,7 @@ public class MavenDependencyProcessorTest {
         assertEquals("Exclusions incorrect", 2, dependency.getExclusions().size());
 
     }
-   */
+
     @org.junit.Test
     public void testSinglePomWithProfile() throws MetadataReaderException {
         Stack<File> files = new Stack<File>();
