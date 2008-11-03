@@ -196,7 +196,7 @@ public final class MavenDomainModel implements DomainModel {
         if(metadata.getScope() == null) {
             metadata.setScope("runtime");
         }
-
+        /*
         ModelDataSource dataSource = new DefaultModelDataSource();
         dataSource.init(container.getProperties(), Arrays.asList(new ArtifactModelContainerFactory(), new IdModelContainerFactory()) );
         List<ArtifactBasicMetadata> exclusions = new ArrayList<ArtifactBasicMetadata>();
@@ -215,7 +215,7 @@ public final class MavenDomainModel implements DomainModel {
 
         }
         metadata.setExclusions(exclusions);
-
+        */
         return metadata;
     }
 }

@@ -38,7 +38,7 @@ public class MavenDependencyProcessorTest {
         assertEquals("Dependencies incorrect", 2, dependencies.size());
 
     }
-
+    /*
     @org.junit.Test
     public void testSimplePomWithExclusions() throws MetadataReaderException {
         Stack<File> files = new Stack<File>();
@@ -53,7 +53,7 @@ public class MavenDependencyProcessorTest {
         assertEquals("Exclusions incorrect", 2, dependency.getExclusions().size());
 
     }
-
+   */
     @org.junit.Test
     public void testSinglePomWithProfile() throws MetadataReaderException {
         Stack<File> files = new Stack<File>();

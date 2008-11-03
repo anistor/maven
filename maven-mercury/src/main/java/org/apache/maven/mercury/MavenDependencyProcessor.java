@@ -1,12 +1,7 @@
 package org.apache.maven.mercury;
 
-import java.io.File;
 import java.io.IOException;
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
 import java.util.*;
-import java.net.URL;
-import java.text.SimpleDateFormat;
 
 import org.apache.maven.mercury.artifact.ArtifactBasicMetadata;
 import org.apache.maven.mercury.builder.api.DependencyProcessor;
@@ -21,7 +16,7 @@ import org.apache.maven.shared.model.*;
 public final class MavenDependencyProcessor implements DependencyProcessor {
 
     public MavenDependencyProcessor() {
-        
+
     }
 
     public List<ArtifactBasicMetadata> getDependencies(ArtifactBasicMetadata bmd, MetadataReader mdReader, Map system, Map user)
@@ -33,7 +28,7 @@ public final class MavenDependencyProcessor implements DependencyProcessor {
         if (mdReader == null) {
             throw new IllegalArgumentException("mdReader: null");
         }
-        
+
         List<InterpolatorProperty> interpolatorProperties = new ArrayList<InterpolatorProperty>();
         if(system != null) {
             interpolatorProperties.addAll( InterpolatorProperty.toInterpolatorProperties( system,
@@ -49,7 +44,7 @@ public final class MavenDependencyProcessor implements DependencyProcessor {
 //            MavenDomainModel superPom =
 //                    new MavenDomainModel(MavenDependencyProcessor.class.getResourceAsStream( "pom-4.0.0.xml" ));
 //            domainModels.add(superPom);
-                                             
+
             MavenDomainModel domainModel = new MavenDomainModel(mdReader.readMetadata(bmd));
             domainModels.add(domainModel);
 
