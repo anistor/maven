@@ -1,4 +1,4 @@
-package org.apache.maven.mercury;
+package org.apache.maven.project.builder;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -19,10 +19,6 @@ package org.apache.maven.mercury;
  * under the License.
  */
 
-import org.apache.maven.project.builder.ArtifactModelContainerFactory;
-import org.apache.maven.project.builder.IdModelContainerFactory;
-import org.apache.maven.project.builder.PomInterpolatorTag;
-import org.apache.maven.project.builder.ProjectUri;
 import org.apache.maven.shared.model.*;
 import org.apache.maven.shared.model.impl.DefaultModelDataSource;
 
@@ -32,10 +28,16 @@ import java.util.*;
 /**
  * Provides methods for transforming model properties into a domain model for the pom classic format and vice versa.
  */
-public final class MercuryPomTransformer
+public final class PomTransformer
     implements ModelTransformer
 {
 
+    private final DomainModelFactory factory;
+
+    public PomTransformer(DomainModelFactory factory)
+    {
+        this.factory = factory;
+    }
     /**
      * The URIs this transformer supports
      */
@@ -207,7 +209,7 @@ public final class MercuryPomTransformer
             }
         }
         props.removeAll( removeProperties );
-        return new MavenDomainModel(props ); 
+        return factory.createDomainModel( props ); 
     }
 
     /**
@@ -233,14 +235,8 @@ public final class MercuryPomTransformer
 
         for ( DomainModel domainModel : domainModels )
         {
-            if ( !( domainModel instanceof MavenDomainModel ) )
-            {
-                throw new IllegalArgumentException( "domainModels: Invalid domain model" );
-            }
-
-
             List<ModelProperty> tmp =
-                ( (MavenDomainModel) domainModel).getModelProperties();
+                domainModel.getModelProperties();
 
             List<ModelProperty> clearedProperties = new ArrayList<ModelProperty>();
 
@@ -452,28 +448,6 @@ public final class MercuryPomTransformer
                                            DomainModel domainModel)
             throws IOException
     {
-        interpolateModelProperties( modelProperties, interpolatorProperties, (MavenDomainModel) domainModel);
-    }
-
-    private static boolean containsProjectVersion( List<InterpolatorProperty> interpolatorProperties )
-    {
-        InterpolatorProperty versionInterpolatorProperty =
-                new ModelProperty( ProjectUri.version, "").asInterpolatorProperty( ProjectUri.baseUri);
-        for( InterpolatorProperty ip : interpolatorProperties)
-        {
-            if ( ip.equals( versionInterpolatorProperty ) )
-            {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private static void interpolateModelProperties(List<ModelProperty> modelProperties,
-                                                   List<InterpolatorProperty> interpolatorProperties,
-                                                   MavenDomainModel domainModel)
-           throws IOException
-    {
 
         Map<String, String> aliases = new HashMap<String, String>();
         aliases.put( "project.", "pom.");
@@ -529,6 +503,20 @@ public final class MercuryPomTransformer
         });
 
         ModelTransformerContext.interpolateModelProperties( modelProperties, ips1 );
+    }
+
+    private static boolean containsProjectVersion( List<InterpolatorProperty> interpolatorProperties )
+    {
+        InterpolatorProperty versionInterpolatorProperty =
+                new ModelProperty( ProjectUri.version, "").asInterpolatorProperty( ProjectUri.baseUri);
+        for( InterpolatorProperty ip : interpolatorProperties)
+        {
+            if ( ip.equals( versionInterpolatorProperty ) )
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static boolean hasExecutionId( ModelContainer executionContainer )

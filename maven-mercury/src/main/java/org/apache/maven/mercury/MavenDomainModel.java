@@ -21,10 +21,7 @@ package org.apache.maven.mercury;
 
 import org.apache.maven.shared.model.*;
 import org.apache.maven.shared.model.impl.DefaultModelDataSource;
-import org.apache.maven.project.builder.ProjectUri;
-import org.apache.maven.project.builder.ArtifactModelContainerFactory;
-import org.apache.maven.project.builder.IdModelContainerFactory;
-import org.apache.maven.project.builder.ExclusionModelContainerFactory;
+import org.apache.maven.project.builder.*;
 import org.apache.maven.project.builder.profile.ProfileContext;
 import org.apache.maven.mercury.artifact.ArtifactBasicMetadata;
 
@@ -71,7 +68,7 @@ public final class MavenDomainModel implements DomainModel {
      */
     public MavenDomainModel(InputStream inputStream)
             throws IOException {
-        this(ModelMarshaller.marshallXmlToModelProperties(inputStream, ProjectUri.baseUri, MercuryPomTransformer.URIS));
+        this(ModelMarshaller.marshallXmlToModelProperties(inputStream, ProjectUri.baseUri, PomTransformer.URIS));
     }
 
     /**

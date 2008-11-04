@@ -7,10 +7,7 @@ import org.apache.maven.mercury.artifact.ArtifactBasicMetadata;
 import org.apache.maven.mercury.builder.api.DependencyProcessor;
 import org.apache.maven.mercury.builder.api.MetadataReader;
 import org.apache.maven.mercury.builder.api.MetadataReaderException;
-import org.apache.maven.project.builder.ArtifactModelContainerFactory;
-import org.apache.maven.project.builder.IdModelContainerFactory;
-import org.apache.maven.project.builder.ProjectUri;
-import org.apache.maven.project.builder.PomInterpolatorTag;
+import org.apache.maven.project.builder.*;
 import org.apache.maven.shared.model.*;
 
 public final class MavenDependencyProcessor implements DependencyProcessor {
@@ -60,7 +57,7 @@ public final class MavenDependencyProcessor implements DependencyProcessor {
             throw new MetadataReaderException("Failed to create domain model. Message = " + e.getMessage());
         }
 
-        MercuryPomTransformer transformer = new MercuryPomTransformer();
+        PomTransformer transformer = new PomTransformer(new MavenDomainModelFactory());
         ModelTransformerContext ctx = new ModelTransformerContext(
                 Arrays.asList(new ArtifactModelContainerFactory(), new IdModelContainerFactory()));
 

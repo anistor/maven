@@ -713,6 +713,10 @@ public final class PomClassicTransformer
         return false;
     }
 
+    public DomainModel createDomainModel() {
+        throw new UnsupportedOperationException();
+    }
+
     /**
      * Returns the base uri of all model properties: http://apache.org/maven/project/
      *
