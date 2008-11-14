@@ -28,17 +28,12 @@ import org.codehaus.plexus.interpolation.EnvarBasedValueSource;
 import org.codehaus.plexus.interpolation.InterpolationException;
 import org.codehaus.plexus.interpolation.MapBasedValueSource;
 import org.codehaus.plexus.interpolation.RegexBasedInterpolator;
-import org.codehaus.plexus.logging.LogEnabled;
-import org.codehaus.plexus.logging.Logger;
 import org.codehaus.plexus.util.FileUtils;
 import org.codehaus.plexus.util.StringUtils;
 
 public class FileProfileActivator
     extends DetectedProfileActivator
-    implements LogEnabled
 {
-    private Logger logger;
-
     protected boolean canDetectActivation( Profile profile )
     {
         return profile.getActivation() != null && profile.getActivation().getFile() != null;
@@ -66,41 +61,40 @@ public class FileProfileActivator
             }
             interpolator.addValueSource( new MapBasedValueSource( System.getProperties() ) );
 
-            try
+            if ( StringUtils.isNotEmpty( fileString ) )
             {
-                if ( StringUtils.isNotEmpty( fileString ) )
+                try
                 {
-                    fileString = StringUtils.replace( interpolator.interpolate( fileString, "" ), "\\", "/" );
-                    return FileUtils.fileExists( fileString );
+                    fileString = interpolator.interpolate( fileString, "" );
                 }
-
-                // check if the file is missing, if it is then the profile will be active
-                fileString = actFile.getMissing();
-
-                if ( StringUtils.isNotEmpty( fileString ) )
+                catch ( InterpolationException e )
                 {
-                    fileString = StringUtils.replace( interpolator.interpolate( fileString, "" ), "\\", "/" );
-                    return !FileUtils.fileExists( fileString );
+                    getLogger().debug( "Failed to interpolate path in file profile activator: " + fileString, e );
                 }
+                
+                fileString = StringUtils.replace( fileString, "\\", "/" );
+                return FileUtils.fileExists( fileString );
             }
-            catch ( InterpolationException e )
+
+            // check if the file is missing, if it is then the profile will be active
+            fileString = actFile.getMissing();
+
+            if ( StringUtils.isNotEmpty( fileString ) )
             {
-                if ( logger.isDebugEnabled() )
+                try
                 {
-                    logger.debug( "Failed to interpolate missing file location for profile activator: " + fileString, e );
+                    fileString = interpolator.interpolate( fileString, "" );
                 }
-                else
+                catch ( InterpolationException e )
                 {
-                    logger.warn( "Failed to interpolate missing file location for profile activator: " + fileString + ". Run in debug mode (-X) for more information." );
+                    getLogger().debug( "Failed to interpolate path in file profile activator: " + fileString, e );
                 }
+                
+                fileString = StringUtils.replace( fileString, "\\", "/" );
+                return !FileUtils.fileExists( fileString );
             }
         }
 
         return false;
-    }
-
-    public void enableLogging( Logger logger )
-    {
-        this.logger = logger;
     }
 }

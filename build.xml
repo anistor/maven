@@ -18,6 +18,8 @@ under the License.
 -->
 
 <project default="all" basedir="." xmlns:artifact="urn:maven-artifact-ant">
+  
+  <property name="it.workdir.version" value="2.0.10-RC"/>
 
   <target name="initTaskDefs">
   	<xmlproperty file="pom.xml" prefix="pom.xml" />
@@ -167,12 +169,12 @@ under the License.
     <echo>Extracting assembly to ${maven.home.dirname} ...</echo>
     <!-- Deleting the contents inside maven.home allow one to use symlinks for maven.home and still have this work. -->          
     <mkdir dir="${maven.home}"/>
-    <delete>
+    <delete includeemptydirs="true">
       <fileset dir="${maven.home}">
-        <include name="bin"/>
-        <include name="boot"/>
-        <include name="conf"/>
-        <include name="lib"/>
+        <include name="bin/**"/>
+        <include name="boot/**"/>
+        <include name="conf/**"/>
+        <include name="lib/**"/>
         <include name="*.txt"/>
       </fileset>
     </delete>
@@ -184,7 +186,58 @@ under the License.
       </fileset>
     </chmod>
   </target>
+  
+  <target name="its-setup">
+    <condition property="its.win32">
+      <os family="windows"/>
+    </condition>
+    <condition property="its.unix">
+      <not>
+        <os family="windows"/>
+      </not>
+    </condition>
+  </target>
+  
+  <target name="its-win32" if="its.win32">
+    <echo>Retrieving integration tests</echo>
+    <exec dir="${basedir}/maven-integration-tests" executable="cmd">
+      <arg value="/c"/>
+      <arg value="${maven.home}\bin\mvn.bat"/>
+      <arg value="initialize"/>
+    </exec>
+    
+    <echo>Running integration tests</echo>
+    <!-- Hard-coding to /tmp/ to avoid long path names that will make windows scream. -->
+    <exec failonerror="true" dir="/tmp/maven-integration-tests-${it.workdir.version}" executable="cmd">
+      <arg value="/c"/>
+      <arg value="${maven.home}\bin\mvn.bat"/>
+      <arg value="-Prun-its"/>
+      <arg value="clean"/>
+      <arg value="install"/>
+    </exec>
+  </target>
 
+  <target name="its-unix" if="its.unix">
+    <echo>Retrieving integration tests</echo>
+    <exec dir="${basedir}/maven-integration-tests" executable="${maven.home}/bin/mvn">
+      <arg value="initialize"/>
+    </exec>
+    
+    <echo>Running integration tests</echo>
+    <!-- Hard-coding to /tmp/ to avoid long path names that will make windows scream. -->
+    <exec failonerror="true" dir="/tmp/maven-integration-tests-${it.workdir.version}" executable="${maven.home}/bin/mvn">
+      <arg value="-Prun-its"/>
+      <arg value="clean"/>
+      <arg value="install"/>
+    </exec>
+  </target>
+
+  <target name="run-its" depends="init,its-setup,its-win32,its-unix">
+    <echo>Integration-test results should be displayed above.</echo>
+  </target>
+  
   <target name="all" depends="clean-bootstrap,init,extract-assembly"/>
 
+  <target name="with-its" depends="all,run-its"/>
+  
 </project>

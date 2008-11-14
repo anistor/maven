@@ -19,6 +19,16 @@ package org.apache.maven.extension;
  * under the License.
  */
 
+import java.io.File;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.jar.JarFile;
+
 import org.apache.maven.MavenArtifactFilterManager;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.ArtifactUtils;
@@ -52,15 +62,6 @@ import org.codehaus.plexus.logging.AbstractLogEnabled;
 import org.codehaus.plexus.personality.plexus.lifecycle.phase.Contextualizable;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 import org.codehaus.plexus.util.xml.Xpp3DomBuilder;
-
-import java.io.File;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
-import java.util.jar.JarFile;
 
 /**
  * Used to locate extensions.
@@ -118,15 +119,17 @@ public class DefaultExtensionManager
 
             // We use the same hack here to make sure that plexus 1.1 is available for extensions that do
             // not declare plexus-utils but need it. MNG-2900
-            Set rgArtifacts = resolutionGroup.getArtifacts();
-            rgArtifacts = DefaultPluginManager.checkPlexusUtils( rgArtifacts, artifactFactory );
+            DefaultPluginManager.checkPlexusUtils( resolutionGroup, artifactFactory );
 
-            rgArtifacts.add( artifact );
+            Set dependencies = new LinkedHashSet();
+
+            dependencies.add( artifact );
+            dependencies.addAll( resolutionGroup.getArtifacts() );
 
             // Make sure that we do not influence the dependenecy resolution of extensions with the project's
             // dependencyManagement
 
-            ArtifactResolutionResult result = artifactResolver.resolveTransitively( rgArtifacts, project.getArtifact(),
+            ArtifactResolutionResult result = artifactResolver.resolveTransitively( dependencies, project.getArtifact(),
                                                                                     Collections.EMPTY_MAP,
                                                                                     //project.getManagedVersionMap(),
                                                                                     localRepository,
@@ -276,7 +279,7 @@ public class DefaultExtensionManager
     public void contextualize( Context context )
         throws ContextException
     {
-        container = (DefaultPlexusContainer) context.get( PlexusConstants.PLEXUS_KEY );
+        this.container = (DefaultPlexusContainer) context.get( PlexusConstants.PLEXUS_KEY );
     }
 
     private static final class ProjectArtifactExceptionFilter
@@ -290,7 +293,7 @@ public class DefaultExtensionManager
                                         Artifact projectArtifact )
         {
             this.passThroughFilter = passThroughFilter;
-            projectDependencyConflictId = projectArtifact.getDependencyConflictId();
+            this.projectDependencyConflictId = projectArtifact.getDependencyConflictId();
         }
 
         public boolean include( Artifact artifact )

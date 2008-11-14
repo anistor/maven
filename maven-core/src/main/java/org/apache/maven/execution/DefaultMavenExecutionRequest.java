@@ -23,8 +23,6 @@ import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.monitor.event.EventDispatcher;
 import org.apache.maven.monitor.event.EventMonitor;
 import org.apache.maven.profiles.ProfileManager;
-import org.apache.maven.project.DefaultProjectBuilderConfiguration;
-import org.apache.maven.project.ProjectBuilderConfiguration;
 import org.apache.maven.settings.Settings;
 
 import java.util.Date;
@@ -144,7 +142,7 @@ public class DefaultMavenExecutionRequest
 
     public void setSession( MavenSession session )
     {
-        session = session;
+        this.session = session;
     }
 
     public void addEventMonitor( EventMonitor monitor )
@@ -205,17 +203,5 @@ public class DefaultMavenExecutionRequest
     public Properties getUserProperties()
     {
         return userProperties;
-    }
-
-    public ProjectBuilderConfiguration getProjectBuilderConfiguration()
-    {
-        ProjectBuilderConfiguration config = new DefaultProjectBuilderConfiguration();
-        config.setLocalRepository( getLocalRepository() )
-              .setGlobalProfileManager( getGlobalProfileManager() )
-              .setExecutionProperties( getExecutionProperties() )
-              .setUserProperties( getUserProperties() )
-              .setBuildStartTime( startTime );
-
-        return config;
     }
 }
