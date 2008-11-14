@@ -1,6 +1,7 @@
 package org.apache.maven.mercury;
 import static junit.framework.Assert.*;
 import org.apache.maven.mercury.artifact.ArtifactBasicMetadata;
+import org.apache.maven.mercury.builder.api.DependencyProcessorException;
 import org.apache.maven.mercury.builder.api.MetadataReaderException;
 import org.junit.Before;
 
@@ -28,7 +29,7 @@ public class MavenDependencyProcessorTest {
     }
 
     @org.junit.Test
-    public void testSinglePom() throws MetadataReaderException {
+    public void testSinglePom() throws MetadataReaderException, DependencyProcessorException {
         Stack<File> files = new Stack<File>();
         files.add(new File(basedir, "src/test/resources/simple.xml"));
 
@@ -40,7 +41,7 @@ public class MavenDependencyProcessorTest {
     }
 
     @org.junit.Test
-    public void testSimplePomWithExclusions() throws MetadataReaderException {
+    public void testSimplePomWithExclusions() throws MetadataReaderException, DependencyProcessorException {
         Stack<File> files = new Stack<File>();
         files.add(new File(basedir, "src/test/resources/simpleWithExclusions.xml"));
 
@@ -55,7 +56,7 @@ public class MavenDependencyProcessorTest {
     }
 
     @org.junit.Test
-    public void testSinglePomWithProfile() throws MetadataReaderException {
+    public void testSinglePomWithProfile() throws MetadataReaderException, DependencyProcessorException {
         Stack<File> files = new Stack<File>();
         files.add(new File(basedir, "src/test/resources/simpleWithProfile.xml"));
 
@@ -67,7 +68,7 @@ public class MavenDependencyProcessorTest {
     }
 
     @org.junit.Test
-    public void testSingleParentPom() throws MetadataReaderException {
+    public void testSingleParentPom() throws MetadataReaderException, DependencyProcessorException {
         Stack<File> files = new Stack<File>();
         files.add(new File(basedir, "src/test/resources/parent.xml"));
         files.add(new File(basedir, "src/test/resources/child.xml"));
@@ -79,7 +80,7 @@ public class MavenDependencyProcessorTest {
     }
 
     @org.junit.Test
-    public void testSingleParentPomWithDependencyManagement() throws MetadataReaderException {
+    public void testSingleParentPomWithDependencyManagement() throws MetadataReaderException, DependencyProcessorException {
         Stack<File> files = new Stack<File>();
         files.add(new File(basedir, "src/test/resources/parent.xml"));
         files.add(new File(basedir, "src/test/resources/child-withDepMng.xml"));

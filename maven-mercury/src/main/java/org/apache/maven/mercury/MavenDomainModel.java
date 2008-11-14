@@ -56,9 +56,10 @@ public final class MavenDomainModel implements DomainModel {
      *
      * @throws IOException if there is a problem constructing the model
      */
-    public MavenDomainModel(byte[] bytes)
-            throws IOException {
-        this(new ByteArrayInputStream(bytes));
+    public MavenDomainModel( byte[] bytes )
+    throws IOException
+    {
+      this( new ByteArrayInputStream(bytes) );
     }
 
     /**

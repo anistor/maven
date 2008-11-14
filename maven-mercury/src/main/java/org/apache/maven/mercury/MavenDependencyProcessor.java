@@ -5,6 +5,7 @@ import java.util.*;
 
 import org.apache.maven.mercury.artifact.ArtifactBasicMetadata;
 import org.apache.maven.mercury.builder.api.DependencyProcessor;
+import org.apache.maven.mercury.builder.api.DependencyProcessorException;
 import org.apache.maven.mercury.builder.api.MetadataReader;
 import org.apache.maven.mercury.builder.api.MetadataReaderException;
 import org.apache.maven.project.builder.*;
@@ -17,7 +18,8 @@ public final class MavenDependencyProcessor implements DependencyProcessor {
     }
 
     public List<ArtifactBasicMetadata> getDependencies(ArtifactBasicMetadata bmd, MetadataReader mdReader, Map system, Map user)
-            throws MetadataReaderException {
+    throws MetadataReaderException, DependencyProcessorException
+    {
         if (bmd == null) {
             throw new IllegalArgumentException("bmd: null");
         }
@@ -42,7 +44,12 @@ public final class MavenDependencyProcessor implements DependencyProcessor {
 //                    new MavenDomainModel(MavenDependencyProcessor.class.getResourceAsStream( "pom-4.0.0.xml" ));
 //            domainModels.add(superPom);
 
-            MavenDomainModel domainModel = new MavenDomainModel(mdReader.readMetadata(bmd));
+            byte [] superBytes = mdReader.readMetadata( bmd );
+            
+            if( superBytes == null || superBytes.length < 1 )
+              throw new DependencyProcessorException("cannot read metadata for " + bmd.getGAV() );
+          
+            MavenDomainModel domainModel = new MavenDomainModel( superBytes );
             domainModels.add(domainModel);
 
             Collection<ModelContainer> activeProfiles = domainModel.getActiveProfileContainers(interpolatorProperties);
