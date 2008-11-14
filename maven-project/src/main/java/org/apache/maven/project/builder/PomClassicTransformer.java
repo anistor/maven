@@ -604,11 +604,6 @@ public final class PomClassicTransformer
         {
             aliases.put("\\$\\{project.version\\}", "\\$\\{version\\}");
         }
-
-        if(!interpolatorProperties.contains(new InterpolatorProperty("${project.groupId}", ""))) {
-            interpolatorProperties.add(new InterpolatorProperty("${project.groupId}", 
-                    interpolatorProperties.get(interpolatorProperties.indexOf(new InterpolatorProperty("${project.parent.groupId}", ""))).getValue()));
-        }
         
         List<ModelProperty> firstPassModelProperties = new ArrayList<ModelProperty>();
         List<ModelProperty> secondPassModelProperties = new ArrayList<ModelProperty>();
@@ -666,6 +661,11 @@ public final class PomClassicTransformer
         });
 
         ModelTransformerContext.interpolateModelProperties( modelProperties, ips1 );
+
+        if(!ips1.contains(new InterpolatorProperty("${project.groupId}", ""))) {
+            ips1.add(new InterpolatorProperty("${project.groupId}",
+                    ips1.get(standardInterpolatorProperties.indexOf(new InterpolatorProperty("${project.parent.groupId}", ""))).getValue()));
+        }
 
         //SECOND PASS - Set absolute paths on build directories
         if( domainModel.isPomInBuild() )
