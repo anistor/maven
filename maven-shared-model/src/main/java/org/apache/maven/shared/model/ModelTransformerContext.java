@@ -147,20 +147,19 @@ public final class ModelTransformerContext
 
         LinkedHashSet<InterpolatorProperty> ips = new LinkedHashSet<InterpolatorProperty>();
         ips.addAll(interpolatorProperties);
-
-        for ( InterpolatorProperty ip : ips)
+        boolean continueInterpolation = true;
+        while(continueInterpolation)
         {
-            for ( ModelProperty mp : unresolvedProperties )
+            continueInterpolation = false;
+            for ( InterpolatorProperty ip : ips)
             {
-                  mp.resolveWith(ip);
-            }
-        }
-
-        for ( InterpolatorProperty ip : ips )
-        {
-            for ( ModelProperty mp : unresolvedProperties )
-            {
-                  mp.resolveWith(ip);
+                for ( ModelProperty mp : unresolvedProperties )
+                {
+                    if(mp.resolveWith(ip) && !continueInterpolation )
+                    {
+                        continueInterpolation = true;
+                    }
+                }
             }
         }
     }
