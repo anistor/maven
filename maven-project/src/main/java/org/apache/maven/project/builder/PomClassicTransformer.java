@@ -664,7 +664,7 @@ public final class PomClassicTransformer
 
         if(!ips1.contains(new InterpolatorProperty("${project.groupId}", ""))) {
             ips1.add(new InterpolatorProperty("${project.groupId}",
-                    ips1.get(standardInterpolatorProperties.indexOf(new InterpolatorProperty("${project.parent.groupId}", ""))).getValue()));
+                    ips1.get(ips1.indexOf(new InterpolatorProperty("${project.parent.groupId}", ""))).getValue()));
         }
 
         //SECOND PASS - Set absolute paths on build directories
