@@ -509,7 +509,7 @@ public final class PomClassicTransformer
                                            DomainModel domainModel)
             throws IOException
     {
-        interpolateModelProperties( modelProperties, interpolatorProperties, (PomClassicDomainModel) domainModel);
+        interpolateModelProperties( new ArrayList<ModelProperty>(modelProperties), interpolatorProperties, (PomClassicDomainModel) domainModel);
     }
 
     public static String interpolateXmlString( String xml, List<InterpolatorProperty> interpolatorProperties )
@@ -605,6 +605,11 @@ public final class PomClassicTransformer
             aliases.put("\\$\\{project.version\\}", "\\$\\{version\\}");
         }
 
+        if(!interpolatorProperties.contains(new InterpolatorProperty("${project.groupId}", ""))) {
+            interpolatorProperties.add(new InterpolatorProperty("${project.groupId}", 
+                    interpolatorProperties.get(interpolatorProperties.indexOf(new InterpolatorProperty("${project.parent.groupId}", ""))).getValue()));
+        }
+        
         List<ModelProperty> firstPassModelProperties = new ArrayList<ModelProperty>();
         List<ModelProperty> secondPassModelProperties = new ArrayList<ModelProperty>();
 
