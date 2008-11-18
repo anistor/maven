@@ -19,8 +19,6 @@ package org.apache.maven.lifecycle;
  * under the License.
  */
 
-import java.util.List;
-
 import org.apache.maven.BuildFailureException;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.execution.ReactorManager;
@@ -36,10 +34,5 @@ public interface LifecycleExecutor
 
     void execute( MavenSession session, ReactorManager rm, EventDispatcher dispatcher )
         throws LifecycleExecutionException, BuildFailureException;
-
-    /**
-     * @since 2.0.10
-     */
-    List getLifecycles();
 
 }

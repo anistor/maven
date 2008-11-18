@@ -20,6 +20,20 @@ package org.apache.maven.plugin;
  * under the License.
  */
 
+import java.io.File;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import org.apache.maven.MavenArtifactFilterManager;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.factory.ArtifactFactory;
@@ -57,7 +71,6 @@ import org.apache.maven.project.MavenProjectBuilder;
 import org.apache.maven.project.ProjectBuildingException;
 import org.apache.maven.project.artifact.InvalidDependencyVersionException;
 import org.apache.maven.project.artifact.MavenMetadataSource;
-import org.apache.maven.project.interpolation.ModelInterpolationException;
 import org.apache.maven.project.path.PathTranslator;
 import org.apache.maven.reporting.MavenReport;
 import org.apache.maven.settings.Settings;
@@ -82,20 +95,6 @@ import org.codehaus.plexus.personality.plexus.lifecycle.phase.Contextualizable;
 import org.codehaus.plexus.personality.plexus.lifecycle.phase.Initializable;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
-
-import java.io.File;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 public class DefaultPluginManager
     extends AbstractLogEnabled
@@ -301,7 +300,9 @@ public class DefaultPluginManager
             try
             {
                 child.getContainerRealm().importFrom( "plexus.core", "org.codehaus.plexus.util.xml.Xpp3Dom" );
-                child.getContainerRealm().importFrom( "plexus.core", "org.codehaus.plexus.util.xml.pull" );
+                child.getContainerRealm().importFrom( "plexus.core", "org.codehaus.plexus.util.xml.pull.XmlPullParser" );
+                child.getContainerRealm().importFrom( "plexus.core", "org.codehaus.plexus.util.xml.pull.XmlPullParserException" );
+                child.getContainerRealm().importFrom( "plexus.core", "org.codehaus.plexus.util.xml.pull.XmlSerializer" );
 
                 // MNG-2878
                 child.getContainerRealm().importFrom( "plexus.core", "/default-report.xml" );
@@ -415,24 +416,10 @@ public class DefaultPluginManager
         Mojo plugin;
 
         PluginDescriptor pluginDescriptor = mojoDescriptor.getPluginDescriptor();
-
         String goalId = mojoDescriptor.getGoal();
         String groupId = pluginDescriptor.getGroupId();
         String artifactId = pluginDescriptor.getArtifactId();
         String executionId = mojoExecution.getExecutionId();
-
-        if ( !project.isConcrete() )
-        {
-            try
-            {
-                mavenProjectBuilder.calculateConcreteState( project, session.getProjectBuilderConfiguration() );
-            }
-            catch ( ModelInterpolationException e )
-            {
-                throw new PluginManagerException( "Failed to calculate concrete state for project: " + project, e );
-            }
-        }
-
         Xpp3Dom dom = project.getGoalConfiguration( groupId, artifactId, executionId, goalId );
         Xpp3Dom reportDom = project.getReportConfiguration( groupId, artifactId, executionId );
         dom = Xpp3Dom.mergeXpp3Dom( dom, reportDom );
@@ -537,15 +524,6 @@ public class DefaultPluginManager
                 }
             }
         }
-
-        try
-        {
-            mavenProjectBuilder.restoreDynamicState( project, session.getProjectBuilderConfiguration() );
-        }
-        catch ( ModelInterpolationException e )
-        {
-            throw new PluginManagerException( "Failed to restore dynamic state for project: " + project, e );
-        }
     }
 
     public MavenReport getReport( MavenProject project,
@@ -556,39 +534,14 @@ public class DefaultPluginManager
     {
         MojoDescriptor mojoDescriptor = mojoExecution.getMojoDescriptor();
         PluginDescriptor descriptor = mojoDescriptor.getPluginDescriptor();
-        
-        if ( !project.isConcrete() )
-        {
-            try
-            {
-                mavenProjectBuilder.calculateConcreteState( project, session.getProjectBuilderConfiguration() );
-            }
-            catch ( ModelInterpolationException e )
-            {
-                throw new PluginManagerException( "Failed to calculate concrete state for project: " + project, e );
-            }
-        }
-        
         Xpp3Dom dom = project.getReportConfiguration( descriptor.getGroupId(), descriptor.getArtifactId(),
                                                       mojoExecution.getExecutionId() );
-        
         if ( mojoExecution.getConfiguration() != null )
         {
             dom = Xpp3Dom.mergeXpp3Dom( dom, mojoExecution.getConfiguration() );
         }
 
-        MavenReport report = (MavenReport) getConfiguredMojo( session, dom, project, true, mojoExecution );
-        
-        try
-        {
-            mavenProjectBuilder.restoreDynamicState( project, session.getProjectBuilderConfiguration() );
-        }
-        catch ( ModelInterpolationException e )
-        {
-            throw new PluginManagerException( "Failed to restore dynamic state for project: " + project, e );
-        }
-        
-        return report;
+        return (MavenReport) getConfiguredMojo( session, dom, project, true, mojoExecution );
     }
 
     public PluginDescriptor verifyReportPlugin( ReportPlugin reportPlugin,
@@ -738,9 +691,7 @@ public class DefaultPluginManager
                     pluginArtifact.getId() + "': " + e.getMessage(), pluginArtifact, e );
             }
 
-            Set rgArtifacts = resolutionGroup.getArtifacts();
-
-            rgArtifacts = checkPlexusUtils( rgArtifacts, artifactFactory );
+            checkPlexusUtils( resolutionGroup, artifactFactory );
 
             // [jdcasey; 20-March-2008]:
             // This is meant to eliminate the introduction of duplicated artifacts.
@@ -770,7 +721,7 @@ public class DefaultPluginManager
             all.addAll( pluginDescriptor.getIntroducedDependencyArtifacts() );
 
             // add in the deps from the plugin POM now.
-            all.addAll( rgArtifacts );
+            all.addAll( resolutionGroup.getArtifacts() );
 
             for ( Iterator it = all.iterator(); it.hasNext(); )
             {
@@ -882,7 +833,7 @@ public class DefaultPluginManager
         }
     }
 
-    public static Set checkPlexusUtils( Set dependencyArtifacts, ArtifactFactory artifactFactory )
+    public static void checkPlexusUtils( ResolutionGroup resolutionGroup, ArtifactFactory artifactFactory )
     {
         // ----------------------------------------------------------------------------
         // If the plugin already declares a dependency on plexus-utils then we're all
@@ -907,7 +858,7 @@ public class DefaultPluginManager
 
         boolean plexusUtilsPresent = false;
 
-        for ( Iterator i = dependencyArtifacts.iterator(); i.hasNext(); )
+        for ( Iterator i = resolutionGroup.getArtifacts().iterator(); i.hasNext(); )
         {
             Artifact a = (Artifact) i.next();
 
@@ -926,19 +877,9 @@ public class DefaultPluginManager
             // version to the latest version we know that works as of the 2.0.6 release. We set the scope to runtime
             // as this is what's implicitly happening in 2.0.6.
 
-            Set result = new LinkedHashSet();
-            if ( !dependencyArtifacts.isEmpty() )
-            {
-                result.addAll( dependencyArtifacts );
-            }
-
-            result.add( artifactFactory.createArtifact( "org.codehaus.plexus", "plexus-utils", "1.1", Artifact.SCOPE_RUNTIME, "jar" ) );
-
-            return result;
-        }
-        else
-        {
-            return dependencyArtifacts;
+            resolutionGroup.getArtifacts().add( artifactFactory.createArtifact( "org.codehaus.plexus",
+                                                                                "plexus-utils", "1.1",
+                                                                                Artifact.SCOPE_RUNTIME, "jar" ) );
         }
     }
 
@@ -1469,7 +1410,7 @@ public class DefaultPluginManager
         {
             project.setDependencyArtifacts( project.createArtifacts( artifactFactory, null, null ) );
         }
-
+        
         Set resolvedArtifacts;
         try
         {
@@ -1484,7 +1425,7 @@ public class DefaultPluginManager
         catch (MultipleArtifactsNotFoundException me)
         {
             /*only do this if we are an aggregating plugin: MNG-2277
-            if the dependency doesn't yet exist but is in the reactor, then
+            if the dependency doesn't yet exist but is in the reactor, then 
             all we can do is warn and skip it. A better fix can be inserted into 2.1*/
             if (isAggregator && checkMissingArtifactsInReactor( context.getSortedProjects(), me.getMissingArtifacts() ))
             {
@@ -1527,19 +1468,19 @@ public class DefaultPluginManager
                     //most likely it would be produced by the project we just found in the reactor since all
                     //the other info matches. Assume it's ok.
                     getLogger().warn( "The dependency: "+ p.getId()+" can't be resolved but has been found in the reactor.\nThis dependency has been excluded from the plugin execution. You should rerun this mojo after executing mvn install.\n" );
-
+                    
                     //found it, move on.
                     foundInReactor.add( p );
                     break;
-                }
+                }   
             }
         }
-
+        
         //if all of them have been found, we can continue.
         return foundInReactor.size() == missing.size();
     }
-
-
+    
+    
     // ----------------------------------------------------------------------
     // Artifact downloading
     // ----------------------------------------------------------------------
