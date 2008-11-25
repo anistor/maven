@@ -28,6 +28,11 @@ under the License.
     <property name="taskdefs.inited" value="true"/>
   </target>
 
+  <target name="initLocalRepo">
+    <property name="maven.repo.local" value="${user.home}/.m2/repository"/>
+    <echo>Using the local repository at: ${maven.repo.local}</echo>
+  </target>
+
   <target name="isMavenHomeSet" depends="initTaskDefs">
     <property environment="env"/>
     <condition property="maven.home" value="${env.M2_HOME}">
@@ -36,7 +41,7 @@ under the License.
     <fail unless="maven.home" message="You must set the M2_HOME environment variable or specify a maven.home property to this Ant script"/>
   </target>
 
-  <target name="read-pom" depends="initTaskDefs" unless="pom.version">
+  <target name="read-pom" depends="initTaskDefs,initLocalRepo" unless="pom.version">
     <copy file="pom.xml" tofile="dependencies.xml"/>
     <replace file="${basedir}/dependencies.xml" token="&lt;!--start--&gt;" value="&lt;!--"/>
     <replace file="${basedir}/dependencies.xml" token="&lt;!--end--&gt;" value="--&gt;"/>
@@ -44,7 +49,7 @@ under the License.
     <delete file="${basedir}/dependencies.xml"/>
   </target>
 
-  <target name="init" depends="isMavenHomeSet">
+  <target name="init" depends="isMavenHomeSet,initLocalRepo">
     <xmlproperty prefix="pom" file="pom.xml"/>    
     <basename file="${maven.home}" property="maven.home.basename"/>
     <dirname file="${maven.home}" property="maven.home.dirname"/>
