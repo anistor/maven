@@ -19,8 +19,6 @@ under the License.
 
 <project default="all" basedir="." xmlns:artifact="urn:maven-artifact-ant">
   
-  <property name="it.workdir.version" value="2.0.x"/>
-
   <target name="initTaskDefs" unless="taskdefs.inited">
   	<xmlproperty file="pom.xml" prefix="pom.xml" />
     <path id="maven-ant-tasks.classpath" path="maven-ant-tasks-2.0.8.jar"/>
@@ -41,12 +39,18 @@ under the License.
     <fail unless="maven.home" message="You must set the M2_HOME environment variable or specify a maven.home property to this Ant script"/>
   </target>
 
-  <target name="read-pom" depends="initTaskDefs,initLocalRepo" unless="pom.version">
+  <target name="read-poms" depends="initTaskDefs,initLocalRepo" unless="pom.version">
     <copy file="pom.xml" tofile="dependencies.xml"/>
     <replace file="${basedir}/dependencies.xml" token="&lt;!--start--&gt;" value="&lt;!--"/>
     <replace file="${basedir}/dependencies.xml" token="&lt;!--end--&gt;" value="--&gt;"/>
-    <artifact:pom file="${basedir}/dependencies.xml" id="pom"/>
+    <artifact:pom file="${basedir}/dependencies.xml" id="pom">
+      <localRepository path="${maven.repo.local}"/>
+    </artifact:pom>
     <delete file="${basedir}/dependencies.xml"/>
+    
+    <artifact:pom file="${basedir}/maven-integration-tests/pom.xml" id="itPom">
+      <localRepository path="${maven.repo.local}"/>
+    </artifact:pom>
   </target>
 
   <target name="init" depends="isMavenHomeSet,initLocalRepo">
@@ -60,7 +64,7 @@ under the License.
     <delete dir="bootstrap"/>
   </target>
 
-  <target name="pull" depends="init, read-pom" unless="skip.pull">    
+  <target name="pull" depends="init, read-poms" unless="skip.pull">    
     <property name="verbose" value="false"/>
     <property name="bootstrap.repository" value="${basedir}/bootstrap-repository"/>
     <!-- Pull the dependencies that Maven needs to build -->
@@ -209,19 +213,22 @@ under the License.
   
   <target name="its-win32" if="its.win32">
     <echo>Retrieving integration tests</echo>
-    <exec failonerror="true" dir="${basedir}/maven-integration-tests" executable="cmd">
+    <exec dir="${basedir}/${itPom.artifactId}" executable="cmd">
       <arg value="/c"/>
       <arg value="${maven.home}\bin\mvn.bat"/>
-      <arg value="-B"/>
-      <arg value="initialize"/>
+      <arg value="process-resources"/>
+    </exec>
+    <exec dir="${basedir}/${itPom.artifactId}/target/classes" executable="cmd">
+      <arg value="/c"/>
+      <arg value="${maven.home}\bin\mvn.bat"/>
+      <arg value="package"/>
     </exec>
     
     <echo>Running integration tests</echo>
-    <!-- Hard-coding to /tmp/ to avoid long path names that will make windows scream. -->
-    <exec failonerror="true" dir="/tmp/maven-integration-tests-${it.workdir.version}" executable="cmd">
+    <!-- Using java.io.tmpdir to avoid long path names that will make windows scream. -->
+    <exec failonerror="true" dir="${java.io.tmpdir}/${itPom.artifactId}-${itPom.version}" executable="cmd">
       <arg value="/c"/>
       <arg value="${maven.home}\bin\mvn.bat"/>
-      <arg value="-B"/>
       <arg value="-Prun-its"/>
       <arg value="clean"/>
       <arg value="install"/>
@@ -230,16 +237,17 @@ under the License.
 
   <target name="its-unix" if="its.unix">
     <echo>Retrieving integration tests</echo>
-    <exec failonerror="true" dir="${basedir}/maven-integration-tests" executable="${maven.home}/bin/mvn">
-      <arg value="-B"/>
-      <arg value="initialize"/>
+    <exec dir="${basedir}/${itPom.artifactId}" executable="${maven.home}/bin/mvn">
+      <arg value="process-resources"/>
+    </exec>
+    <exec dir="${basedir}/${itPom.artifactId}/target/classes" executable="${maven.home}/bin/mvn">
+      <arg value="package"/>
     </exec>
     
     <echo>Running integration tests</echo>
-    <!-- Hard-coding to /tmp/ to avoid long path names that will make windows scream. -->
-    <exec failonerror="true" dir="/tmp/maven-integration-tests-${it.workdir.version}" executable="${maven.home}/bin/mvn">
+    <!-- Using java.io.tmpdir to avoid long path names that will make windows scream. -->
+    <exec failonerror="true" dir="${java.io.tmpdir}/${itPom.artifactId}-${itPom.version}" executable="${maven.home}/bin/mvn">
       <arg value="-Prun-its"/>
-      <arg value="-B"/>
       <arg value="clean"/>
       <arg value="install"/>
     </exec>
@@ -253,7 +261,7 @@ under the License.
 
   <target name="with-its" depends="all,run-its"/>
   
-  <target name="set-temp-maven-home" depends="read-pom">
+  <target name="set-temp-maven-home" depends="read-poms">
     <property name="maven.home" value="${java.io.tmpdir}/apache-maven-${pom.version}"/>
     <echo>Using temporary maven install directory: ${maven.home}</echo>
   </target>
