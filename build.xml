@@ -21,10 +21,16 @@ under the License.
   
   <property name="it.workdir.version" value="2.0.10-RC"/>
 
-  <target name="initTaskDefs">
+  <target name="initTaskDefs" unless="taskdefs.inited">
   	<xmlproperty file="pom.xml" prefix="pom.xml" />
     <path id="maven-ant-tasks.classpath" path="maven-ant-tasks-2.0.8.jar"/>
     <typedef resource="org/apache/maven/artifact/ant/antlib.xml" uri="urn:maven-artifact-ant" classpathref="maven-ant-tasks.classpath"/>
+    <property name="taskdefs.inited" value="true"/>
+  </target>
+
+  <target name="initLocalRepo">
+    <property name="maven.repo.local" value="${user.home}/.m2/repository"/>
+    <echo>Using the local repository at: ${maven.repo.local}</echo>
   </target>
 
   <target name="isMavenHomeSet" depends="initTaskDefs">
@@ -33,6 +39,16 @@ under the License.
       <isset property="env.M2_HOME"/>
     </condition>
     <fail unless="maven.home" message="You must set the M2_HOME environment variable or specify a maven.home property to this Ant script"/>
+  </target>
+
+  <target name="read-poms" depends="initTaskDefs,initLocalRepo" unless="pom.version">
+    <copy file="pom.xml" tofile="dependencies.xml"/>
+    <replace file="${basedir}/dependencies.xml" token="&lt;!--start--&gt;" value="&lt;!--"/>
+    <replace file="${basedir}/dependencies.xml" token="&lt;!--end--&gt;" value="--&gt;"/>
+    <artifact:pom file="${basedir}/dependencies.xml" id="pom"/>
+    <delete file="${basedir}/dependencies.xml"/>
+    
+    <artifact:pom file="${basedir}/maven-integration-tests/pom.xml" id="itPom"/>
   </target>
 
   <target name="init" depends="isMavenHomeSet">
@@ -46,21 +62,16 @@ under the License.
     <delete dir="bootstrap"/>
   </target>
 
-  <target name="pull" depends="init" unless="skip.pull">    
+  <target name="pull" depends="init, read-poms" unless="skip.pull">    
     <property name="verbose" value="false"/>
     <property name="bootstrap.repository" value="${basedir}/bootstrap-repository"/>
     <!-- Pull the dependencies that Maven needs to build -->
-    <copy file="pom.xml" tofile="dependencies.xml"/>
-    <replace file="${basedir}/dependencies.xml" token="&lt;!--start--&gt;" value="&lt;!--"/>
-    <replace file="${basedir}/dependencies.xml" token="&lt;!--end--&gt;" value="--&gt;"/>
-    <artifact:pom file="${basedir}/dependencies.xml" id="pom"/>                                                                                                     
     <artifact:dependencies pathId="pom.pathid" filesetId="pom.fileset" verbose="${verbose}">
        <!--
        <localRepository path="${bootstrap.repository}"/>
        -->
        <pom refid="pom"/>                                                                                                                                       
     </artifact:dependencies>      
-    <delete file="${basedir}/dependencies.xml"/>
     
     <!-- Pull the dependencies for Modello -->
     <artifact:dependencies pathId="modello.pathid" filesetId="modello.fileset" verbose="${verbose}">
@@ -203,7 +214,12 @@ under the License.
     <exec dir="${basedir}/maven-integration-tests" executable="cmd">
       <arg value="/c"/>
       <arg value="${maven.home}\bin\mvn.bat"/>
-      <arg value="initialize"/>
+      <arg value="process-resources"/>
+    </exec>
+    <exec dir="${basedir}/maven-integration-tests/target/classes" executable="cmd">
+      <arg value="/c"/>
+      <arg value="${maven.home}\bin\mvn.bat"/>
+      <arg value="package"/>
     </exec>
     
     <echo>Running integration tests</echo>
@@ -220,12 +236,15 @@ under the License.
   <target name="its-unix" if="its.unix">
     <echo>Retrieving integration tests</echo>
     <exec dir="${basedir}/maven-integration-tests" executable="${maven.home}/bin/mvn">
-      <arg value="initialize"/>
+      <arg value="process-resources"/>
+    </exec>
+    <exec dir="${basedir}/maven-integration-tests/target/classes" executable="${maven.home}/bin/mvn">
+      <arg value="package"/>
     </exec>
     
     <echo>Running integration tests</echo>
     <!-- Hard-coding to /tmp/ to avoid long path names that will make windows scream. -->
-    <exec failonerror="true" dir="/tmp/maven-integration-tests-${it.workdir.version}" executable="${maven.home}/bin/mvn">
+    <exec failonerror="true" dir="/tmp/${itPom.artifactId}-${itPom.version}" executable="${maven.home}/bin/mvn">
       <arg value="-Prun-its"/>
       <arg value="clean"/>
       <arg value="install"/>
@@ -239,5 +258,10 @@ under the License.
   <target name="all" depends="clean-bootstrap,init,extract-assembly"/>
 
   <target name="with-its" depends="all,run-its"/>
+  
+  <target name="set-temp-maven-home" depends="read-poms">
+    <property name="maven.home" value="${java.io.tmpdir}/apache-maven-${pom.version}"/>
+    <echo>Using temporary maven install directory: ${maven.home}</echo>
+  </target>
   
 </project>
