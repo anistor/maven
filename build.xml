@@ -213,12 +213,12 @@ under the License.
   
   <target name="its-win32" if="its.win32">
     <echo>Retrieving integration tests</echo>
-    <exec dir="${basedir}/${itPom.artifactId}" executable="cmd">
+    <exec failonerror="true" dir="${basedir}/${itPom.artifactId}" executable="cmd">
       <arg value="/c"/>
       <arg value="${maven.home}\bin\mvn.bat"/>
       <arg value="process-resources"/>
     </exec>
-    <exec dir="${basedir}/${itPom.artifactId}/target/classes" executable="cmd">
+    <exec failonerror="true" dir="${basedir}/${itPom.artifactId}/target/classes" executable="cmd">
       <arg value="/c"/>
       <arg value="${maven.home}\bin\mvn.bat"/>
       <arg value="package"/>
@@ -237,10 +237,10 @@ under the License.
 
   <target name="its-unix" if="its.unix">
     <echo>Retrieving integration tests</echo>
-    <exec dir="${basedir}/${itPom.artifactId}" executable="${maven.home}/bin/mvn">
+    <exec failonerror="true" dir="${basedir}/${itPom.artifactId}" executable="${maven.home}/bin/mvn">
       <arg value="process-resources"/>
     </exec>
-    <exec dir="${basedir}/${itPom.artifactId}/target/classes" executable="${maven.home}/bin/mvn">
+    <exec failonerror="true" dir="${basedir}/${itPom.artifactId}/target/classes" executable="${maven.home}/bin/mvn">
       <arg value="package"/>
     </exec>
     
