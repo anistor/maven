@@ -85,6 +85,7 @@
           <!-- Hard-coding to /tmp/ to avoid long path names that will make windows scream. -->
           <!-- NOT INTERPOLATED DURING PROFILE ACTIVATION, so making these values explicit throughout to avoid confusion. -->
           <checkoutDirectory>${itDir}</checkoutDirectory>
+          <workingDirectory>${itDir}</workingDirectory>
         </configuration>
       </plugin>
     </plugins>
