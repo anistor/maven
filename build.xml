@@ -245,10 +245,7 @@ under the License.
     </exec>
     
     <echo>Running integration tests</echo>
-    <exec failonerror="true" dir="${java.io.tmpdir}/${itPom.artifactId}-${itPom.version}" executable="${maven.home}/bin/mvn">
-      <arg value="-v"/>
-    </exec>
-    
+    <echo>maven.home is: ${maven.home}</echo>
     <!-- Using java.io.tmpdir to avoid long path names that will make windows scream. -->
     <exec failonerror="true" dir="${java.io.tmpdir}/${itPom.artifactId}-${itPom.version}" executable="${maven.home}/bin/mvn">
       <arg value="-Prun-its"/>
