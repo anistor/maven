@@ -89,11 +89,6 @@
                   <pattern>org.apache.commons.logging</pattern>
                 </relocation>
 
-                <!-- For jsch wagon -->
-                <relocation>
-                  <pattern>com.jcraft</pattern>
-                </relocation>
-
                 <!-- For wagon API -->
                 <relocation>
                   <pattern>org.cyberneko</pattern>
