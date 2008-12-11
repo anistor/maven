@@ -41,8 +41,6 @@ public class MavenArtifactFilterManager
         artifacts.add( "wagon-webdav" );
         artifacts.add( "wagon-ssh" );
         artifacts.add( "wagon-ssh-external" );
-        artifacts.add( "wagon-ssh-common" );
-        artifacts.add( "wagon-http-shared" );
 
         return new ExclusionSetFilter( artifacts );
     }
@@ -63,6 +61,7 @@ public class MavenArtifactFilterManager
         Set artifacts = new HashSet();
 
         artifacts.add( "classworlds" );
+        artifacts.add( "jsch" );
         artifacts.add( "commons-cli" );
         artifacts.add( "doxia-sink-api" );
         artifacts.add( "doxia-logging-api" );

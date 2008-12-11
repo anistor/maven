@@ -51,8 +51,8 @@ import org.apache.maven.project.inheritance.ModelInheritanceAssembler;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -562,8 +562,6 @@ public final class ModelUtils
     public static Model cloneModel( Model model )
     {
         // TODO: would be nice for the modello:java code to generate this as a copy constructor
-        // FIXME: Fix deep cloning issues with existing plugin instances (setting 
-        //       a version when resolved will pollute the original model instance)
         Model newModel = new Model();
         ModelInheritanceAssembler assembler = new DefaultModelInheritanceAssembler();
         newModel.setModelVersion( model.getModelVersion() );
@@ -581,17 +579,6 @@ public final class ModelUtils
         assembler.copyModel( newModel, model );
 
         return newModel;
-    }
-
-    public static Build cloneBuild( Build build )
-    {
-        ModelInheritanceAssembler assembler = new DefaultModelInheritanceAssembler();
-
-        Build clone = new Build();
-
-        assembler.assembleBuildInheritance( clone, build, false );
-
-        return clone;
     }
 
     private static List cloneProfiles( List profiles )
@@ -1163,7 +1150,7 @@ public final class ModelUtils
 
     public static List mergeDependencyList( List child, List parent )
     {
-        Map depsMap = new HashMap();
+        Map depsMap = new LinkedHashMap();
 
         if ( parent != null )
         {
