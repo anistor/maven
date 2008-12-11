@@ -218,6 +218,7 @@ under the License.
       <env key="M2_HOME" value="${maven.home}"/>
       <arg value="/c"/>
       <arg value="${maven.home}\bin\mvn.bat"/>
+      <arg value="-B"/>
       <arg value="process-resources"/>
     </exec>
     
@@ -225,6 +226,7 @@ under the License.
       <env key="M2_HOME" value="${maven.home}"/>
       <arg value="/c"/>
       <arg value="${maven.home}\bin\mvn.bat"/>
+      <arg value="-B"/>
       <arg value="package"/>
     </exec>
     
@@ -235,6 +237,7 @@ under the License.
       <arg value="/c"/>
       <arg value="${maven.home}\bin\mvn.bat"/>
       <arg value="-Prun-its"/>
+      <arg value="-B"/>
       <arg value="clean"/>
       <arg value="install"/>
     </exec>
@@ -244,10 +247,12 @@ under the License.
     <echo>Retrieving integration tests</echo>
     <exec failonerror="true" dir="${basedir}/${itPom.artifactId}" executable="${maven.home}/bin/mvn">
       <env key="M2_HOME" value="${maven.home}"/>
+      <arg value="-B"/>
       <arg value="process-resources"/>
     </exec>
     <exec failonerror="true" dir="${basedir}/${itPom.artifactId}/target/classes" executable="${maven.home}/bin/mvn">
       <env key="M2_HOME" value="${maven.home}"/>
+      <arg value="-B"/>
       <arg value="package"/>
     </exec>
     
@@ -256,6 +261,7 @@ under the License.
     <exec failonerror="true" dir="${java.io.tmpdir}/${itPom.artifactId}-${itPom.version}" executable="${maven.home}/bin/mvn">
       <env key="M2_HOME" value="${maven.home}"/>
       <arg value="-Prun-its"/>
+      <arg value="-B"/>
       <arg value="clean"/>
       <arg value="install"/>
     </exec>
