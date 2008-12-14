@@ -131,7 +131,7 @@ public class DefaultLifecycleExecutor
 
         if ( goals.isEmpty() )
         {
-            throw new BuildFailureException( "\n\nYou must specify at least one goal. Try 'mvn install' to build or 'mvn -?' for options \nSee http://maven.apache.org for more information.\n\n" );
+            throw new BuildFailureException( "\n\nYou must specify at least one goal. Try 'mvn install' to build or 'mvn --help' for options \nSee http://maven.apache.org for more information.\n\n" );
         }
 
         List taskSegments = segmentTaskListByAggregationNeeds( goals, session, rootProject );
