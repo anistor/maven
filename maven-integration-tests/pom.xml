@@ -10,7 +10,7 @@
   
   <properties>
     <integrationTestSVNDir>trunk</integrationTestSVNDir>
-    <itDir>${java.io.tmpdir}/${pom.artifactId}-${pom.version}</itDir>
+    <itDir>file:${java.io.tmpdir}/${pom.artifactId}-${pom.version}</itDir>
   </properties>
   
   <profiles>
