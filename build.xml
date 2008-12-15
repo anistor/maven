@@ -275,7 +275,7 @@ under the License.
   <target name="with-its" depends="all,run-its"/>
   
   <target name="set-temp-maven-home" depends="read-poms">
-    <property name="maven.home" value="${java.io.tmpdir}/apache-maven-${pom.version}"/>
+    <property name="maven.home" value="${java.io.tmpdir}${file.separator}apache-maven-${pom.version}"/>
     <echo>Using temporary maven install directory: ${maven.home}</echo>
   </target>
   
