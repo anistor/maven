@@ -10,7 +10,7 @@
   
   <properties>
     <integrationTestSVNDir>trunk</integrationTestSVNDir>
-    <itDir>file:${java.io.tmpdir}/${pom.artifactId}-${pom.version}</itDir>
+    <itDir>${java.io.tmpdir}/${pom.artifactId}-${pom.version}</itDir>
   </properties>
   
   <profiles>
@@ -33,6 +33,9 @@
                 <goals>
                   <goal>update</goal>
                 </goals>
+                <configuration>
+                  <workingDirectory>${itDir}</workingDirectory>
+                </configuration>
               </execution>
             </executions>
           </plugin>
@@ -57,6 +60,9 @@
                 <goals>
                   <goal>checkout</goal>
                 </goals>
+                <configuration>
+                  <checkoutDirectory>${itDir}</checkoutDirectory>
+                </configuration>
               </execution>
             </executions>
           </plugin>
@@ -75,16 +81,20 @@
         <filtering>true</filtering>
       </resource>
     </resources>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <artifactId>maven-resources-plugin</artifactId>
+          <version>2.2</version>
+        </plugin>
+      </plugins>
+    </pluginManagement>
     <plugins>
       <plugin>
         <artifactId>maven-scm-plugin</artifactId>
         <version>1.1</version>
         <configuration>
           <connectionUrl>scm:svn:http://svn.apache.org/repos/asf/maven/core-integration-testing/${integrationTestSVNDir}</connectionUrl>
-          <!-- Hard-coding to /tmp/ to avoid long path names that will make windows scream. -->
-          <!-- NOT INTERPOLATED DURING PROFILE ACTIVATION, so making these values explicit throughout to avoid confusion. -->
-          <checkoutDirectory>${itDir}</checkoutDirectory>
-          <workingDirectory>${itDir}</workingDirectory>
         </configuration>
       </plugin>
     </plugins>
