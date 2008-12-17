@@ -20,13 +20,33 @@ package org.apache.maven.profiles.activation;
  */
 
 import org.apache.maven.model.Profile;
+import org.codehaus.plexus.logging.LogEnabled;
+import org.codehaus.plexus.logging.Logger;
+import org.codehaus.plexus.logging.console.ConsoleLogger;
 
 public abstract class DetectedProfileActivator
-    implements ProfileActivator
+    implements ProfileActivator, LogEnabled
 {
+    private Logger logger;
+
     public boolean canDetermineActivation( Profile profile )
     {
         return canDetectActivation( profile );
+    }
+    
+    public void enableLogging( Logger logger )
+    {
+        this.logger = logger;
+    }
+    
+    protected final Logger getLogger()
+    {
+        if ( logger == null )
+        {
+            return new ConsoleLogger( Logger.LEVEL_INFO, getClass().getName() );
+        }
+        
+        return logger;
     }
 
     protected abstract boolean canDetectActivation( Profile profile );

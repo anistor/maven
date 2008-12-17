@@ -26,15 +26,9 @@ import org.apache.maven.model.Organization;
 import org.apache.maven.model.Repository;
 import org.apache.maven.model.Resource;
 import org.apache.maven.model.Scm;
-import org.apache.maven.project.DefaultProjectBuilderConfiguration;
-import org.apache.maven.project.path.DefaultPathTranslator;
-import org.apache.maven.project.path.PathTranslator;
-import org.codehaus.plexus.personality.plexus.lifecycle.phase.InitializationException;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -50,7 +44,7 @@ public class RegexBasedModelInterpolatorTest
     extends TestCase
 {
     private Map context;
-    
+
     protected void setUp()
         throws Exception
     {
@@ -60,7 +54,7 @@ public class RegexBasedModelInterpolatorTest
     }
 
     public void testShouldNotThrowExceptionOnReferenceToNonExistentValue()
-        throws IOException, ModelInterpolationException, InitializationException
+        throws IOException, ModelInterpolationException
     {
         Model model = new Model();
 
@@ -69,16 +63,13 @@ public class RegexBasedModelInterpolatorTest
 
         model.setScm( scm );
 
-        RegexBasedModelInterpolator interpolator = new RegexBasedModelInterpolator();
-        interpolator.initialize();
-        
-        Model out = interpolator.interpolate( model, context );
+        Model out = new RegexBasedModelInterpolator().interpolate( model, context );
 
         assertEquals( "${test}/somepath", out.getScm().getConnection() );
     }
 
     public void testShouldThrowExceptionOnRecursiveScmConnectionReference()
-        throws IOException, InitializationException
+        throws IOException
     {
         Model model = new Model();
 
@@ -89,10 +80,7 @@ public class RegexBasedModelInterpolatorTest
 
         try
         {
-            RegexBasedModelInterpolator interpolator = new RegexBasedModelInterpolator();
-            interpolator.initialize();
-            
-            interpolator.interpolate( model, context );
+            Model out = new RegexBasedModelInterpolator().interpolate( model, context );
 
             fail( "The interpolator should not allow self-referencing expressions in POM." );
         }
@@ -103,7 +91,7 @@ public class RegexBasedModelInterpolatorTest
     }
 
     public void testShouldNotThrowExceptionOnReferenceToValueContainingNakedExpression()
-        throws IOException, ModelInterpolationException, InitializationException
+        throws IOException, ModelInterpolationException
     {
         Model model = new Model();
 
@@ -114,11 +102,8 @@ public class RegexBasedModelInterpolatorTest
 
         model.addProperty( "test", "test" );
 
-        RegexBasedModelInterpolator interpolator = new RegexBasedModelInterpolator();
-        interpolator.initialize();
-        
-        Model out = interpolator.interpolate( model, context );
-        
+        Model out = new RegexBasedModelInterpolator().interpolate( model, context );
+
         assertEquals( "test/somepath", out.getScm().getConnection() );
     }
 
@@ -135,11 +120,8 @@ public class RegexBasedModelInterpolatorTest
 
         model.setOrganization( org );
 
-        RegexBasedModelInterpolator interpolator = new RegexBasedModelInterpolator();
-        interpolator.initialize();
-        
-        Model out = interpolator.interpolate( model, context );
-        
+        Model out = new RegexBasedModelInterpolator().interpolate( model, context );
+
         assertEquals( orgName + " Tools", out.getName() );
     }
 
@@ -154,11 +136,8 @@ public class RegexBasedModelInterpolatorTest
 
         model.addDependency( dep );
 
-        RegexBasedModelInterpolator interpolator = new RegexBasedModelInterpolator();
-        interpolator.initialize();
-        
-        Model out = interpolator.interpolate( model, context );
-        
+        Model out = new RegexBasedModelInterpolator().interpolate( model, context );
+
         assertEquals( "3.8.1", ( (Dependency) out.getDependencies().get( 0 ) ).getVersion() );
     }
 
@@ -188,11 +167,8 @@ public class RegexBasedModelInterpolatorTest
          }
          */
 
-        RegexBasedModelInterpolator interpolator = new RegexBasedModelInterpolator();
-        interpolator.initialize();
-        
-        Model out = interpolator.interpolate( model, context );
-        
+        Model out = new RegexBasedModelInterpolator().interpolate( model, context );
+
         assertEquals( "${something}", ( (Dependency) out.getDependencies().get( 0 ) ).getVersion() );
     }
 
@@ -208,11 +184,8 @@ public class RegexBasedModelInterpolatorTest
 
         model.addDependency( dep );
 
-        RegexBasedModelInterpolator interpolator = new RegexBasedModelInterpolator();
-        interpolator.initialize();
-        
-        Model out = interpolator.interpolate( model, context );
-        
+        Model out = new RegexBasedModelInterpolator().interpolate( model, context );
+
         assertEquals( "foo-3.8.1", ( (Dependency) out.getDependencies().get( 0 ) ).getVersion() );
     }
 
@@ -229,20 +202,17 @@ public class RegexBasedModelInterpolatorTest
 
         model.addRepository( repository );
 
-        RegexBasedModelInterpolator interpolator = new RegexBasedModelInterpolator();
-        interpolator.initialize();
-        
-        Model out = interpolator.interpolate( model, context );
-        
+        Model out = new RegexBasedModelInterpolator().interpolate( model, context );
+
         assertEquals( "file://localhost/myBasedir/temp-repo", ( (Repository) out.getRepositories().get( 0 ) ).getUrl() );
     }
 
     public void testEnvars()
         throws Exception
     {
-        Map context = new HashMap();
+        Properties envars = new Properties();
 
-        context.put( "env.HOME", "/path/to/home" );
+        envars.setProperty( "HOME", "/path/to/home" );
 
         Model model = new Model();
 
@@ -252,11 +222,8 @@ public class RegexBasedModelInterpolatorTest
 
         model.setProperties( modelProperties );
 
-        RegexBasedModelInterpolator interpolator = new RegexBasedModelInterpolator();
-        interpolator.initialize();
-        
-        Model out = interpolator.interpolate( model, context );
-        
+        Model out = new RegexBasedModelInterpolator( envars ).interpolate( model, context );
+
         assertEquals( out.getProperties().getProperty( "outputDirectory" ), "/path/to/home" );
     }
 
@@ -273,10 +240,7 @@ public class RegexBasedModelInterpolatorTest
 
         model.setProperties( modelProperties );
 
-        RegexBasedModelInterpolator interpolator = new RegexBasedModelInterpolator( envars );
-        interpolator.initialize();
-        
-        Model out = interpolator.interpolate( model, context );
+        Model out = new RegexBasedModelInterpolator( envars ).interpolate( model, context );
 
         assertEquals( out.getProperties().getProperty( "outputDirectory" ), "${env.DOES_NOT_EXIST}" );
     }
@@ -292,11 +256,8 @@ public class RegexBasedModelInterpolatorTest
 
         model.setProperties( modelProperties );
 
-        RegexBasedModelInterpolator interpolator = new RegexBasedModelInterpolator();
-        interpolator.initialize();
-        
-        Model out = interpolator.interpolate( model, context );
-        
+        Model out = new RegexBasedModelInterpolator().interpolate( model, context );
+
         assertEquals( out.getProperties().getProperty( "outputDirectory" ), "${DOES_NOT_EXIST}" );
     }
 
@@ -325,65 +286,14 @@ public class RegexBasedModelInterpolatorTest
 
         model.setBuild( build );
 
-        RegexBasedModelInterpolator interpolator = new RegexBasedModelInterpolator();
-        interpolator.initialize();
-        
-        Model out = interpolator.interpolate( model, context );
-        
+        Model out = new RegexBasedModelInterpolator().interpolate( model, context );
+
         List outResources = out.getBuild().getResources();
         Iterator resIt = outResources.iterator();
 
         assertEquals( build.getSourceDirectory(), ( (Resource) resIt.next() ).getDirectory() );
         assertEquals( build.getSourceDirectory(), ( (Resource) resIt.next() ).getDirectory() );
         assertEquals( build.getSourceDirectory(), ( (Resource) resIt.next() ).getDirectory() );
-    }
-
-    public void testShouldInterpolateUnprefixedBasedirExpression()
-        throws ModelInterpolationException, IOException, InitializationException
-    {
-        File basedir = new File( "/test/path" );
-        Model model = new Model();
-        Dependency dep = new Dependency();
-        dep.setSystemPath( "${basedir}/artifact.jar" );
-
-        model.addDependency( dep );
-
-        RegexBasedModelInterpolator interpolator = new RegexBasedModelInterpolator();
-        interpolator.initialize();
-        
-        Model result = interpolator.interpolate( model, basedir, new DefaultProjectBuilderConfiguration(), true );
-
-        List rDeps = result.getDependencies();
-        assertNotNull( rDeps );
-        assertEquals( 1, rDeps.size() );
-        assertEquals( new File( basedir, "artifact.jar" ).getAbsolutePath(), new File( ( (Dependency) rDeps.get( 0 ) )
-            .getSystemPath() ).getAbsolutePath() );
-    }
-    
-    public void testTwoLevelRecursiveBasedirAlignedExpression()
-        throws Exception
-    {
-        Model model = new Model();
-        Build build = new Build();
-        
-        model.setBuild( build );
-        
-        build.setDirectory( "${project.basedir}/target" );
-        build.setOutputDirectory( "${project.build.directory}/classes" );
-        
-        PathTranslator translator = new DefaultPathTranslator();
-        RegexBasedModelInterpolator interpolator = new RegexBasedModelInterpolator( translator );
-        interpolator.initialize();
-        
-        File basedir = new File( System.getProperty( "java.io.tmpdir" ), "base" );
-        
-        String value = interpolator.interpolate( "${project.build.outputDirectory}/foo", model, basedir, new DefaultProjectBuilderConfiguration(), true );
-        value = value.replace( '/', File.separatorChar ).replace( '\\', File.separatorChar );
-        
-        String check = new File( basedir, "target/classes/foo" ).getAbsolutePath();
-        check = check.replace( '/', File.separatorChar ).replace( '\\', File.separatorChar );
-        
-        assertEquals( check, value );
     }
 
 //    public void testPOMExpressionDoesNotUseSystemProperty()

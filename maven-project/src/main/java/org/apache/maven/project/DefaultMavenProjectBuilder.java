@@ -46,12 +46,9 @@ import org.apache.maven.model.Extension;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.Parent;
 import org.apache.maven.model.Plugin;
-import org.apache.maven.model.PluginExecution;
-import org.apache.maven.model.PluginManagement;
 import org.apache.maven.model.Profile;
 import org.apache.maven.model.ReportPlugin;
 import org.apache.maven.model.Repository;
-import org.apache.maven.model.Resource;
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
 import org.apache.maven.profiles.DefaultProfileManager;
 import org.apache.maven.profiles.MavenProfilesBuilder;
@@ -92,12 +89,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.TreeMap;
 
@@ -543,7 +540,7 @@ public class DefaultMavenProjectBuilder
         }
         else
         {
-            getLogger().debug( "Attempting to build MavenProject instance for Artifact (" + artifact.getGroupId() + ":"
+            getLogger().warn( "Attempting to build MavenProject instance for Artifact (" + artifact.getGroupId() + ":"
                                   + artifact.getArtifactId() + ":" + artifact.getVersion() + ") of type: "
                                   + artifact.getType() + "; constructing POM artifact instead." );
 
@@ -895,6 +892,10 @@ public class DefaultMavenProjectBuilder
         // this only happens if we are building from a source file
         if ( projectDescriptor != null )
         {
+            // Only translate the base directory for files in the source tree
+            pathTranslator.alignToBaseDirectory( project.getModel(),
+                                                 projectDir );
+
             Build build = project.getBuild();
 
             project.addCompileSourceRoot( build.getSourceDirectory() );
@@ -906,15 +907,6 @@ public class DefaultMavenProjectBuilder
             // Only track the file of a POM in the source tree
             project.setFile( projectDescriptor );
         }
-
-//        try
-//        {
-//            calculateConcreteState( project, config );
-//        }
-//        catch ( ModelInterpolationException e )
-//        {
-//            throw new InvalidProjectModelException( projectId, pomLocation, e.getMessage(), e );
-//        }
 
         project.setManagedVersionMap( createManagedVersionMap( projectId,
                                                                project.getDependencyManagement(),
@@ -990,15 +982,46 @@ public class DefaultMavenProjectBuilder
 
         activeProfiles.addAll( injectedProfiles );
 
-        Build dynamicBuild = model.getBuild();
+        // We don't need all the project methods that are added over those in the model, but we do need basedir
+        Map context = new HashMap();
 
-        model.setBuild( ModelUtils.cloneBuild( dynamicBuild ) );
+        Build build = model.getBuild();
 
-        model = modelInterpolator.interpolate( model, projectDir, config, getLogger().isDebugEnabled() );
+        if ( projectDir != null )
+        {
+            context.put( "basedir", projectDir.getAbsolutePath() );
 
-        mergeDeterministicBuildElements( model.getBuild(), dynamicBuild );
+            // MNG-1927, MNG-2124, MNG-3355:
+            // If the build section is present and the project directory is non-null, we should make
+            // sure interpolation of the directories below uses translated paths.
+            // Afterward, we'll double back and translate any paths that weren't covered during interpolation via the
+            // code below...
+            context.put( "build.directory", pathTranslator.alignToBaseDirectory( build.getDirectory(), projectDir ) );
+            context.put( "build.outputDirectory", pathTranslator.alignToBaseDirectory( build.getOutputDirectory(), projectDir ) );
+            context.put( "build.testOutputDirectory", pathTranslator.alignToBaseDirectory( build.getTestOutputDirectory(), projectDir ) );
+            context.put( "build.sourceDirectory", pathTranslator.alignToBaseDirectory( build.getSourceDirectory(), projectDir ) );
+            context.put( "build.testSourceDirectory", pathTranslator.alignToBaseDirectory( build.getTestSourceDirectory(), projectDir ) );
+        }
 
-        model.setBuild( dynamicBuild );
+        if ( !isSuperPom )
+        {
+            Properties userProps = config.getUserProperties();
+            if ( userProps != null )
+            {
+                context.putAll( userProps );
+            }
+        }
+
+        model = modelInterpolator.interpolate( model, context, strict );
+
+        // second pass allows ${user.home} to work, if it needs to.
+        // [MNG-2339] ensure the system properties are still interpolated for backwards compat, but the model values must win
+        if ( config.getExecutionProperties() != null && !config.getExecutionProperties().isEmpty() )
+        {
+            context.putAll( config.getExecutionProperties() );
+        }
+
+        model = modelInterpolator.interpolate( model, context, strict );
 
         // MNG-3482: Make sure depMgmt is interpolated before merging.
         if ( !isSuperPom )
@@ -1096,57 +1119,6 @@ public class DefaultMavenProjectBuilder
         project.setExtensionArtifacts( createExtensionArtifacts( projectId, project.getBuildExtensions() ) );
 
         return project;
-    }
-
-    private void mergeDeterministicBuildElements( Build interpolatedBuild,
-                                                  Build dynamicBuild )
-    {
-        mergeDeterministicPluginElements( interpolatedBuild.getPlugins(), dynamicBuild.getPlugins() );
-
-        PluginManagement dPluginMgmt = dynamicBuild.getPluginManagement();
-        PluginManagement iPluginMgmt = interpolatedBuild.getPluginManagement();
-
-        if ( dPluginMgmt != null )
-        {
-            mergeDeterministicPluginElements( iPluginMgmt.getPlugins(), dPluginMgmt.getPlugins() );
-        }
-
-        if ( dynamicBuild.getExtensions() != null )
-        {
-            dynamicBuild.setExtensions( interpolatedBuild.getExtensions() );
-        }
-    }
-
-    private void mergeDeterministicPluginElements( List iPlugins, List dPlugins )
-    {
-        if ( dPlugins != null )
-        {
-            for ( int i = 0; i < dPlugins.size(); i++ )
-            {
-                Plugin dPlugin = (Plugin) dPlugins.get( i );
-                Plugin iPlugin = (Plugin) iPlugins.get( i );
-
-                dPlugin.setGroupId( iPlugin.getGroupId() );
-                dPlugin.setArtifactId( iPlugin.getArtifactId() );
-                dPlugin.setVersion( iPlugin.getVersion() );
-                
-                dPlugin.setDependencies( iPlugin.getDependencies() );
-                
-                List dExecutions = dPlugin.getExecutions();
-                if ( dExecutions != null )
-                {
-                    List iExecutions = iPlugin.getExecutions();
-                    
-                    for ( int j = 0; j < dExecutions.size(); j++ )
-                    {
-                        PluginExecution dExec = (PluginExecution) dExecutions.get( j );
-                        PluginExecution iExec = (PluginExecution) iExecutions.get( j );
-                        
-                        dExec.setId( iExec.getId() );
-                    }
-                }
-            }
-        }
     }
 
     /**
@@ -1654,7 +1626,7 @@ public class DefaultMavenProjectBuilder
                                          List plugins )
         throws ProjectBuildingException
     {
-        Set pluginArtifacts = new HashSet();
+        Set pluginArtifacts = new LinkedHashSet();
 
         for ( Iterator i = plugins.iterator(); i.hasNext(); )
         {
@@ -1697,7 +1669,7 @@ public class DefaultMavenProjectBuilder
                                          List reports )
         throws ProjectBuildingException
     {
-        Set pluginArtifacts = new HashSet();
+        Set pluginArtifacts = new LinkedHashSet();
 
         if ( reports != null )
         {
@@ -1743,7 +1715,7 @@ public class DefaultMavenProjectBuilder
                                             List extensions )
         throws ProjectBuildingException
     {
-        Set extensionArtifacts = new HashSet();
+        Set extensionArtifacts = new LinkedHashSet();
 
         if ( extensions != null )
         {
@@ -1803,595 +1775,6 @@ public class DefaultMavenProjectBuilder
         throws ContextException
     {
         container = (PlexusContainer) context.get( PlexusConstants.PLEXUS_KEY );
-    }
-
-    // NOTE: This is a code hotspot, PLEASE be careful about the performance of logic inside or
-    // called from this method. 
-    public void calculateConcreteState( MavenProject project, ProjectBuilderConfiguration config )
-        throws ModelInterpolationException
-    {
-        if ( project.isConcrete() )
-        {
-            return;
-        }
-
-        Build build = project.getBuild();
-        if ( build != null )
-        {
-            initResourceMergeIds( build.getResources() );
-            initResourceMergeIds( build.getTestResources() );
-        }
-
-        // NOTE: Since interpolation makes a copy through serialization, we don't need this.
-        // See note below.
-        //
-        // Model model = ModelUtils.cloneModel( project.getModel() );
-
-        File basedir = project.getBasedir();
-
-        // NOTE: If we ever get past serialization/deserialization for interpolation, we'll need to copy the model here!
-        Model model = modelInterpolator.interpolate( project.getModel(), project.getBasedir(), config, getLogger().isDebugEnabled() );
-
-        List originalInterpolatedCompileSourceRoots = interpolateListOfStrings( project.getCompileSourceRoots(),
-                                                                           model,
-                                                                           project.getBasedir(),
-                                                                           config,
-                                                                           getLogger().isDebugEnabled() );
-
-        project.preserveCompileSourceRoots( originalInterpolatedCompileSourceRoots );
-
-        project.setCompileSourceRoots( originalInterpolatedCompileSourceRoots == null ? null
-                        : translateListOfPaths( originalInterpolatedCompileSourceRoots, basedir ) );
-
-        List originalInterpolatedTestCompileSourceRoots = interpolateListOfStrings( project.getTestCompileSourceRoots(),
-                                                                               model,
-                                                                               project.getBasedir(),
-                                                                               config,
-                                                                               getLogger().isDebugEnabled() );
-
-        project.preserveTestCompileSourceRoots( originalInterpolatedTestCompileSourceRoots );
-        project.setTestCompileSourceRoots( originalInterpolatedTestCompileSourceRoots == null ? null
-                        : translateListOfPaths( originalInterpolatedTestCompileSourceRoots, basedir ) );
-
-        List originalInterpolatedScriptSourceRoots = interpolateListOfStrings( project.getScriptSourceRoots(),
-                                                                          model,
-                                                                          project.getBasedir(),
-                                                                          config,
-                                                                          getLogger().isDebugEnabled() );
-
-        project.preserveScriptSourceRoots( originalInterpolatedScriptSourceRoots );
-        project.setScriptSourceRoots( originalInterpolatedScriptSourceRoots == null ? null
-                        : translateListOfPaths( originalInterpolatedScriptSourceRoots, basedir ) );
-
-        if ( basedir != null )
-        {
-            pathTranslator.alignToBaseDirectory( model, basedir );
-        }
-
-        project.preserveBuild( ModelUtils.cloneBuild( model.getBuild() ) );
-        project.setBuild( model.getBuild() );
-
-        calculateConcreteProjectReferences( project, config );
-
-        if ( project.getExecutionProject() != null )
-        {
-            calculateConcreteState( project.getExecutionProject(), config );
-        }
-
-        project.setConcrete( true );
-    }
-
-    private void initResourceMergeIds( List resources )
-    {
-        if ( resources != null )
-        {
-            for ( Iterator it = resources.iterator(); it.hasNext(); )
-            {
-                Resource resource = (Resource) it.next();
-
-                resource.initMergeId();
-            }
-        }
-    }
-
-    private void calculateConcreteProjectReferences( MavenProject project,
-                                                     ProjectBuilderConfiguration config )
-        throws ModelInterpolationException
-    {
-        Map projectRefs = project.getProjectReferences();
-
-        if ( projectRefs != null )
-        {
-            for ( Iterator it = projectRefs.values().iterator(); it.hasNext(); )
-            {
-                MavenProject reference = (MavenProject) it.next();
-                calculateConcreteState( reference, config );
-            }
-        }
-    }
-
-    private List translateListOfPaths( List paths, File basedir )
-    {
-        if ( paths == null )
-        {
-            return null;
-        }
-        else if ( basedir == null )
-        {
-            return paths;
-        }
-
-        List result = new ArrayList( paths.size() );
-        for ( Iterator it = paths.iterator(); it.hasNext(); )
-        {
-            String path = (String) it.next();
-
-            String aligned = pathTranslator.alignToBaseDirectory( path, basedir );
-
-            result.add( aligned );
-        }
-
-        return result;
-    }
-
-    // NOTE: This is a code hotspot, PLEASE be careful about the performance of logic inside or
-    // called from this method. 
-    public void restoreDynamicState( MavenProject project, ProjectBuilderConfiguration config )
-        throws ModelInterpolationException
-    {
-        if ( !project.isConcrete() )
-        {
-            return;
-        }
-
-        restoreBuildRoots( project, config, getLogger().isDebugEnabled() );
-        restoreModelBuildSection( project, config, getLogger().isDebugEnabled() );
-        
-        restoreDynamicProjectReferences( project, config );
-        
-        if ( project.getExecutionProject() != null )
-        {
-            restoreDynamicState( project.getExecutionProject(), config );
-        }
-
-        project.setConcrete( false );
-    }
-
-    private void propagateNewPlugins( MavenProject project )
-    {
-        Build changedBuild = project.getBuild();
-        Build dynamicBuild = project.getDynamicBuild();
-        
-        if ( changedBuild == null || dynamicBuild == null )
-        {
-            return;
-        }
-        
-        List changedPlugins = changedBuild.getPlugins();
-        List dynamicPlugins = dynamicBuild.getPlugins();
-        
-        if ( changedPlugins != null && dynamicPlugins != null && changedPlugins.size() != dynamicPlugins.size() )
-        {
-            changedPlugins.removeAll( dynamicPlugins );
-            if ( !changedPlugins.isEmpty() )
-            {
-                for ( Iterator it = changedPlugins.iterator(); it.hasNext(); )
-                {
-                    Plugin plugin = (Plugin) it.next();
-                    
-                    dynamicBuild.addPlugin( plugin );
-                }
-            }
-        }
-        
-        dynamicBuild.flushPluginMap();
-    }
-
-    private void restoreDynamicProjectReferences( MavenProject project,
-                                                  ProjectBuilderConfiguration config )
-        throws ModelInterpolationException
-    {
-        Map projectRefs = project.getProjectReferences();
-        if ( projectRefs != null )
-        {
-            for ( Iterator it = projectRefs.values().iterator(); it.hasNext(); )
-            {
-                MavenProject projectRef = (MavenProject) it.next();
-                restoreDynamicState( projectRef, config );
-            }
-        }
-    }
-
-    private void restoreBuildRoots( MavenProject project,
-                                    ProjectBuilderConfiguration config,
-                                    boolean debugMessages )
-        throws ModelInterpolationException
-    {
-        project.setCompileSourceRoots( restoreListOfStrings( project.getDynamicCompileSourceRoots(),
-                                                             project.getOriginalInterpolatedCompileSourceRoots(),
-                                                             project.getCompileSourceRoots(),
-                                                             project,
-                                                             config,
-                                                             debugMessages ) );
-
-        project.setTestCompileSourceRoots( restoreListOfStrings( project.getDynamicTestCompileSourceRoots(),
-                                                                 project.getOriginalInterpolatedTestCompileSourceRoots(),
-                                                                 project.getTestCompileSourceRoots(),
-                                                                 project,
-                                                                 config,
-                                                                 debugMessages ) );
-
-        project.setScriptSourceRoots( restoreListOfStrings( project.getDynamicScriptSourceRoots(),
-                                                            project.getOriginalInterpolatedScriptSourceRoots(),
-                                                            project.getScriptSourceRoots(),
-                                                            project,
-                                                            config,
-                                                            debugMessages ) );
-
-        project.clearRestorableRoots();
-    }
-
-    private void restoreModelBuildSection( MavenProject project,
-                                           ProjectBuilderConfiguration config,
-                                           boolean debugMessages )
-        throws ModelInterpolationException
-    {
-        Build changedBuild = project.getBuild();
-        Build dynamicBuild = project.getDynamicBuild();
-        Build originalInterpolatedBuild = project.getOriginalInterpolatedBuild();
-
-        dynamicBuild.setResources( restoreResources( dynamicBuild.getResources(),
-                                                         originalInterpolatedBuild.getResources(),
-                                                         changedBuild.getResources(),
-                                                         project,
-                                                         config,
-                                                         debugMessages ) );
-
-        dynamicBuild.setTestResources( restoreResources( dynamicBuild.getTestResources(),
-                                                         originalInterpolatedBuild.getTestResources(),
-                                                         changedBuild.getTestResources(),
-                                                         project,
-                                                         config,
-                                                         debugMessages ) );
-
-        dynamicBuild.setFilters( restoreListOfStrings( dynamicBuild.getFilters(),
-                                                           originalInterpolatedBuild.getFilters(),
-                                                           changedBuild.getFilters(),
-                                                           project,
-                                                           config,
-                                                           debugMessages ) );
-
-        dynamicBuild.setFinalName( restoreString( dynamicBuild.getFinalName(),
-                                                  originalInterpolatedBuild.getFinalName(),
-                                                  changedBuild.getFinalName(),
-                                                  project,
-                                                  config,
-                                                  debugMessages ) );
-
-        dynamicBuild.setDefaultGoal( restoreString( dynamicBuild.getDefaultGoal(),
-                                                  originalInterpolatedBuild.getDefaultGoal(),
-                                                  changedBuild.getDefaultGoal(),
-                                                  project,
-                                                  config,
-                                                  debugMessages ) );
-
-        dynamicBuild.setSourceDirectory( restoreString( dynamicBuild.getSourceDirectory(),
-                                                            originalInterpolatedBuild.getSourceDirectory(),
-                                                            changedBuild.getSourceDirectory(),
-                                                            project,
-                                                            config,
-                                                            debugMessages ) );
-
-        dynamicBuild.setTestSourceDirectory( restoreString( dynamicBuild.getTestSourceDirectory(),
-                                                                originalInterpolatedBuild.getTestSourceDirectory(),
-                                                                changedBuild.getTestSourceDirectory(),
-                                                                project,
-                                                                config,
-                                                                debugMessages ) );
-
-        dynamicBuild.setScriptSourceDirectory( restoreString( dynamicBuild.getScriptSourceDirectory(),
-                                                                  originalInterpolatedBuild.getScriptSourceDirectory(),
-                                                                  changedBuild.getScriptSourceDirectory(),
-                                                                  project,
-                                                                  config,
-                                                                  debugMessages ) );
-
-        dynamicBuild.setOutputDirectory( restoreString( dynamicBuild.getOutputDirectory(),
-                                                            originalInterpolatedBuild.getOutputDirectory(),
-                                                            changedBuild.getOutputDirectory(),
-                                                            project,
-                                                            config,
-                                                            debugMessages ) );
-
-        dynamicBuild.setTestOutputDirectory( restoreString( dynamicBuild.getTestOutputDirectory(),
-                                                                originalInterpolatedBuild.getTestOutputDirectory(),
-                                                                changedBuild.getTestOutputDirectory(),
-                                                                project,
-                                                                config,
-                                                                debugMessages ) );
-
-        dynamicBuild.setDirectory( restoreString( dynamicBuild.getDirectory(),
-                                                      originalInterpolatedBuild.getDirectory(),
-                                                      changedBuild.getDirectory(),
-                                                      project,
-                                                      config,
-                                                      debugMessages ) );
-
-        propagateNewPlugins( project );
-        
-        project.setBuild( dynamicBuild );
-
-        project.clearRestorableBuild();
-    }
-
-    private List interpolateListOfStrings( List originalStrings,
-                                           Model model,
-                                           File projectDir,
-                                           ProjectBuilderConfiguration config,
-                                           boolean debugMessages )
-        throws ModelInterpolationException
-    {
-        if ( originalStrings == null )
-        {
-            return null;
-        }
-
-        List result = new ArrayList();
-
-        for ( Iterator it = originalStrings.iterator(); it.hasNext(); )
-        {
-            String original = (String) it.next();
-            String interpolated = modelInterpolator.interpolate( original, model, projectDir, config, debugMessages );
-
-            result.add( interpolated );
-        }
-
-        return result;
-    }
-
-    private String restoreString( String originalString,
-                                      String originalInterpolatedString,
-                                      String changedString,
-                                      MavenProject project,
-                                      ProjectBuilderConfiguration config,
-                                      boolean debugMessages )
-        throws ModelInterpolationException
-    {
-        if ( originalString == null )
-        {
-            return changedString;
-        }
-        else if ( changedString == null )
-        {
-            return originalString;
-        }
-
-        Model model = project.getModel();
-
-        String relativeChangedString;
-        if ( project.getBasedir() != null )
-        {
-            relativeChangedString = pathTranslator.unalignFromBaseDirectory( changedString, project.getBasedir() );
-        }
-        else
-        {
-            relativeChangedString = changedString;
-        }
-
-        String interpolatedOriginal = modelInterpolator.interpolate( originalString,
-                                                                     model,
-                                                                     project.getBasedir(),
-                                                                     config,
-                                                                     debugMessages );
-        
-        interpolatedOriginal = pathTranslator.unalignFromBaseDirectory( interpolatedOriginal, project.getBasedir() );
-
-        String interpolatedOriginal2 = modelInterpolator.interpolate( originalInterpolatedString,
-                                                                      model,
-                                                                      project.getBasedir(),
-                                                                      config,
-                                                                      debugMessages );
-        
-        interpolatedOriginal2 = pathTranslator.alignToBaseDirectory( interpolatedOriginal2, project.getBasedir() );
-
-        String interpolatedChanged = modelInterpolator.interpolate( changedString,
-                                                                    model,
-                                                                    project.getBasedir(),
-                                                                    config,
-                                                                    debugMessages );
-        
-        interpolatedChanged = pathTranslator.alignToBaseDirectory( interpolatedChanged, project.getBasedir() );
-
-        String relativeInterpolatedChanged = modelInterpolator.interpolate( relativeChangedString,
-                                                                            model,
-                                                                            project.getBasedir(),
-                                                                            config,
-                                                                            debugMessages );
-
-        if ( interpolatedOriginal.equals( interpolatedChanged ) || interpolatedOriginal2.equals( interpolatedChanged ) )
-        {
-            return originalString;
-        }
-        else if ( interpolatedOriginal.equals( relativeInterpolatedChanged )
-            || interpolatedOriginal2.equals( relativeInterpolatedChanged ) )
-        {
-            return originalString;
-        }
-
-        return relativeChangedString;
-    }
-
-    private List restoreListOfStrings( List originalStrings,
-                                           List originalInterpolatedStrings,
-                                           List changedStrings,
-                                           MavenProject project,
-                                           ProjectBuilderConfiguration config,
-                                           boolean debugMessages )
-        throws ModelInterpolationException
-    {
-        if ( originalStrings == null )
-        {
-            return changedStrings;
-        }
-        else if ( changedStrings == null )
-        {
-            return originalStrings;
-        }
-
-        List result = new ArrayList();
-
-        Map orig = new HashMap();
-        for ( int idx = 0; idx < originalStrings.size(); idx++ )
-        {
-            String[] permutations = new String[2];
-
-            permutations[0] = pathTranslator.alignToBaseDirectory( (String) originalInterpolatedStrings.get( idx ), project.getBasedir() );
-            permutations[1] = (String) originalStrings.get( idx );
-
-            orig.put( permutations[0], permutations );
-        }
-
-        for ( Iterator it = changedStrings.iterator(); it.hasNext(); )
-        {
-            String changedString = (String) it.next();
-            String relativeChangedString;
-            if ( project.getBasedir() != null )
-            {
-                relativeChangedString = pathTranslator.unalignFromBaseDirectory( changedString, project.getBasedir() );
-            }
-            else
-            {
-                relativeChangedString = changedString;
-            }
-
-            String interpolated = modelInterpolator.interpolate( changedString,
-                                                                 project.getModel(),
-                                                                 project.getBasedir(),
-                                                                 config,
-                                                                 debugMessages );
-            
-            interpolated = pathTranslator.alignToBaseDirectory( interpolated, project.getBasedir() );
-
-            String relativeInterpolated = modelInterpolator.interpolate( relativeChangedString,
-                                                                         project.getModel(),
-                                                                         project.getBasedir(),
-                                                                         config,
-                                                                         debugMessages );
-            
-            String[] original = (String[]) orig.get( interpolated );
-            if ( original == null )
-            {
-                original = (String[]) orig.get( relativeInterpolated );
-            }
-
-            if ( original == null )
-            {
-                result.add( relativeChangedString );
-            }
-            else
-            {
-                result.add( original[1] );
-            }
-        }
-
-        return result;
-    }
-
-    private List restoreResources( List originalResources,
-                                       List originalInterpolatedResources,
-                                       List changedResources,
-                                       MavenProject project,
-                                       ProjectBuilderConfiguration config,
-                                       boolean debugMessages )
-        throws ModelInterpolationException
-    {
-        if ( originalResources == null || changedResources == null )
-        {
-            return originalResources;
-        }
-
-        List result = new ArrayList();
-
-        Map originalResourcesByMergeId = new HashMap();
-        for ( int idx = 0; idx < originalResources.size(); idx++ )
-        {
-            Resource[] permutations = new Resource[2];
-
-            permutations[0] = (Resource) originalInterpolatedResources.get( idx );
-            permutations[1] = (Resource) originalResources.get( idx );
-
-            originalResourcesByMergeId.put( permutations[0].getMergeId(), permutations );
-        }
-
-        for ( Iterator it = changedResources.iterator(); it.hasNext(); )
-        {
-            Resource resource = (Resource) it.next();
-            String mergeId = resource.getMergeId();
-            if ( mergeId == null || !originalResourcesByMergeId.containsKey( mergeId ) )
-            {
-                result.add( resource );
-            }
-            else
-            {
-                Resource originalInterpolatedResource = ( (Resource[]) originalResourcesByMergeId.get( mergeId ) )[0];
-                Resource originalResource = ( (Resource[]) originalResourcesByMergeId.get( mergeId ) )[1];
-
-                String dir = modelInterpolator.interpolate( resource.getDirectory(), project.getModel(), project.getBasedir(), config, getLogger().isDebugEnabled() );
-                String oDir = originalInterpolatedResource.getDirectory();
-
-                if ( !dir.equals( oDir ) )
-                {
-                    originalResource.setDirectory( pathTranslator.unalignFromBaseDirectory( dir, project.getBasedir() ) );
-                }
-
-                if ( resource.getTargetPath() != null )
-                {
-                    String target = modelInterpolator.interpolate( resource.getTargetPath(), project.getModel(), project.getBasedir(), config, getLogger().isDebugEnabled() );
-
-                    String oTarget = originalInterpolatedResource.getTargetPath();
-
-                    if ( !target.equals( oTarget ) )
-                    {
-                        originalResource.setTargetPath( pathTranslator.unalignFromBaseDirectory( target, project.getBasedir() ) );
-                    }
-                }
-
-                originalResource.setFiltering( resource.isFiltering() );
-
-                originalResource.setExcludes( collectRestoredListOfPatterns( resource.getExcludes(),
-                                                                             originalResource.getExcludes(),
-                                                                             originalInterpolatedResource.getExcludes() ) );
-
-                originalResource.setIncludes( collectRestoredListOfPatterns( resource.getIncludes(),
-                                                                             originalResource.getIncludes(),
-                                                                             originalInterpolatedResource.getIncludes() ) );
-
-                result.add( originalResource );
-            }
-        }
-
-        return result;
-    }
-
-    private List collectRestoredListOfPatterns( List patterns,
-                                                        List originalPatterns,
-                                                        List originalInterpolatedPatterns )
-    {
-        LinkedHashSet collectedPatterns = new LinkedHashSet();
-
-        collectedPatterns.addAll( originalPatterns );
-
-        for ( Iterator it = patterns.iterator(); it.hasNext(); )
-        {
-            String pattern = (String) it.next();
-            if ( !originalInterpolatedPatterns.contains( pattern ) )
-            {
-                collectedPatterns.add( pattern );
-            }
-        }
-
-        return collectedPatterns.isEmpty() ? Collections.EMPTY_LIST
-                        : new ArrayList( collectedPatterns );
     }
 
 }
