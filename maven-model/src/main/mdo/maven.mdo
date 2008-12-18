@@ -761,7 +761,7 @@
     {
         if ( pluginMap == null )
         {
-            pluginMap = new java.util.HashMap();
+            pluginMap = new java.util.LinkedHashMap();
             if ( plugins != null )
             {
                 for ( java.util.Iterator it = plugins.iterator(); it.hasNext(); )
@@ -2640,7 +2640,7 @@
     {
         if ( executionMap == null )
         {
-            executionMap = new java.util.HashMap();
+            executionMap = new java.util.LinkedHashMap();
             if ( getExecutions() != null )
             {
                 for ( java.util.Iterator i = getExecutions().iterator(); i.hasNext(); )
@@ -2792,13 +2792,12 @@
       <version>4.0.0</version>
       <description>Section for management of reports and their configuration.</description>
       <fields>
-        <field>
-          <name>excludeDefaults</name>
+        <field xml.tagName="excludeDefaults">
+          <name>excludeDefaultsValue</name>
           <version>4.0.0</version>
-          <type>boolean</type>
+          <type>Boolean</type>
           <description>If true, then the default reports are not included in the site generation.
             This includes the reports in the "Project Info" menu.</description>
-          <defaultValue>false</defaultValue>
         </field>
         <field>
           <name>outputDirectory</name>
@@ -2846,7 +2845,7 @@
     {
         if ( reportPluginMap == null )
         {
-            reportPluginMap = new java.util.HashMap();
+            reportPluginMap = new java.util.LinkedHashMap();
             if ( getPlugins() != null )
             {
                 for ( java.util.Iterator it = getPlugins().iterator(); it.hasNext(); )
@@ -2858,6 +2857,21 @@
         }
 
         return reportPluginMap;
+    }
+
+    public boolean isExcludeDefaults()
+    {
+        return excludeDefaultsValue != null ? excludeDefaultsValue.booleanValue() : false;
+    }
+
+    public void setExcludeDefaults( boolean excludeDefaults )
+    {
+        excludeDefaultsValue = excludeDefaults ? Boolean.TRUE : Boolean.FALSE;
+    }
+
+    public void setExcludeDefaultsValue( String excludeDefaults )
+    {
+        excludeDefaultsValue = excludeDefaults != null ? Boolean.valueOf( excludeDefaults ) : null;
     }
             ]]>
           </code>
@@ -3156,7 +3170,7 @@
     {
         if ( reportSetMap == null )
         {
-            reportSetMap = new java.util.HashMap();
+            reportSetMap = new java.util.LinkedHashMap();
             if ( getReportSets() != null )
             {
                 for ( java.util.Iterator i = getReportSets().iterator(); i.hasNext(); )
@@ -3377,9 +3391,9 @@
     public int hashCode()
     {
         int result = 17;
-        result = 37 * result + getArtifactId() != null ? getArtifactId().hashCode() : 0;
-        result = 37 * result + getGroupId() != null ? getGroupId().hashCode() : 0;
-        result = 37 * result + getVersion() != null ? getVersion().hashCode() : 0;
+        result = 37 * result + ( getArtifactId() != null ? getArtifactId().hashCode() : 0 );
+        result = 37 * result + ( getGroupId() != null ? getGroupId().hashCode() : 0 );
+        result = 37 * result + ( getVersion() != null ? getVersion().hashCode() : 0 );
         return result;
     }
             ]]>

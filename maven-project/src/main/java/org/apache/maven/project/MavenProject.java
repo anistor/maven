@@ -63,6 +63,7 @@ import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
 import org.apache.maven.project.artifact.ActiveProjectArtifact;
 import org.apache.maven.project.artifact.InvalidDependencyVersionException;
 import org.apache.maven.project.artifact.MavenMetadataSource;
+import org.apache.maven.project.overlay.BuildOverlay;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 
 /**
@@ -144,11 +145,11 @@ public class MavenProject
 
     private Map projectReferences = new HashMap();
 
+    private Build buildOverlay;
+
     private boolean executionRoot;
     
     private Map moduleAdjustments;
-
-    private File basedir;
 
     public MavenProject()
     {
@@ -279,35 +280,6 @@ public class MavenProject
         {
             setSnapshotArtifactRepository( project.getSnapshotArtifactRepository() );
         }
-
-        if ( project.isConcrete() )
-        {
-            setDynamicBuild( ModelUtils.cloneBuild( project.getDynamicBuild() ) );
-            setOriginalInterpolatedBuild( ModelUtils.cloneBuild( project.getOriginalInterpolatedBuild() ) );
-
-            List dynamicRoots = project.getDynamicCompileSourceRoots();
-            if ( dynamicRoots != null )
-            {
-                setDynamicCompileSourceRoots( new ArrayList( dynamicRoots ) );
-                setOriginalInterpolatedCompileSourceRoots( new ArrayList( project.getOriginalInterpolatedCompileSourceRoots() ) );
-            }
-
-            dynamicRoots = project.getDynamicTestCompileSourceRoots();
-            if ( dynamicRoots != null )
-            {
-                setDynamicTestCompileSourceRoots( new ArrayList( dynamicRoots ) );
-                setOriginalInterpolatedTestCompileSourceRoots( new ArrayList( project.getOriginalInterpolatedTestCompileSourceRoots() ) );
-            }
-
-            dynamicRoots = project.getDynamicScriptSourceRoots();
-            if ( dynamicRoots != null )
-            {
-                setDynamicScriptSourceRoots( new ArrayList( dynamicRoots ) );
-                setOriginalInterpolatedScriptSourceRoots( new ArrayList( project.getOriginalInterpolatedScriptSourceRoots() ) );
-            }
-        }
-
-        setConcrete( project.isConcrete() );
     }
     
     public String getModulePathAdjustment( MavenProject moduleProject ) throws IOException
@@ -422,27 +394,20 @@ public class MavenProject
 
     public void setFile( File file )
     {
-        if ( file == null )
-        {
-            return;
-        }
-        
-        if ( basedir == null )
-        {
-            basedir = file.getParentFile();
-        }
-        
         this.file = file;
-    }
-    
-    public void setBasedir( File basedir )
-    {
-        this.basedir = basedir;
     }
 
     public File getBasedir()
     {
-        return basedir;
+        if ( getFile() != null )
+        {
+            return getFile().getParentFile();
+        }
+        else
+        {
+            // repository based POM
+            return null;
+        }
     }
 
     public void setDependencies( List dependencies )
@@ -1082,12 +1047,19 @@ public class MavenProject
 
     public void setBuild( Build build )
     {
+        this.buildOverlay = new BuildOverlay( build );
+
         getModel().setBuild( build );
     }
 
     public Build getBuild()
     {
-        return getModelBuild();
+        if ( buildOverlay == null )
+        {
+            buildOverlay = new BuildOverlay( getModelBuild() );
+        }
+
+        return buildOverlay;
     }
 
     public List getResources()
@@ -1611,7 +1583,7 @@ public class MavenProject
         projectReferences.put( getProjectReferenceId( project.getGroupId(), project.getArtifactId(), project.getVersion() ), project );
     }
 
-    public static String getProjectReferenceId( String groupId, String artifactId, String version )
+    private static String getProjectReferenceId( String groupId, String artifactId, String version )
     {
         return groupId + ":" + artifactId + ":" + version;
     }
@@ -1703,7 +1675,6 @@ public class MavenProject
                     // if the project artifact doesn't exist, don't use it. We haven't built that far.
                     if ( ref.getArtifact().getFile() != null && ref.getArtifact().getFile().exists() )
                     {
-                        // FIXME: Why aren't we using project.getArtifact() for the second parameter here??
                         pluginArtifact = new ActiveProjectArtifact( ref, pluginArtifact );
                         return pluginArtifact;
                     }
@@ -1821,161 +1792,6 @@ public class MavenProject
         MavenProject clone = (MavenProject) super.clone();
         clone.deepCopy( this );
         return clone;
-    }
-
-// ----------------------------------------------------------------------------
-// CODE BELOW IS USED TO PRESERVE DYNAMISM IN THE BUILD SECTION OF THE POM.
-// ----------------------------------------------------------------------------
-
-    private Build dynamicBuild;
-
-    private Build originalInterpolatedBuild;
-
-    private List dynamicCompileSourceRoots;
-
-    private List originalInterpolatedCompileSourceRoots;
-
-    private List dynamicTestCompileSourceRoots;
-
-    private List originalInterpolatedTestCompileSourceRoots;
-
-    private List dynamicScriptSourceRoots;
-
-    private List originalInterpolatedScriptSourceRoots;
-
-    private boolean isConcrete = false;
-
-    public boolean isConcrete()
-    {
-        return isConcrete;
-    }
-
-    public void setConcrete( boolean concrete )
-    {
-        isConcrete = concrete;
-    }
-
-    public Build getDynamicBuild()
-    {
-        return dynamicBuild;
-    }
-
-    public Build getOriginalInterpolatedBuild()
-    {
-        return originalInterpolatedBuild;
-    }
-
-    public List getDynamicCompileSourceRoots()
-    {
-        return dynamicCompileSourceRoots;
-    }
-
-    public List getOriginalInterpolatedCompileSourceRoots()
-    {
-        return originalInterpolatedCompileSourceRoots;
-    }
-
-    public List getDynamicTestCompileSourceRoots()
-    {
-        return dynamicTestCompileSourceRoots;
-    }
-
-    public List getOriginalInterpolatedTestCompileSourceRoots()
-    {
-        return originalInterpolatedTestCompileSourceRoots;
-    }
-
-    public List getDynamicScriptSourceRoots()
-    {
-        return dynamicScriptSourceRoots;
-    }
-
-    public List getOriginalInterpolatedScriptSourceRoots()
-    {
-        return originalInterpolatedScriptSourceRoots;
-    }
-
-    public void clearRestorableRoots()
-    {
-        dynamicCompileSourceRoots = null;
-        dynamicTestCompileSourceRoots = null;
-        dynamicScriptSourceRoots = null;
-        originalInterpolatedCompileSourceRoots = null;
-        originalInterpolatedScriptSourceRoots = null;
-        originalInterpolatedTestCompileSourceRoots = null;
-    }
-
-    public void clearRestorableBuild()
-    {
-        dynamicBuild = null;
-        originalInterpolatedBuild = null;
-    }
-
-    public void preserveCompileSourceRoots( List originalInterpolatedCompileSourceRoots )
-    {
-        dynamicCompileSourceRoots = getCompileSourceRoots();
-        this.originalInterpolatedCompileSourceRoots = originalInterpolatedCompileSourceRoots;
-    }
-
-    public void preserveTestCompileSourceRoots( List originalInterpolatedTestCompileSourceRoots )
-    {
-        dynamicTestCompileSourceRoots = getTestCompileSourceRoots();
-        this.originalInterpolatedTestCompileSourceRoots = originalInterpolatedTestCompileSourceRoots;
-    }
-
-    public void preserveScriptSourceRoots( List originalInterpolatedScriptSourceRoots )
-    {
-        dynamicScriptSourceRoots = getScriptSourceRoots();
-        this.originalInterpolatedScriptSourceRoots = originalInterpolatedScriptSourceRoots;
-    }
-
-    public void preserveBuild( Build originalInterpolatedBuild )
-    {
-        dynamicBuild = getBuild();
-        this.originalInterpolatedBuild = originalInterpolatedBuild;
-
-        this.originalInterpolatedBuild.setPluginManagement( null );
-        this.originalInterpolatedBuild.setPlugins( null );
-    }
-
-    protected void setDynamicBuild( Build dynamicBuild )
-    {
-        this.dynamicBuild = dynamicBuild;
-    }
-
-    protected void setOriginalInterpolatedBuild( Build originalInterpolatedBuild )
-    {
-        this.originalInterpolatedBuild = originalInterpolatedBuild;
-    }
-
-    protected void setDynamicCompileSourceRoots( List dynamicCompileSourceRoots )
-    {
-        this.dynamicCompileSourceRoots = dynamicCompileSourceRoots;
-    }
-
-    protected void setOriginalInterpolatedCompileSourceRoots( List originalInterpolatedCompileSourceRoots )
-    {
-        this.originalInterpolatedCompileSourceRoots = originalInterpolatedCompileSourceRoots;
-    }
-
-    protected void setDynamicTestCompileSourceRoots( List dynamicTestCompileSourceRoots )
-    {
-        this.dynamicTestCompileSourceRoots = dynamicTestCompileSourceRoots;
-    }
-
-    protected void setOriginalInterpolatedTestCompileSourceRoots( List originalInterpolatedTestCompileSourceRoots )
-    {
-        this.originalInterpolatedTestCompileSourceRoots = originalInterpolatedTestCompileSourceRoots;
-    }
-
-    protected void setDynamicScriptSourceRoots( List dynamicScriptSourceRoots )
-    {
-        this.dynamicScriptSourceRoots = dynamicScriptSourceRoots;
-    }
-
-    protected void setOriginalInterpolatedScriptSourceRoots( List originalInterpolatedScriptSourceRoots )
-    {
-        this.originalInterpolatedScriptSourceRoots = originalInterpolatedScriptSourceRoots;
     }
 
 }
