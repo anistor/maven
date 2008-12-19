@@ -62,7 +62,9 @@ import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
@@ -581,7 +583,12 @@ public class MavenCli
         {
             msg += " (";
             msg += ( rev != null ? "r" + rev : "" );
-            msg += ( timestamp != null ? ( rev != null ? "; " : "" ) + new java.util.Date( Long.valueOf( timestamp ).longValue() ) : "" );
+            if ( timestamp != null )
+            {
+                SimpleDateFormat fmt = new SimpleDateFormat( "yyyy-MM-dd HH:mm:ssZ" );
+                String ts = fmt.format( new Date( Long.valueOf( timestamp ).longValue() ) );
+                msg += ( rev != null ? "; " : "" ) + ts;
+            }
             msg += ")";
         }
 
