@@ -24,8 +24,10 @@ import java.io.IOException;
 import java.util.Map;
 
 import org.apache.maven.wagon.AbstractWagon;
+import org.apache.maven.wagon.ConnectionException;
 import org.apache.maven.wagon.ResourceDoesNotExistException;
 import org.apache.maven.wagon.TransferFailedException;
+import org.apache.maven.wagon.authentication.AuthenticationException;
 import org.apache.maven.wagon.authorization.AuthorizationException;
 import org.apache.maven.wagon.events.TransferEvent;
 import org.apache.maven.wagon.resource.Resource;
@@ -104,4 +106,10 @@ public class WagonString
     {
         return new String[] { "string" };
     }
+
+	public void openConnection() throws ConnectionException,
+			AuthenticationException {
+		// TODO Auto-generated method stub
+		
+	}
 }

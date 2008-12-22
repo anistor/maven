@@ -50,7 +50,6 @@ import org.apache.maven.wagon.authorization.AuthorizationException;
 import org.apache.maven.wagon.events.TransferListener;
 import org.apache.maven.wagon.observers.ChecksumObserver;
 import org.apache.maven.wagon.proxy.ProxyInfo;
-import org.apache.maven.wagon.proxy.ProxyInfoProvider;
 import org.apache.maven.wagon.repository.Repository;
 import org.apache.maven.wagon.repository.RepositoryPermissions;
 import org.codehaus.plexus.PlexusConstants;
@@ -241,11 +240,7 @@ public class DefaultWagonManager
                 }
             }
 
-            wagon.connect( artifactRepository, getAuthenticationInfo( repository.getId() ), new ProxyInfoProvider(){
-                public ProxyInfo getProxyInfo(String protocol) {
-                    return (ProxyInfo) proxies.get( protocol );
-                }
-            });
+            wagon.connect( artifactRepository, getAuthenticationInfo( repository.getId() ), getProxy(protocol));
 
             wagon.put( source, remotePath );
 
@@ -443,11 +438,7 @@ public class DefaultWagonManager
         try
         {
             wagon.connect( new Repository( repository.getId(), repository.getUrl() ),
-                           getAuthenticationInfo( repository.getId() ), new ProxyInfoProvider(){
-                public ProxyInfo getProxyInfo(String protocol) {
-                    return (ProxyInfo) proxies.get( protocol );
-                }
-            });
+                           getAuthenticationInfo( repository.getId() ),getProxy(protocol));
 
             boolean firstRun = true;
             boolean retry = true;
