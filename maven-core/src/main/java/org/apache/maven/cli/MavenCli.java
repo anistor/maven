@@ -547,7 +547,7 @@ public class MavenCli
         return localRepository;
     }
 
-    public static Properties getBuildProperties()
+    static Properties getBuildProperties()
     {
         Properties properties = new Properties();
         InputStream resourceAsStream = null;
