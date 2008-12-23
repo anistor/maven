@@ -473,6 +473,29 @@ under the License.
       <id>release</id>
       <build>
         <plugins>
+<!-- TODO: Commented until a release version is available
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-enforcer-plugin</artifactId>
+            <version>1.0-alpha-5-SNAPSHOT</version>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>enforce</goal>
+                </goals>
+                <configuration>
+                  <rules>
+                    <requireNoRepositories>
+                      <allowedRepositories>
+                        <allowedRepository>apache.snapshots</allowedRepository>
+                      </allowedRepositories>
+                    </requireNoRepositories>
+                  </rules>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+-->
           <plugin>
             <artifactId>maven-assembly-plugin</artifactId>
             <inherited>false</inherited>
