@@ -1137,22 +1137,6 @@ public class DefaultMavenProjectBuilder
     {
         Model originalModel = ModelUtils.cloneModel( model );
 
-
-        if ( !model.getRepositories().isEmpty() )
-        {
-            List respositories = buildArtifactRepositories( model );
-
-            for ( Iterator it = respositories.iterator(); it.hasNext(); )
-            {
-                ArtifactRepository repository = (ArtifactRepository) it.next();
-
-                if ( !aggregatedRemoteWagonRepositories.contains( repository ) )
-                {
-                    aggregatedRemoteWagonRepositories.add( repository );
-                }
-            }
-        }
-
         ProfileManager externalProfileManager = config.getGlobalProfileManager();
         ProfileManager profileManager;
         if ( externalProfileManager != null )
@@ -1188,6 +1172,21 @@ public class DefaultMavenProjectBuilder
 
             throw new ProjectBuildingException( projectId, "Failed to activate local (project-level) build profiles: " +
                 e.getMessage(), e );
+        }
+
+        if ( !model.getRepositories().isEmpty() )
+        {
+            List respositories = buildArtifactRepositories( model );
+
+            for ( Iterator it = respositories.iterator(); it.hasNext(); )
+            {
+                ArtifactRepository repository = (ArtifactRepository) it.next();
+
+                if ( !aggregatedRemoteWagonRepositories.contains( repository ) )
+                {
+                    aggregatedRemoteWagonRepositories.add( repository );
+                }
+            }
         }
 
         MavenProject project = new MavenProject( model );
