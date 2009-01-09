@@ -779,6 +779,7 @@ public class DefaultWagonManager
                     if ( matchPattern( originalRepository, pattern ) )
                     {
                         selectedMirror = (ArtifactRepository) mirrors.get( pattern );
+                        break;
                     }
                 }
             }
