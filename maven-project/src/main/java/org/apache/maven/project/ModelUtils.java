@@ -797,7 +797,7 @@ public final class ModelUtils
                 newDM.setRelocation( newR );
             }
 
-            RepositoryBase repo = dm.getRepository();
+            DeploymentRepository repo = dm.getRepository();
 
             if ( repo != null )
             {
@@ -807,6 +807,7 @@ public final class ModelUtils
                 newRepo.setLayout( repo.getLayout() );
                 newRepo.setName( repo.getName() );
                 newRepo.setUrl( repo.getUrl() );
+                newRepo.setUniqueVersion( repo.isUniqueVersion() );
 
                 newDM.setRepository( newRepo );
             }
@@ -824,7 +825,7 @@ public final class ModelUtils
                 newDM.setSite( newSite );
             }
 
-            RepositoryBase sRepo = dm.getSnapshotRepository();
+            DeploymentRepository sRepo = dm.getSnapshotRepository();
 
             if ( sRepo != null )
             {
@@ -834,6 +835,7 @@ public final class ModelUtils
                 newRepo.setLayout( sRepo.getLayout() );
                 newRepo.setName( sRepo.getName() );
                 newRepo.setUrl( sRepo.getUrl() );
+                newRepo.setUniqueVersion( sRepo.isUniqueVersion() );
 
                 newDM.setSnapshotRepository( newRepo );
             }
