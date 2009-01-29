@@ -23,7 +23,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -34,21 +33,12 @@ import org.apache.maven.artifact.InvalidRepositoryException;
 import org.apache.maven.artifact.factory.ArtifactFactory;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.Parent;
+import org.apache.maven.model.Plugin;
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.ProjectBuilderConfiguration;
-import org.apache.maven.project.builder.ArtifactModelContainerFactory;
-import org.apache.maven.project.builder.IdModelContainerFactory;
-import org.apache.maven.project.builder.PomArtifactResolver;
-import org.apache.maven.project.builder.PomClassicDomainModel;
-import org.apache.maven.project.builder.PomClassicDomainModelFactory;
-import org.apache.maven.project.builder.PomClassicTransformer;
-import org.apache.maven.project.builder.PomTransformer;
-import org.apache.maven.project.builder.ProjectBuilder;
-import org.apache.maven.shared.model.DomainModel;
-import org.apache.maven.shared.model.InterpolatorProperty;
-import org.apache.maven.shared.model.ModelEventListener;
-import org.apache.maven.shared.model.ModelTransformerContext;
+import org.apache.maven.project.builder.*;
+import org.apache.maven.shared.model.*;
 import org.codehaus.plexus.component.annotations.Component;
 import org.codehaus.plexus.component.annotations.Requirement;
 import org.codehaus.plexus.logging.LogEnabled;
@@ -61,7 +51,7 @@ import org.codehaus.plexus.util.ReaderFactory;
  */
 @Component(role = ProjectBuilder.class)
 public class DefaultProjectBuilder
-    implements ProjectBuilder, LogEnabled
+    implements ProjectBuilder, Mixer, LogEnabled
 {
     @Requirement
     private ArtifactFactory artifactFactory;
@@ -371,5 +361,28 @@ public class DefaultProjectBuilder
         }
         
         return superModel;        
-    }        
+    }
+
+    public Model mixPlugin(Plugin plugin, Model model) throws IOException
+    {
+        //TODO - interpolation
+        List<DomainModel> domainModels = new ArrayList<DomainModel>();
+        domainModels.add( new PluginMixin(plugin) );
+        domainModels.add( new PomClassicDomainModel(model) );
+
+        PomClassicTransformer transformer = new PomClassicTransformer( new PomClassicDomainModelFactory() );
+
+        ModelTransformerContext ctx = new ModelTransformerContext(PomTransformer.MODEL_CONTAINER_INFOS );
+
+        PomClassicDomainModel transformedDomainModel = ( (PomClassicDomainModel) ctx.transform( domainModels,
+                                                                                                transformer,
+                                                                                                transformer,
+                                                                                                Collections.EMPTY_LIST,
+                                                                                                null,
+                                                                                                listeners ) );
+        return transformedDomainModel.getModel();
+      //  List<ModelProperty> pluginProperties = ModelMarshaller.marshallXmlToModelProperties(
+      //          (new PluginMixin(plugin)).getInputStream(), ProjectUri.Build.Plugins.xUri, null);
+        
+    }
 }
