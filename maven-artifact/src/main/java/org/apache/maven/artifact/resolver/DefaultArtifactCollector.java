@@ -24,12 +24,12 @@ import org.apache.maven.artifact.metadata.ArtifactMetadataRetrievalException;
 import org.apache.maven.artifact.metadata.ArtifactMetadataSource;
 import org.apache.maven.artifact.metadata.ResolutionGroup;
 import org.apache.maven.artifact.repository.ArtifactRepository;
-import org.apache.maven.artifact.resolver.filter.AndArtifactFilter;
 import org.apache.maven.artifact.resolver.filter.ArtifactFilter;
+import org.apache.maven.artifact.resolver.filter.AndArtifactFilter;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
-import org.apache.maven.artifact.versioning.ManagedVersionMap;
 import org.apache.maven.artifact.versioning.OverConstrainedVersionException;
 import org.apache.maven.artifact.versioning.VersionRange;
+import org.apache.maven.artifact.versioning.ManagedVersionMap;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -285,15 +285,17 @@ public class DefaultArtifactCollector
         {
             fireEvent( ResolutionListener.PROCESS_CHILDREN, listeners, node );
 
+            Artifact parentArtifact = node.getArtifact();
+            
             for ( Iterator i = node.getChildrenIterator(); i.hasNext(); )
             {
                 ResolutionNode child = (ResolutionNode) i.next();
-
                 // We leave in optional ones, but don't pick up its dependencies
                 if ( !child.isResolved() && ( !child.getArtifact().isOptional() || child.isChildOfRootNode() ) )
                 {
-                    Artifact artifact = child.getArtifact();
                     List childRemoteRepositories = child.getRemoteRepositories();
+                    Artifact artifact = child.getArtifact();
+                    
                     try
                     {
                         Object childKey;
@@ -384,16 +386,27 @@ public class DefaultArtifactCollector
                             }
 
                             Artifact relocated = source.retrieveRelocatedArtifact( artifact, localRepository, childRemoteRepositories );
-                            if ( relocated != null && !artifact.equals( relocated ) )
+                            if ( !artifact.equals( relocated ) )
                             {
+                                relocated.setDependencyFilter( artifact.getDependencyFilter() );
                                 artifact = relocated;
                                 child.setArtifact( artifact );
                             }
                         }
                         while( !childKey.equals( child.getKey() ) );
+                        
+                        if ( parentArtifact != null && parentArtifact.getDependencyFilter() != null && !parentArtifact.getDependencyFilter().include( artifact ) )
+                        {
+                            // MNG-3769: the [probably relocated] artifact is excluded. 
+                            // We could process exclusions on relocated artifact details in the
+                            // MavenMetadataSource.createArtifacts(..) step, BUT that would
+                            // require resolving the POM from the repository very early on in
+                            // the build.
+                            continue;
+                        }
 
                         artifact.setDependencyTrail( node.getDependencyTrail() );
-                        ResolutionGroup rGroup = source.retrieve( artifact, localRepository, childRemoteRepositories );
+                        ResolutionGroup rGroup = source.retrieve( artifact, localRepository, remoteRepositories );
 
                         //TODO might be better to have source.retrieve() throw a specific exception for this situation
                         //and catch here rather than have it return null
@@ -411,17 +424,17 @@ public class DefaultArtifactCollector
                         // would like to throw this, but we have crappy stuff in the repo
 
                         fireEvent( ResolutionListener.OMIT_FOR_CYCLE, listeners,
-                                   new ResolutionNode( e.getArtifact(), childRemoteRepositories, child ) );
+                                   new ResolutionNode( e.getArtifact(), remoteRepositories, child ) );
                     }
                     catch ( ArtifactMetadataRetrievalException e )
                     {
                         artifact.setDependencyTrail( node.getDependencyTrail() );
                         throw new ArtifactResolutionException(
-                            "Unable to get dependency information: " + e.getMessage(), artifact, childRemoteRepositories,
+                            "Unable to get dependency information: " + e.getMessage(), artifact, remoteRepositories,
                             e );
                     }
 
-                    recurse( originatingArtifact, child, resolvedArtifacts, managedVersions, localRepository, childRemoteRepositories, source,
+                    recurse( originatingArtifact, child, resolvedArtifacts, managedVersions, localRepository, remoteRepositories, source,
                              filter, listeners );
                 }
             }

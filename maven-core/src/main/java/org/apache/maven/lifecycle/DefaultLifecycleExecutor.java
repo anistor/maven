@@ -19,18 +19,6 @@ package org.apache.maven.lifecycle;
  * under the License.
  */
 
-import java.io.IOException;
-import java.io.StringReader;
-import java.io.StringWriter;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Stack;
-import java.util.StringTokenizer;
-
 import org.apache.maven.BuildFailureException;
 import org.apache.maven.artifact.handler.ArtifactHandler;
 import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
@@ -63,33 +51,26 @@ import org.apache.maven.plugin.lifecycle.Execution;
 import org.apache.maven.plugin.lifecycle.Phase;
 import org.apache.maven.plugin.version.PluginVersionNotFoundException;
 import org.apache.maven.plugin.version.PluginVersionResolutionException;
-import org.apache.maven.project.DefaultProjectBuilderConfiguration;
 import org.apache.maven.project.MavenProject;
-import org.apache.maven.project.MavenProjectBuilder;
-import org.apache.maven.project.ProjectBuilderConfiguration;
-import org.apache.maven.project.ProjectBuildingException;
 import org.apache.maven.project.artifact.InvalidDependencyVersionException;
-import org.apache.maven.project.interpolation.ModelInterpolationException;
-import org.apache.maven.project.interpolation.ModelInterpolator;
 import org.apache.maven.reporting.MavenReport;
 import org.apache.maven.settings.Settings;
-import org.codehaus.plexus.PlexusConstants;
-import org.codehaus.plexus.PlexusContainer;
 import org.codehaus.plexus.PlexusContainerException;
 import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
-import org.codehaus.plexus.configuration.PlexusConfiguration;
-import org.codehaus.plexus.configuration.PlexusConfigurationException;
-import org.codehaus.plexus.context.Context;
-import org.codehaus.plexus.context.ContextException;
 import org.codehaus.plexus.logging.AbstractLogEnabled;
-import org.codehaus.plexus.personality.plexus.lifecycle.phase.Contextualizable;
-import org.codehaus.plexus.personality.plexus.lifecycle.phase.Initializable;
-import org.codehaus.plexus.personality.plexus.lifecycle.phase.InitializationException;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
-import org.codehaus.plexus.util.xml.Xpp3DomBuilder;
-import org.codehaus.plexus.util.xml.Xpp3DomWriter;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Stack;
+import java.util.StringTokenizer;
 
 /**
  * @author <a href="mailto:jason@maven.org">Jason van Zyl</a>
@@ -99,7 +80,7 @@ import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
  */
 public class DefaultLifecycleExecutor
     extends AbstractLogEnabled
-    implements LifecycleExecutor, Initializable, Contextualizable
+    implements LifecycleExecutor
 {
     // ----------------------------------------------------------------------
     // Components
@@ -116,10 +97,6 @@ public class DefaultLifecycleExecutor
     private List defaultReports;
 
     private Map phaseToLifecycleMap;
-
-    private MavenProjectBuilder mavenProjectBuilder;
-
-    private ModelInterpolator modelInterpolator;
 
     // ----------------------------------------------------------------------
     //
@@ -154,27 +131,7 @@ public class DefaultLifecycleExecutor
 
         if ( goals.isEmpty() )
         {
-            StringBuffer buffer = new StringBuffer( 1024 );
-
-            buffer.append( "\n\n" );
-            buffer.append( "You must specify at least one goal or lifecycle phase to perform build steps.\n" );
-            buffer.append( "The following list illustrates some commonly used build commands:\n\n" );
-            buffer.append( "  mvn clean\n" );
-            buffer.append( "    Deletes any build output (e.g. class files or JARs).\n" );
-            buffer.append( "  mvn test\n" );
-            buffer.append( "    Runs the unit tests for the project.\n" );
-            buffer.append( "  mvn install\n" );
-            buffer.append( "    Copies the project artifacts into your local repository.\n" );
-            buffer.append( "  mvn deploy\n" );
-            buffer.append( "    Copies the project artifacts into the remote repository.\n" );
-            buffer.append( "  mvn site\n" );
-            buffer.append( "    Creates project documentation (e.g. reports or Javadoc).\n\n" );
-            buffer.append( "Please see\n" );
-            buffer.append( "http://maven.apache.org/guides/introduction/introduction-to-the-lifecycle.html\n" );
-            buffer.append( "for a complete description of available lifecycle phases.\n\n" );
-            buffer.append( "Use \"mvn -?\" to show general usage information about Maven's command line.\n\n" );
-
-            throw new BuildFailureException( buffer.toString() );
+            throw new BuildFailureException( "\n\nYou must specify at least one goal. Try 'mvn install' to build or 'mvn --help' for options \nSee http://maven.apache.org for more information.\n\n" );
         }
 
         List taskSegments = segmentTaskListByAggregationNeeds( goals, session, rootProject );
@@ -197,6 +154,7 @@ public class DefaultLifecycleExecutor
                 Extension extension = (Extension) j.next();
                 try
                 {
+                    getLogger().debug( "Adding extension: " + extension );
                     extensionManager.addExtension( extension, project, session.getLocalRepository() );
                 }
                 catch ( PlexusContainerException e )
@@ -565,60 +523,6 @@ public class DefaultLifecycleExecutor
 
             MojoDescriptor mojoDescriptor = mojoExecution.getMojoDescriptor();
 
-            calculateConcreteState( project, session );
-            
-            PlexusConfiguration configuration = mojoDescriptor.getMojoConfiguration();
-            boolean usesAllProjects = mojoDescriptor.isAggregator() || usesSessionOrReactorProjects( configuration );
-            
-            if ( usesAllProjects )
-            {
-                calculateAllConcreteStates( session );
-            }
-            
-            calculateConcreteConfiguration( mojoExecution, project, session );
-            
-            List reportExecutions = null;
-            if ( mojoDescriptor.isRequiresReports() )
-            {
-                reportExecutions = getReportExecutions( project, forkEntryPoints, mojoExecution, session );
-            }
-            
-            boolean hasFork = false;
-            if ( mojoDescriptor.getExecutePhase() != null || mojoDescriptor.getExecuteGoal() != null )
-            {
-                hasFork = true;
-            }
-            else if ( reportExecutions != null )
-            {
-                for ( Iterator it = reportExecutions.iterator(); it.hasNext(); )
-                {
-                    MojoExecution reportExecution = (MojoExecution) it.next();
-                    MojoDescriptor reportDescriptor = reportExecution.getMojoDescriptor();
-                    if ( reportDescriptor.getExecutePhase() != null || reportDescriptor.getExecuteGoal() != null )
-                    {
-                        hasFork = true;
-                    }
-                }
-            }
-            
-            if ( hasFork )
-            {
-                createExecutionProject( project, session );
-                
-                if ( usesAllProjects )
-                {
-                    List reactorProjects = session.getSortedProjects();
-                    for ( Iterator it = reactorProjects.iterator(); it.hasNext(); )
-                    {
-                        MavenProject reactorProject = (MavenProject) it.next();
-                        if ( reactorProject.getExecutionProject() == null )
-                        {
-                            createExecutionProject( reactorProject, session );
-                        }
-                    }
-                }
-            }
-
             if ( mojoDescriptor.getExecutePhase() != null || mojoDescriptor.getExecuteGoal() != null )
             {
                 forkEntryPoints.push( mojoDescriptor );
@@ -627,10 +531,10 @@ public class DefaultLifecycleExecutor
 
                 forkEntryPoints.pop();
             }
-            
+
             if ( mojoDescriptor.isRequiresReports() )
             {
-                List reports = getReports( reportExecutions, project, mojoExecution, session );
+                List reports = getReports( project, forkEntryPoints, mojoExecution, session );
 
                 mojoExecution.setReports( reports );
 
@@ -646,23 +550,6 @@ public class DefaultLifecycleExecutor
                         forkLifecycle( descriptor, forkEntryPoints, session, project );
 
                         forkEntryPoints.pop();
-                    }
-                }
-            }
-            
-            if ( hasFork )
-            {
-                // TODO: Would be nice to find a way to cause the execution project to stay in a concrete state...
-                calculateConcreteState( project.getExecutionProject(), session );
-                
-                if ( usesAllProjects )
-                {
-                    List reactorProjects = session.getSortedProjects();
-                    for ( Iterator it = reactorProjects.iterator(); it.hasNext(); )
-                    {
-                        MavenProject reactorProject = (MavenProject) it.next();
-                        calculateConcreteState( reactorProject, session );
-                        calculateConcreteState( reactorProject.getExecutionProject(), session );
                     }
                 }
             }
@@ -700,167 +587,10 @@ public class DefaultLifecycleExecutor
             {
                 throw new LifecycleExecutionException( e.getMessage(), e );
             }
-            
-            if ( hasFork )
-            {
-                project.setExecutionProject( null );
-                
-                if ( usesAllProjects )
-                {
-                    List reactorProjects = session.getSortedProjects();
-                    for ( Iterator it = reactorProjects.iterator(); it.hasNext(); )
-                    {
-                        MavenProject reactorProject = (MavenProject) it.next();
-                        reactorProject.setExecutionProject( null );
-                    }
-                }
-            }
-            
-            restoreDynamicState( project, session );
-            
-            if ( usesAllProjects )
-            {
-                restoreAllDynamicStates( session );
-            }
-        }
-    }
-    
-    private void createExecutionProject( MavenProject project, MavenSession session )
-        throws LifecycleExecutionException
-    {
-        MavenProject executionProject = new MavenProject( project );
-        
-        calculateConcreteState( executionProject, session );
-        
-        project.setExecutionProject( executionProject );
-    }
-
-    private boolean usesSessionOrReactorProjects( PlexusConfiguration configuration )
-    {
-        String value = configuration != null ? String.valueOf( configuration ) : null;
-        
-        if ( value != null )
-        {
-            if ( value.indexOf( "${session" ) > -1 || value.indexOf( "${reactorProjects}" ) > -1 )
-            {
-                return true;
-            }
-        }
-        
-        return false;
-    }
-
-    private void calculateConcreteConfiguration( MojoExecution mojoExecution, MavenProject project, MavenSession session )
-        throws LifecycleExecutionException
-    {
-        if ( mojoExecution.getConfiguration() == null )
-        {
-            return;
-        }
-        
-        StringWriter writer = new StringWriter();
-        Xpp3DomWriter.write( writer, mojoExecution.getConfiguration() );
-        
-        String domStr = writer.toString();
-        
-        if ( project == null )
-        {
-            try
-            {
-                project = mavenProjectBuilder.buildStandaloneSuperProject( session.getProjectBuilderConfiguration() );
-            }
-            catch ( ProjectBuildingException e )
-            {
-                throw new LifecycleExecutionException( "Error building super-POM to interpolate configuration for: '" + mojoExecution.getMojoDescriptor().getRoleHint() +
-                                                       "' (execution: '" + mojoExecution.getExecutionId() + "')", e );
-            }
-        }
-        
-        try
-        {
-            domStr =
-                modelInterpolator.interpolate( domStr, project.getModel(), project.getBasedir(),
-                                               session.getProjectBuilderConfiguration(), getLogger().isDebugEnabled() );
-        }
-        catch ( ModelInterpolationException e )
-        {
-            throw new LifecycleExecutionException( "Error interpolating configuration for: '" + mojoExecution.getMojoDescriptor().getRoleHint() +
-                                              "' (execution: '" + mojoExecution.getExecutionId() + "')", e );
-        }
-        
-        try
-        {
-            mojoExecution.setConfiguration( Xpp3DomBuilder.build( new StringReader( domStr ) ) );
-        }
-        catch ( XmlPullParserException e )
-        {
-            throw new LifecycleExecutionException( "Error reading interpolated configuration for: '" + mojoExecution.getMojoDescriptor().getRoleHint() +
-                                              "' (execution: '" + mojoExecution.getExecutionId() + "')", e );
-        }
-        catch ( IOException e )
-        {
-            throw new LifecycleExecutionException( "Error reading interpolated configuration for: '" + mojoExecution.getMojoDescriptor().getRoleHint() +
-                                              "' (execution: '" + mojoExecution.getExecutionId() + "')", e );
-        }
-    }
-    
-    private void calculateAllConcreteStates( MavenSession session )
-        throws LifecycleExecutionException
-    {
-        List projects = session.getSortedProjects();
-        if ( projects != null )
-        {
-            for ( Iterator it = projects.iterator(); it.hasNext(); )
-            {
-                calculateConcreteState( (MavenProject) it.next(), session );
-            }
         }
     }
 
-    private void calculateConcreteState( MavenProject project, MavenSession session )
-        throws LifecycleExecutionException
-    {
-        if ( mavenProjectBuilder != null && project != null && !project.isConcrete() )
-        {
-            try
-            {
-                mavenProjectBuilder.calculateConcreteState( project, session.getProjectBuilderConfiguration() );
-            }
-            catch ( ModelInterpolationException e )
-            {
-                throw new LifecycleExecutionException( "Failed to calculate concrete state for project: " + project,
-                                                         e );
-            }
-        }
-    }
-    private void restoreAllDynamicStates( MavenSession session )
-        throws LifecycleExecutionException
-    {
-        List reactorProjects = session.getSortedProjects();
-        if ( reactorProjects != null )
-        {
-            for ( Iterator it = reactorProjects.iterator(); it.hasNext(); )
-            {
-                MavenProject project = (MavenProject) it.next();
-                restoreDynamicState( project, session );
-            }
-        }
-    }
-
-    private void restoreDynamicState( MavenProject project, MavenSession session )
-        throws LifecycleExecutionException
-    {
-        try
-        {
-            mavenProjectBuilder.restoreDynamicState( project, session.getProjectBuilderConfiguration() );
-        }
-        catch ( ModelInterpolationException e )
-        {
-            throw new LifecycleExecutionException( "Failed to restore dynamic state for project: " + project, e );
-        }
-    }
-
-    private List getReportExecutions( MavenProject project, Stack forkEntryPoints, MojoExecution mojoExecution, MavenSession session )
+    private List getReports( MavenProject project, Stack forkEntryPoints, MojoExecution mojoExecution, MavenSession session )
         throws LifecycleExecutionException, PluginNotFoundException
     {
         List reportPlugins = project.getReportPlugins();
@@ -929,7 +659,7 @@ public class DefaultLifecycleExecutor
 
                 if ( reportSets == null || reportSets.isEmpty() )
                 {
-                    reports.addAll( getReportExecutions( reportPlugin, forkEntryPoints, null, project, session, mojoExecution ) );
+                    reports.addAll( getReports( reportPlugin, forkEntryPoints, null, project, session, mojoExecution ) );
                 }
                 else
                 {
@@ -937,15 +667,15 @@ public class DefaultLifecycleExecutor
                     {
                         ReportSet reportSet = (ReportSet) j.next();
 
-                        reports.addAll( getReportExecutions( reportPlugin, forkEntryPoints, reportSet, project, session, mojoExecution ) );
+                        reports.addAll( getReports( reportPlugin, forkEntryPoints, reportSet, project, session, mojoExecution ) );
                     }
                 }
             }
         }
         return reports;
     }
-    
-    private List getReportExecutions( ReportPlugin reportPlugin,
+
+    private List getReports( ReportPlugin reportPlugin,
                              Stack forkEntryPoints,
                              ReportSet reportSet,
                              MavenProject project,
@@ -976,53 +706,38 @@ public class DefaultLifecycleExecutor
                 }
 
                 MojoExecution reportExecution = new MojoExecution( mojoDescriptor, id );
-                reports.add( reportExecution );
-            }
-        }
-        return reports;
-    }
 
-    private List getReports( List reportExecutions, MavenProject project, MojoExecution mojoExecution, MavenSession session )
-        throws LifecycleExecutionException
-    {
-        List reports = new ArrayList();
-        
-        for ( Iterator it = reportExecutions.iterator(); it.hasNext(); )
-        {
-            MojoExecution reportExecution = (MojoExecution) it.next();
-            PluginDescriptor pluginDescriptor = reportExecution.getMojoDescriptor().getPluginDescriptor();
-            
-            try
-            {
-                MavenReport reportMojo = pluginManager.getReport( project, reportExecution, session );
-
-                // Comes back null if it was a plugin, not a report - these are mojos in the reporting plugins that are not reports
-                if ( reportMojo != null )
+                try
                 {
-                    reports.add( reportMojo );
-                    mojoExecution.addMojoExecution( reportExecution );
+                    MavenReport reportMojo = pluginManager.getReport( project, reportExecution, session );
+
+                    // Comes back null if it was a plugin, not a report - these are mojos in the reporting plugins that are not reports
+                    if ( reportMojo != null )
+                    {
+                        reports.add( reportMojo );
+                        mojoExecution.addMojoExecution( reportExecution );
+                    }
+                }
+                catch ( PluginManagerException e )
+                {
+                    throw new LifecycleExecutionException(
+                        "Error getting reports from the plugin '" + reportPlugin.getKey() + "': " + e.getMessage(), e );
+                }
+                catch ( PluginConfigurationException e )
+                {
+                    throw new LifecycleExecutionException(
+                        "Error getting reports from the plugin '" + reportPlugin.getKey() + "'", e );
+                }
+                catch ( ArtifactNotFoundException e )
+                {
+                    throw new LifecycleExecutionException( e.getMessage(), e );
+                }
+                catch ( ArtifactResolutionException e )
+                {
+                    throw new LifecycleExecutionException( e.getMessage(), e );
                 }
             }
-            catch ( PluginManagerException e )
-            {
-                throw new LifecycleExecutionException(
-                    "Error getting reports from the plugin '" + pluginDescriptor.getId() + "': " + e.getMessage(), e );
-            }
-            catch ( PluginConfigurationException e )
-            {
-                throw new LifecycleExecutionException(
-                    "Error getting reports from the plugin '" + pluginDescriptor.getId() + "'", e );
-            }
-            catch ( ArtifactNotFoundException e )
-            {
-                throw new LifecycleExecutionException( e.getMessage(), e );
-            }
-            catch ( ArtifactResolutionException e )
-            {
-                throw new LifecycleExecutionException( e.getMessage(), e );
-            }
         }
-        
         return reports;
     }
 
@@ -1038,7 +753,7 @@ public class DefaultLifecycleExecutor
             for ( Iterator i = session.getSortedProjects().iterator(); i.hasNext(); )
             {
                 MavenProject reactorProject = (MavenProject) i.next();
-                
+
                 line();
 
                 getLogger().info( "Building " + reactorProject.getName() );
@@ -1162,7 +877,6 @@ public class DefaultLifecycleExecutor
                             }
 
                             Xpp3Dom configuration = (Xpp3Dom) exec.getConfiguration();
-                            // NOTE: This seems to be duplicated below. Why??
                             if ( phase.getConfiguration() != null )
                             {
                                 configuration = Xpp3Dom.mergeXpp3Dom( new Xpp3Dom( (Xpp3Dom) phase.getConfiguration() ),
@@ -1203,11 +917,12 @@ public class DefaultLifecycleExecutor
             removeFromLifecycle( forkEntryPoints, lifecycleMappings );
         }
 
+        MavenProject executionProject = new MavenProject( project );
         if ( targetPhase != null )
         {
             Lifecycle lifecycle = getLifecycleForPhase( targetPhase );
 
-            executeGoalWithLifecycle( targetPhase, forkEntryPoints, session, lifecycleMappings, project.getExecutionProject(),
+            executeGoalWithLifecycle( targetPhase, forkEntryPoints, session, lifecycleMappings, executionProject,
                                       lifecycle );
         }
         else
@@ -1215,8 +930,9 @@ public class DefaultLifecycleExecutor
             String goal = mojoDescriptor.getExecuteGoal();
             MojoDescriptor desc = getMojoDescriptor( pluginDescriptor, goal );
             executeGoals( Collections.singletonList( new MojoExecution( desc ) ), forkEntryPoints, session,
-                          project.getExecutionProject() );
+                          executionProject );
         }
+        project.setExecutionProject( executionProject );
     }
 
     private Lifecycle getLifecycleForPhase( String phase )
@@ -1958,64 +1674,5 @@ public class DefaultLifecycleExecutor
         {
             return tasks;
         }
-    }
-    
-    public List getLifecycles()
-    {
-        return lifecycles;
-    }
-
-    // -------------------------------------------------------------------------
-    // TODO: The methods and fields below are only needed for products like Hudson,
-    //  that provide their own LifecycleExecutor and component configuration, 
-    //  which may not contain up-to-date component requirements.
-    public void initialize()
-        throws InitializationException
-    {
-        if ( mavenProjectBuilder == null )
-        {
-            warnOfIncompleteComponentConfiguration( MavenProjectBuilder.ROLE );
-            try
-            {
-                mavenProjectBuilder = (MavenProjectBuilder) container.lookup( MavenProjectBuilder.ROLE );
-            }
-            catch ( ComponentLookupException e )
-            {
-                throw new InitializationException( "Failed to lookup project builder after it was NOT injected via component requirement." );
-            }
-        }
-        
-        if ( modelInterpolator == null )
-        {
-            warnOfIncompleteComponentConfiguration( ModelInterpolator.ROLE );
-            try
-            {
-                modelInterpolator = (ModelInterpolator) container.lookup( ModelInterpolator.ROLE );
-            }
-            catch ( ComponentLookupException e )
-            {
-                throw new InitializationException( "Failed to lookup model interpolator after it was NOT injected via component requirement." );
-            }
-        }
-    }
-    
-    private void warnOfIncompleteComponentConfiguration( String role )
-    {
-        StringBuffer buffer = new StringBuffer();
-        buffer.append( "\n************ WARNING ************" );
-        buffer.append( "\n\nThis Maven runtime contains a LifecycleExecutor component with an incomplete configuration." );
-        buffer.append( "\n\nLifecycleExecutor class: " ).append( getClass().getName() );
-        buffer.append( "\nMissing component requirement: " ).append( role );
-        buffer.append( "\n\n" );
-        
-        getLogger().warn( buffer.toString() );
-    }
-
-    private PlexusContainer container;
-
-    public void contextualize( Context context )
-        throws ContextException
-    {
-        container = (PlexusContainer) context.get( PlexusConstants.PLEXUS_KEY );
     }
 }

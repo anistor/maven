@@ -21,7 +21,6 @@ package org.apache.maven.artifact.manager;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Date;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.DefaultArtifact;
@@ -53,7 +52,7 @@ import org.easymock.MockControl;
 public class DefaultWagonManagerTest
     extends PlexusTestCase
 {
-    private WagonManager wagonManager;
+    private DefaultWagonManager wagonManager;
 
     private TransferListener transferListener = new Debug();
 
@@ -64,7 +63,7 @@ public class DefaultWagonManagerTest
     {
         super.setUp();
 
-        wagonManager = (WagonManager) lookup( WagonManager.ROLE );
+        wagonManager = (DefaultWagonManager) lookup( WagonManager.ROLE );
         
         artifactFactory = (ArtifactFactory) lookup( ArtifactFactory.ROLE );
     }
@@ -80,24 +79,6 @@ public class DefaultWagonManagerTest
         artifact.setFile( new File( testData, "test-1.0.pom" ) );
         assertFalse( artifact.getFile().exists() );
         return artifact;
-    }
-    
-    private Artifact createTestArtifact( String directory, String type )
-        throws IOException
-    {
-        File testData = getTestFile( directory );
-        FileUtils.deleteDirectory( testData );
-        testData.mkdirs();
-
-        Artifact artifact = artifactFactory.createBuildArtifact( "test", "test", "1.0", type );
-        artifact.setFile( new File( testData, "test-1.0." + artifact.getArtifactHandler().getExtension() ) );
-        assertFalse( artifact.getFile().exists() );
-        return artifact;
-    }
-    
-    public void testAddMirrorWithNullRepositoryId()
-    {
-        wagonManager.addMirror( null, "test", "http://www.nowhere.com/" );
     }
     
     public void testGetArtifactSha1MissingMd5Present()
@@ -253,6 +234,45 @@ public class DefaultWagonManagerTest
     }
 
     /**
+     * Check that first match wins
+     */
+    public void testMirrorStopOnFirstMatch()
+    {
+        //exact matches win first
+        wagonManager.addMirror( "a2", "a,b", "http://a2" );
+        wagonManager.addMirror( "a", "a", "http://a" );
+        //make sure repeated entries are skipped
+        wagonManager.addMirror( "a", "a", "http://a3" );
+        
+        wagonManager.addMirror( "b", "b", "http://b" );
+        wagonManager.addMirror( "c", "d,e", "http://de" );
+        wagonManager.addMirror( "c", "*", "http://wildcard" );
+        wagonManager.addMirror( "c", "e,f", "http://ef" );
+        
+    
+
+        ArtifactRepository repo = null;
+        repo = wagonManager.getMirrorRepository( getRepo( "a", "http://a.a" ) );
+        assertEquals( "http://a", repo.getUrl() );
+
+        repo = wagonManager.getMirrorRepository( getRepo( "b", "http://a.a" ) );
+        assertEquals( "http://b", repo.getUrl() );
+
+        repo = wagonManager.getMirrorRepository( getRepo( "c", "http://c.c" ) );
+        assertEquals( "http://wildcard", repo.getUrl() );
+        
+        repo = wagonManager.getMirrorRepository( getRepo( "d", "http://d" ) );
+        assertEquals( "http://de", repo.getUrl() );
+        
+        repo = wagonManager.getMirrorRepository( getRepo( "e", "http://e" ) );
+        assertEquals( "http://de", repo.getUrl() );
+        
+        repo = wagonManager.getMirrorRepository( getRepo( "f", "http://f" ) );
+        assertEquals( "http://wildcard", repo.getUrl() );
+
+    }
+    
+    /**
      * Build an ArtifactRepository object.
      * 
      * @param id
@@ -357,10 +377,14 @@ public class DefaultWagonManagerTest
         ArtifactRepository repo =
             new DefaultArtifactRepository( "id", "string://url", new ArtifactRepositoryLayoutStub(), policy, policy );
 
-        Artifact artifact = createTestArtifact( "target/test-data/sample-art", "jar" );
+        Artifact artifact =
+            new DefaultArtifact( "sample.group", "sample-art", VersionRange.createFromVersion( "1.0" ), "scope",
+                                 "jar", "classifier", null );
+        artifact.setFile( getTestFile( "target/sample-art" ) );            
 
         StringWagon wagon = (StringWagon) wagonManager.getWagon( "string" );
         
+        artifact.getFile().delete();
         wagon.clearExpectedContent();
         wagon.addExpectedContent( "path", "lower-case-checksum" );
         wagon.addExpectedContent( "path.sha1", "2a25dc564a3b34f68237fc849066cbc7bb7a36a1" );
