@@ -43,6 +43,7 @@ import org.apache.maven.project.builder.PomArtifactResolver;
 import org.apache.maven.project.builder.PomClassicDomainModel;
 import org.apache.maven.project.builder.PomClassicDomainModelFactory;
 import org.apache.maven.project.builder.PomClassicTransformer;
+import org.apache.maven.project.builder.PomTransformer;
 import org.apache.maven.project.builder.ProjectBuilder;
 import org.apache.maven.shared.model.DomainModel;
 import org.apache.maven.shared.model.InterpolatorProperty;
@@ -59,7 +60,7 @@ import org.codehaus.plexus.util.ReaderFactory;
  * Default implementation of the project builder.
  */
 @Component(role = ProjectBuilder.class)
-public final class DefaultProjectBuilder
+public class DefaultProjectBuilder
     implements ProjectBuilder, LogEnabled
 {
     @Requirement
@@ -156,8 +157,7 @@ public final class DefaultProjectBuilder
         
         PomClassicTransformer transformer = new PomClassicTransformer( new PomClassicDomainModelFactory() );
         
-        ModelTransformerContext ctx = new ModelTransformerContext(
-            Arrays.asList( new ArtifactModelContainerFactory(), new IdModelContainerFactory() ) );
+        ModelTransformerContext ctx = new ModelTransformerContext(PomTransformer.MODEL_CONTAINER_INFOS );
         
         PomClassicDomainModel transformedDomainModel = ( (PomClassicDomainModel) ctx.transform( domainModels,
                                                                                                 transformer,
@@ -220,7 +220,7 @@ public final class DefaultProjectBuilder
                 f = new File( f, "pom.xml" );
             }
             
-            return f.exists();
+            return f.isFile();
         }
         catch ( IOException e )
         {
@@ -290,7 +290,7 @@ public final class DefaultProjectBuilder
             parentFile = new File( parentFile.getAbsolutePath(), "pom.xml" );
         }
 
-        if ( !parentFile.exists() )
+        if ( !parentFile.isFile() )
         {
             throw new IOException( "File does not exist: File = " + parentFile.getAbsolutePath() );
         }

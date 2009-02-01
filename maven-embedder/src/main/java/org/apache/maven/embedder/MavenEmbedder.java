@@ -320,10 +320,7 @@ public class MavenEmbedder
         PluginNotFoundException, PluginVersionNotFoundException
     {
         PluginManager pluginManager = container.lookup( PluginManager.class );
-
-//        MavenSession session = new MavenSession( container, request, null, null, projectSessions );
         MavenSession session = new MavenSession( container, request, null, null );
-
         pluginManager.verifyPlugin( plugin, project, session );
     }
 

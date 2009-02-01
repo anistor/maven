@@ -1,6 +1,7 @@
 package org.apache.maven.project.builder.profile;
 
 import org.apache.maven.project.builder.profile.ProfileContext;
+import org.apache.maven.project.builder.PomTransformer;
 import org.apache.maven.project.builder.ProjectUri;
 import org.apache.maven.project.builder.ArtifactModelContainerFactory;
 import org.apache.maven.project.builder.IdModelContainerFactory;
@@ -29,8 +30,7 @@ public class ProfileContextTest {
         modelProperties.add(new ModelProperty(ProjectUri.Profiles.Profile.Activation.Property.name , "foo"));
         modelProperties.add(new ModelProperty(ProjectUri.Profiles.Profile.Activation.Property.value , "bar"));
 
-        DefaultModelDataSource dataSource = new DefaultModelDataSource();
-        dataSource.init(modelProperties, Arrays.asList(new ArtifactModelContainerFactory(), new IdModelContainerFactory()));
+        DefaultModelDataSource dataSource = new DefaultModelDataSource(modelProperties, PomTransformer.MODEL_CONTAINER_FACTORIES );
 
         List<InterpolatorProperty> interpolatorProperties = new ArrayList<InterpolatorProperty>();
         interpolatorProperties.add(new InterpolatorProperty( "${foo}", "bar"));

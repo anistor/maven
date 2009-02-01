@@ -111,10 +111,7 @@ public final class MavenDomainModel
     {
         List<ArtifactBasicMetadata> metadatas = new ArrayList<ArtifactBasicMetadata>();
 
-        ModelDataSource source = new DefaultModelDataSource();
-        source.init( modelProperties,
-                     Arrays.asList( new ArtifactModelContainerFactory(), new IdModelContainerFactory() ) );
-
+        ModelDataSource source = new DefaultModelDataSource( modelProperties, PomTransformer.MODEL_CONTAINER_FACTORIES );
         for ( ModelContainer modelContainer : source.queryFor( ProjectUri.Dependencies.Dependency.xUri ) )
         {
             metadatas.add( transformContainerToMetadata( modelContainer ) );
@@ -126,9 +123,8 @@ public final class MavenDomainModel
     public Collection<ModelContainer> getActiveProfileContainers( List<InterpolatorProperty> properties )
         throws DataSourceException
     {
-        ModelDataSource dataSource = new DefaultModelDataSource();
-        dataSource.init( modelProperties, Arrays.asList( new ArtifactModelContainerFactory(),
-                                                         new IdModelContainerFactory() ) );
+        ModelDataSource dataSource = new DefaultModelDataSource( modelProperties, PomTransformer.MODEL_CONTAINER_FACTORIES );
+
         return new ProfileContext( dataSource, properties ).getActiveProfiles();
     }
 
@@ -145,15 +141,15 @@ public final class MavenDomainModel
         {
             if ( mp.getUri().equals( ProjectUri.Parent.version ) )
             {
-                version = mp.getValue();
+                version = mp.getResolvedValue();
             }
             else if ( mp.getUri().equals( ProjectUri.Parent.artifactId ) )
             {
-                artifactId = mp.getValue();
+                artifactId = mp.getResolvedValue();
             }
             else if ( mp.getUri().equals( ProjectUri.Parent.groupId ) )
             {
-                groupId = mp.getValue();
+                groupId = mp.getResolvedValue();
             }
             if ( groupId != null && artifactId != null && version != null )
             {
@@ -218,31 +214,31 @@ public final class MavenDomainModel
         {
             if ( mp.getUri().equals( ProjectUri.Dependencies.Dependency.groupId ) )
             {
-                metadata.setGroupId( mp.getValue() );
+                metadata.setGroupId( mp.getResolvedValue() );
             }
             else if ( mp.getUri().equals( ProjectUri.Dependencies.Dependency.artifactId ) )
             {
-                metadata.setArtifactId( mp.getValue() );
+                metadata.setArtifactId( mp.getResolvedValue() );
             }
             else if ( mp.getUri().equals( ProjectUri.Dependencies.Dependency.version ) )
             {
-                metadata.setVersion( mp.getValue() );
+                metadata.setVersion( mp.getResolvedValue() );
             }
             else if ( mp.getUri().equals( ProjectUri.Dependencies.Dependency.classifier ) )
             {
-                metadata.setClassifier( mp.getValue() );
+                metadata.setClassifier( mp.getResolvedValue() );
             }
             else if ( mp.getUri().equals( ProjectUri.Dependencies.Dependency.scope ) )
             {
-                metadata.setScope( mp.getValue() );
+                metadata.setScope( mp.getResolvedValue() );
             }
             else if ( mp.getUri().equals( ProjectUri.Dependencies.Dependency.type ) )
             {
-                metadata.setType( mp.getValue() );
+                metadata.setType( mp.getResolvedValue() );
             }
             else if ( mp.getUri().equals( ProjectUri.Dependencies.Dependency.optional ) )
             {
-                metadata.setOptional( mp.getValue() );
+                metadata.setOptional( mp.getResolvedValue() );
             }
         }
 
@@ -251,9 +247,8 @@ public final class MavenDomainModel
             metadata.setScope( "runtime" );
         }
 
-        ModelDataSource dataSource = new DefaultModelDataSource();
-        dataSource.init( container.getProperties(), Arrays.asList( new ArtifactModelContainerFactory(),
-                                                                   new ExclusionModelContainerFactory() ) );
+        ModelDataSource dataSource = new DefaultModelDataSource( container.getProperties(), Arrays.asList( new ArtifactModelContainerFactory(),
+                                                                   new ExclusionModelContainerFactory() ));
         List<ArtifactBasicMetadata> exclusions = new ArrayList<ArtifactBasicMetadata>();
 
         for ( ModelContainer exclusion : dataSource.queryFor( ProjectUri.Dependencies.Dependency.Exclusions.Exclusion.xUri ) )
@@ -265,11 +260,11 @@ public final class MavenDomainModel
             {
                 if ( mp.getUri().equals( ProjectUri.Dependencies.Dependency.Exclusions.Exclusion.artifactId ) )
                 {
-                    meta.setArtifactId( mp.getValue() );
+                    meta.setArtifactId( mp.getResolvedValue() );
                 }
                 else if ( mp.getUri().equals( ProjectUri.Dependencies.Dependency.Exclusions.Exclusion.groupId ) )
                 {
-                    meta.setGroupId( mp.getValue() );
+                    meta.setGroupId( mp.getResolvedValue() );
                 }
             }
 

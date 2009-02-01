@@ -7,7 +7,7 @@ import org.apache.maven.shared.model.ModelContainerAction;
 
 import java.util.*;
 
-public class ExclusionModelContainerFactory     implements ModelContainerFactory
+public class ExclusionModelContainerFactory implements ModelContainerFactory
 {
 
     private static final Collection<String> uris = Collections.unmodifiableList( Arrays.asList(

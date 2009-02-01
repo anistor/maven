@@ -23,7 +23,6 @@ import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -308,6 +307,17 @@ public class DefaultMavenProjectBuilder
             profileActivationContext = new DefaultProfileActivationContext( config.getExecutionProperties(), false );
         }
 
+        List<Profile> projectProfiles = new ArrayList<Profile>();
+
+        projectProfiles.addAll( profileAdvisor.applyActivatedProfiles( model,
+                                                                       isReactorProject ? projectDescriptor : null,
+                                                                       isReactorProject, profileActivationContext ) );
+
+        projectProfiles.addAll( profileAdvisor.applyActivatedExternalProfiles( model,
+                                                                               isReactorProject ? projectDescriptor
+                                                                                               : null,
+                                                                               externalProfileManager ) );
+
         MavenProject project;
         
         try
@@ -327,12 +337,6 @@ public class DefaultMavenProjectBuilder
         {
             throw new InvalidProjectModelException( projectId, e.getMessage(), projectDescriptor, e );
         }
-
-        List<Profile> projectProfiles = new ArrayList<Profile>();
-        
-        projectProfiles.addAll( profileAdvisor.applyActivatedProfiles( project.getModel(), project.getFile(), isReactorProject, profileActivationContext ) );
-        
-        projectProfiles.addAll( profileAdvisor.applyActivatedExternalProfiles( project.getModel(), project.getFile(), externalProfileManager ) );
         
         project.setActiveProfiles( projectProfiles );
 

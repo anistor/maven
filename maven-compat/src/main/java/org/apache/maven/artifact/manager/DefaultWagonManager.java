@@ -76,8 +76,32 @@ public class DefaultWagonManager
 
     /** have to match the CHECKSUM_IDS */
     private static final String[] CHECKSUM_ALGORITHMS = {"MD5", "SHA-1"};
-    
+        
     private PlexusContainer container;
+
+    // TODO: proxies, authentication and mirrors are via settings, and should come in via an alternate method - perhaps
+    // attached to ArtifactRepository before the method is called (so AR would be composed of WR, not inherit it)
+    private Map<String,ProxyInfo> proxies = new HashMap<String,ProxyInfo>();
+
+    private static Map<String,AuthenticationInfo> authenticationInfoMap = new HashMap<String,AuthenticationInfo>();
+
+    private Map<String,RepositoryPermissions> serverPermissionsMap = new HashMap<String,RepositoryPermissions>();
+
+    //used LinkedMap to preserve the order.
+    private Map<String,ArtifactRepository> mirrors = new LinkedHashMap<String,ArtifactRepository>();
+
+    /** Map( String, XmlPlexusConfiguration ) with the repository id and the wagon configuration */
+    private Map<String,XmlPlexusConfiguration> serverConfigurationMap = new HashMap<String,XmlPlexusConfiguration>();
+
+    private TransferListener downloadMonitor;
+
+    private boolean online = true;
+
+    private boolean interactive = true;
+
+    private RepositoryPermissions defaultRepositoryPermissions;
+
+    // Components
 
     /** @plexus.requirement */
     private ArtifactRepositoryFactory repositoryFactory;
@@ -188,7 +212,9 @@ public class DefaultWagonManager
             {
                 Repository artifactRepository = new Repository( repository.getId(), repository.getUrl() );
 
-                wagon.connect( artifactRepository, getAuthenticationInfo( repository.getId() ), new ProxyInfoProvider()
+                AuthenticationInfo authenticationInfo = getAuthenticationInfo( repository.getId() ); 
+                                
+                wagon.connect( artifactRepository, authenticationInfo, new ProxyInfoProvider()
                 {
                     public ProxyInfo getProxyInfo( String protocol )
                     {
@@ -727,8 +753,9 @@ public class DefaultWagonManager
             // remove whitespaces at the end
             expectedChecksum = expectedChecksum.trim();
 
-            // check for 'MD5 (name) = CHECKSUM'
-            if ( expectedChecksum.startsWith( "MD5" ) )
+            // check for 'ALGO (name) = CHECKSUM' like used by openssl
+            if ( expectedChecksum.regionMatches( true, 0, "MD", 0, 2 )
+                || expectedChecksum.regionMatches( true, 0, "SHA", 0, 3 ) )
             {
                 int lastSpacePos = expectedChecksum.lastIndexOf( ' ' );
                 expectedChecksum = expectedChecksum.substring( lastSpacePos + 1 );
@@ -791,13 +818,278 @@ public class DefaultWagonManager
             getLogger().debug( "", e );
         }
     }
-
-    public void contextualize( Context context )
-        throws ContextException
+    
+    public ProxyInfo getProxy( String protocol )
     {
-        container = (PlexusContainer) context.get( PlexusConstants.PLEXUS_KEY );
+        return proxies.get( protocol );
     }
 
+    public AuthenticationInfo getAuthenticationInfo( String id )
+        throws CredentialsDataSourceException
+    {
+        return credentialsDataSource == null
+            ? authenticationInfoMap.get( id )
+            : credentialsDataSource.get( id );
+    }
+
+    /**
+     * This method finds a matching mirror for the selected repository. If there is an exact match, this will be used.
+     * If there is no exact match, then the list of mirrors is examined to see if a pattern applies.
+     *
+     * @param originalRepository See if there is a mirror for this repository.
+     * @return the selected mirror or null if none are found.
+     */
+    public ArtifactRepository getMirror( ArtifactRepository originalRepository )
+    {
+        ArtifactRepository selectedMirror = mirrors.get( originalRepository.getId() );
+        if ( null == selectedMirror )
+        {
+            // Process the patterns in order. First one that matches wins.
+            Set<String> keySet = mirrors.keySet();
+            if ( keySet != null )
+            {
+                for (String pattern : keySet) 
+                {
+                    if (matchPattern(originalRepository, pattern)) 
+                    {
+                        selectedMirror = mirrors.get(pattern);
+                        break;
+                    }
+                }
+            }
+
+        }
+        return selectedMirror;
+    }
+
+    /**
+     * This method checks if the pattern matches the originalRepository.
+     * Valid patterns:
+     * * = everything
+     * external:* = everything not on the localhost and not file based.
+     * repo,repo1 = repo or repo1
+     * *,!repo1 = everything except repo1
+     *
+     * @param originalRepository to compare for a match.
+     * @param pattern used for match. Currently only '*' is supported.
+     * @return true if the repository is a match to this pattern.
+     */
+    public boolean matchPattern( ArtifactRepository originalRepository, String pattern )
+    {
+        boolean result = false;
+        String originalId = originalRepository.getId();
+
+        // simple checks first to short circuit processing below.
+        if ( WILDCARD.equals( pattern ) || pattern.equals( originalId ) )
+        {
+            result = true;
+        }
+        else
+        {
+            // process the list
+            String[] repos = pattern.split( "," );
+            for (String repo : repos) {
+                // see if this is a negative match
+                if (repo.length() > 1 && repo.startsWith("!")) {
+                    if (originalId.equals(repo.substring(1))) {
+                        // explicitly exclude. Set result and stop processing.
+                        result = false;
+                        break;
+                    }
+                }
+                // check for exact match
+                else if (originalId.equals(repo)) {
+                    result = true;
+                    break;
+                }
+                // check for external:*
+                else if (EXTERNAL_WILDCARD.equals(repo) && isExternalRepo(originalRepository)) {
+                    result = true;
+                    // don't stop processing in case a future segment explicitly excludes this repo
+                } else if (WILDCARD.equals(repo)) {
+                    result = true;
+                    // don't stop processing in case a future segment explicitly excludes this repo
+                }
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Checks the URL to see if this repository refers to an external repository
+     *
+     * @param originalRepository
+     * @return true if external.
+     */
+    public boolean isExternalRepo( ArtifactRepository originalRepository )
+    {
+        try
+        {
+            URL url = new URL( originalRepository.getUrl() );
+            return !( url.getHost().equals( "localhost" ) || url.getHost().equals( "127.0.0.1" ) || url.getProtocol().equals("file" ) );
+        }
+        catch ( MalformedURLException e )
+        {
+            // bad url just skip it here. It should have been validated already, but the wagon lookup will deal with it
+            return false;
+        }
+    }
+
+    /**
+     * Set the proxy used for a particular protocol.
+     *
+     * @param protocol the protocol (required)
+     * @param host the proxy host name (required)
+     * @param port the proxy port (required)
+     * @param username the username for the proxy, or null if there is none
+     * @param password the password for the proxy, or null if there is none
+     * @param nonProxyHosts the set of hosts not to use the proxy for. Follows Java system property format:
+     *            <code>*.foo.com|localhost</code>.
+     * @todo [BP] would be nice to configure this via plexus in some way
+     */
+    public void addProxy( String protocol,
+                          String host,
+                          int port,
+                          String username,
+                          String password,
+                          String nonProxyHosts )
+    {
+        ProxyInfo proxyInfo = new ProxyInfo();
+        proxyInfo.setHost( host );
+        proxyInfo.setType( protocol );
+        proxyInfo.setPort( port );
+        proxyInfo.setNonProxyHosts( nonProxyHosts );
+        proxyInfo.setUserName( username );
+        proxyInfo.setPassword( password );
+
+        proxies.put( protocol, proxyInfo );
+    }
+
+    // We are leaving this method here so that we can attempt to use the new maven-artifact
+    // library from the 2.0.x code so that we aren't maintaining two lines of code
+    // for the artifact management.
+    public void addAuthenticationInfo( String repositoryId,
+                                       String username,
+                                       String password,
+                                       String privateKey,
+                                       String passphrase
+    )
+    {
+        AuthenticationInfo authInfo = new AuthenticationInfo();
+        authInfo.setUserName( username );
+        authInfo.setPassword( password );
+        authInfo.setPrivateKey( privateKey );
+        authInfo.setPassphrase( passphrase );
+
+        authenticationInfoMap.put( repositoryId, authInfo );
+    }
+
+    // This is the new way of handling authentication that will allow us to help users setup
+    // authentication requirements.
+    public void addAuthenticationCredentials( String repositoryId,
+                                              String username,
+                                              String password,
+                                              String privateKey,
+                                              String passphrase
+    )
+        throws CredentialsDataSourceException
+    {
+        AuthenticationInfo authInfo = new AuthenticationInfo();
+        authInfo.setUserName( username );
+        authInfo.setPassword( password );
+        authInfo.setPrivateKey( privateKey );
+        authInfo.setPassphrase( passphrase );
+
+        if ( credentialsDataSource == null )
+        {
+            authenticationInfoMap.put( repositoryId, authInfo );
+        }
+        else
+        {
+            credentialsDataSource.set( new CredentialsChangeRequest( repositoryId, authInfo, null ) );
+        }
+    }
+
+    public void addPermissionInfo( String repositoryId,
+                                   String filePermissions,
+                                   String directoryPermissions )
+    {
+        RepositoryPermissions permissions = new RepositoryPermissions();
+
+        boolean addPermissions = false;
+
+        if ( filePermissions != null )
+        {
+            permissions.setFileMode( filePermissions );
+            addPermissions = true;
+        }
+
+        if ( directoryPermissions != null )
+        {
+            permissions.setDirectoryMode( directoryPermissions );
+            addPermissions = true;
+        }
+
+        if ( addPermissions )
+        {
+            serverPermissionsMap.put( repositoryId, permissions );
+        }
+    }
+
+    public void addMirror( String id,
+                           String mirrorOf,
+                           String url )
+    {
+        if ( id == null )
+        {
+            id = "mirror-" + anonymousMirrorIdSeed++;
+            getLogger().warn( "You are using a mirror that doesn't declare an <id/> element. Using \'" + id + "\' instead:\nId: " + id + "\nmirrorOf: " + mirrorOf + "\nurl: " + url + "\n" );
+        }
+        
+        ArtifactRepository mirror = new DefaultArtifactRepository( id, url, null );
+
+        //to preserve first wins, don't add repeated mirrors.
+        if (!mirrors.containsKey( mirrorOf ))
+        {
+            mirrors.put( mirrorOf, mirror );
+        }
+    }
+
+    public void setOnline( boolean online )
+    {
+        this.online = online;
+    }
+
+    public boolean isOnline()
+    {
+        return online;
+    }
+
+    public void setInteractive( boolean interactive )
+    {
+        this.interactive = interactive;
+    }
+
+    public void findAndRegisterWagons( PlexusContainer container )
+    {
+        try
+        {
+            Map wagons = container.lookupMap( Wagon.ROLE );
+
+            registerWagons( wagons.keySet(), container );
+        }
+        catch ( ComponentLookupException e )
+        {
+            // no wagons found in the extension
+        }
+    }
+
+    /** @deprecated Wagons are discovered in plugin and extension realms now. */
+    @Deprecated
+    public void registerWagons( Collection wagons,
+                                PlexusContainer extensionContainer )
+    {
+    }
 
     /**
      * Applies the server configuration to the wagon

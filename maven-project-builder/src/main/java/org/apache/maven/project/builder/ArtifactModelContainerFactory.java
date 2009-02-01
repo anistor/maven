@@ -35,20 +35,27 @@ public final class ArtifactModelContainerFactory
 {
 
     private static final Collection<String> uris = Collections.unmodifiableList( Arrays.asList(
-        ProjectUri.DependencyManagement.Dependencies.Dependency.xUri, ProjectUri.Dependencies.Dependency.xUri,
+        ProjectUri.DependencyManagement.Dependencies.Dependency.xUri,
+        ProjectUri.Dependencies.Dependency.xUri,
         ProjectUri.Reporting.Plugins.Plugin.xUri,
         ProjectUri.Build.PluginManagement.Plugins.Plugin.xUri,
-        //ProjectUri.Build.PluginManagement.Plugins.Plugin.Dependencies.Dependency.xUri,
-
-        ProjectUri.Build.Plugins.Plugin.xUri, 
-        //ProjectUri.Build.Plugins.Plugin.Dependencies.Dependency.xUri,
-       // ProjectUri.Build.Plugins.Plugin.Dependencies.Dependency.Exclusions.Exclusion.xUri,
+        ProjectUri.Build.Plugins.Plugin.xUri,
         ProjectUri.Build.Extensions.Extension.xUri    
          ) );
 
+    private final Collection<String> u;
+
     public Collection<String> getUris()
     {
-        return uris;
+        return u;
+    }
+
+    public ArtifactModelContainerFactory() {
+        u = uris;
+    }
+
+    public ArtifactModelContainerFactory(String uri) {
+        u = Collections.unmodifiableList( Arrays.asList(uri) );
     }
 
     public ModelContainer create( List<ModelProperty> modelProperties )
@@ -75,6 +82,8 @@ public final class ArtifactModelContainerFactory
         private String scope;
 
         private String classifier;
+        
+        private String uri;
 
         private List<ModelProperty> properties;
 
@@ -95,7 +104,7 @@ public final class ArtifactModelContainerFactory
         {
             this.properties = new ArrayList<ModelProperty>( properties );
             this.properties = Collections.unmodifiableList( this.properties );
-            String uri = findBaseUriFrom( this.properties );
+            uri = findBaseUriFrom( this.properties );
 
             for ( ModelProperty mp : this.properties )
             {
@@ -193,7 +202,8 @@ public final class ArtifactModelContainerFactory
             if ( c.groupId.equals( groupId ) && c.artifactId.equals( artifactId ) && c.type.equals( type )
                     && c.classifier.equals( classifier ))
             {
-                if ( c.version.equals( version ) || version.equals("") || c.version.equals(""))
+                if ( uri.startsWith(ProjectUri.Build.Plugins.xUri) || c.version.equals( version ) 
+                		|| version.equals("") || c.version.equals(""))
                 {
                     return ModelContainerAction.JOIN;
                 }

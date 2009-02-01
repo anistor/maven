@@ -12,6 +12,8 @@ public class DefaultMavenExecutionRequestPopulatorTest
 {
     private MavenExecutionRequestPopulator populator;
 
+    what to change maven tools to and then start populating it
+    
     private WagonManager wagonManager;
 
     public void setUp()

@@ -24,7 +24,7 @@ under the License.
   <parent>
     <groupId>org.apache.maven</groupId>
     <artifactId>maven-parent</artifactId>
-    <version>9</version>
+    <version>10</version>
     <relativePath>../pom/maven/pom.xml</relativePath>
   </parent>
   <groupId>org.apache.maven</groupId>
@@ -43,20 +43,20 @@ under the License.
   <url>http://maven.apache.org/</url>
   <inceptionYear>2001</inceptionYear>
   <properties>
-    <aspectjVersion>1.5.3</aspectjVersion>
     <classWorldsVersion>1.3</classWorldsVersion>
     <commonsCliVersion>1.0</commonsCliVersion>
     <doxiaVersion>1.0-alpha-9</doxiaVersion>
     <easyMockVersion>1.2_Java1.3</easyMockVersion>
     <junitVersion>3.8.1</junitVersion>
-    <plexusVersion>1.0-beta-3.0.1</plexusVersion>
+    <plexusVersion>1.0-beta-3.0.5</plexusVersion>
     <plexusInteractivityVersion>1.0-alpha-6</plexusInteractivityVersion>
     <plexusInterpolationVersion>1.1</plexusInterpolationVersion>
     <plexusPluginManagerVersion>1.0-SNAPSHOT</plexusPluginManagerVersion>
-    <plexusUtilsVersion>1.5.5</plexusUtilsVersion>
+    <plexusUtilsVersion>1.5.6</plexusUtilsVersion>
     <wagonVersion>1.0-beta-4</wagonVersion>
-    <modelBuilderVersion>1.0</modelBuilderVersion>
+    <modelBuilderVersion>1.3</modelBuilderVersion>
     <mercuryVersion>1.0.0-alpha-2</mercuryVersion>
+    <mercuryMp3Version>1.0-alpha-1</mercuryMp3Version>
     <woodstoxVersion>3.2.6</woodstoxVersion>
     <modelloVersion>1.0-alpha-22</modelloVersion>
   </properties>  
@@ -174,15 +174,6 @@ under the License.
           </configuration>
         </plugin>
         <plugin>
-          <groupId>org.codehaus.mojo</groupId>
-          <artifactId>aspectj-maven-plugin</artifactId>
-          <version>1.0-beta-2</version>
-          <configuration>
-            <source>1.5</source>
-            <target>1.5</target>
-          </configuration>
-        </plugin>
-        <plugin>
           <artifactId>maven-release-plugin</artifactId>
           <configuration>
             <tagBase>https://svn.apache.org/repos/asf/maven/components/tags</tagBase>
@@ -217,27 +208,6 @@ under the License.
           <version>1.0.0</version>
         </plugin>
         <plugin>
-          <groupId>org.codehaus.mojo</groupId>
-          <artifactId>clirr-maven-plugin</artifactId>
-          <version>2.2.1</version>
-          <configuration>
-            <!-- needed for release: default value "(,${project.version})" for 2.0.10 is 2.0.10-SNAPSHOT -->
-            <comparisonVersion>2.0.9</comparisonVersion>
-            <excludes>
-              <!-- TODO: These represent method ADDITIONS from 2.0.9, and should be removed after
-                   2.0.10 is released. -->
-              <exclude>org/apache/maven/lifecycle/LifecycleExecutor*</exclude>
-              <exclude>org/apache/maven/artifact/metadata/ArtifactMetadataSource*</exclude>
-              <exclude>org/apache/maven/project/MavenProjectBuilder*</exclude>
-              <exclude>org/apache/maven/project/ProjectBuilderConfiguration*</exclude>
-              <exclude>org/apache/maven/project/interpolation/ModelInterpolator*</exclude>
-              <exclude>org/apache/maven/project/inheritance/ModelInheritanceAssembler*</exclude>
-              <exclude>org/apache/maven/execution/MavenExecutionRequest*</exclude>
-              <exclude>org/apache/maven/plugin/DefaultPluginManager*</exclude>
-            </excludes>
-          </configuration>
-        </plugin>
-        <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-surefire-plugin</artifactId>
           <version>2.4.2</version>
@@ -252,7 +222,7 @@ under the License.
   </build>
   <modules>
     <module>maven-core</module>
-    <module>maven-distribution</module>
+    <module>apache-maven</module>
     <module>maven-lifecycle</module>
     <module>maven-model</module>
     <module>maven-plugin-api</module>
@@ -430,22 +400,61 @@ under the License.
           </exclusion>
         </exclusions>
       </dependency>
+
       <!--  Mercury -->
       <dependency>
         <groupId>org.apache.maven.mercury</groupId>
         <artifactId>mercury-artifact</artifactId>
         <version>${mercuryVersion}</version>
       </dependency>
-        <dependency>
+      <dependency>
         <groupId>org.apache.maven.mercury</groupId>
         <artifactId>mercury-external</artifactId>
         <version>${mercuryVersion}</version>
       </dependency>
-      <!-- Needed for backward compat aspect. -->
+    <dependency>
+      <groupId>org.sonatype.mercury</groupId>
+      <artifactId>mercury-mp3-cli</artifactId>
+        <version>${mercuryMp3Version}</version>
+    </dependency>
+      
+      <!--  Mercury test dependencies -->
       <dependency>
-        <groupId>aspectj</groupId>
-        <artifactId>aspectjrt</artifactId>
-        <version>${aspectjVersion}</version>
+        <groupId>org.apache.maven.mercury</groupId>
+        <artifactId>mercury-repo-local-m2</artifactId>
+        <version>${mercuryVersion}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.maven.mercury</groupId>
+        <artifactId>mercury-repo-remote-m2</artifactId>
+        <version>${mercuryVersion}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.maven.mercury</groupId>
+        <artifactId>mercury-md-sat</artifactId>
+        <version>${mercuryVersion}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.maven.mercury</groupId>
+        <artifactId>mercury-util</artifactId>
+        <version>${mercuryVersion}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.maven.mercury</groupId>
+        <artifactId>mercury-transport-http</artifactId>
+        <version>${mercuryVersion}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.maven.mercury</groupId>
+        <artifactId>mercury-transport-http</artifactId>
+        <version>${mercuryVersion}</version>
+        <type>test-jar</type>
+        <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.sonatype.plexus</groupId>

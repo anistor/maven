@@ -141,6 +141,11 @@ public final class PomClassicDomainModel
         this.parentFile = parentFile;
     }
     
+    /**
+     * This should only be set for projects that are in the build. Setting for poms in the repo may cause unstable behavior.
+     * 
+     * @param projectDirectory
+     */
     public void setProjectDirectory(File projectDirectory)
     {
         this.projectDirectory = projectDirectory;
@@ -153,7 +158,7 @@ public final class PomClassicDomainModel
 
     public boolean isPomInBuild()
     {
-        return projectDirectory != null && new File(projectDirectory, "pom.xml").exists();
+        return projectDirectory != null;
     }
 
     /**
@@ -290,7 +295,13 @@ public final class PomClassicDomainModel
             //TODO: Should add all collections from ProjectUri
             s.addAll(PomTransformer.URIS);
             s.add(ProjectUri.Build.PluginManagement.Plugins.Plugin.Executions.xUri);
+            s.add(ProjectUri.DependencyManagement.Dependencies.Dependency.Exclusions.xUri);
+            s.add(ProjectUri.Dependencies.Dependency.Exclusions.xUri);
             s.add(ProjectUri.Build.Plugins.Plugin.Executions.xUri);
+            s.add(ProjectUri.Build.Plugins.Plugin.Executions.Execution.Goals.xURI);
+            s.add(ProjectUri.Reporting.Plugins.Plugin.ReportSets.xUri);
+            s.add(ProjectUri.Reporting.Plugins.Plugin.ReportSets.ReportSet.configuration);
+            s.add(ProjectUri.Build.Plugins.Plugin.Executions.Execution.configuration);
             modelProperties = ModelMarshaller.marshallXmlToModelProperties(
                 getInputStream(), ProjectUri.baseUri, s );
         }

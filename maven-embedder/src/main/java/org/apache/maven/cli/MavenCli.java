@@ -84,15 +84,6 @@ public class MavenCli
             return 1;
         }
 
-        if ( "1.5".compareTo( System.getProperty( "java.specification.version" ) ) > 0 )
-        {
-            System.err.println();
-            System.err.println( "You need JDK 1.5 or above to execute Maven 3.x." );
-            System.err.println();
-            
-            return 1;
-        }
-
         boolean debug = commandLine.hasOption( CLIManager.DEBUG );
 
         boolean quiet = !debug && commandLine.hasOption( CLIManager.QUIET );
@@ -125,7 +116,15 @@ public class MavenCli
         {
             CLIReportingUtils.showVersion();
         }
-        
+
+        // Make sure the Maven home directory is an absolute path to save us from confusion with say drive-relative
+        // Windows paths.
+        String mavenHome = System.getProperty( "maven.home" );
+        if ( mavenHome != null )
+        {
+            System.setProperty( "maven.home", new File( mavenHome ).getAbsolutePath() );
+        }
+
         MavenExecutionRequest request = CLIRequestUtils.buildRequest( commandLine, debug, quiet, showErrors );
 
         Configuration configuration = buildEmbedderConfiguration( request, commandLine, classWorld );

@@ -106,7 +106,12 @@ public final class MavenDependencyProcessor
                 domainModels.add( new MavenDomainModel( transformProfiles( mc.getProperties() ) ) );
             }
 
-            domainModels.addAll( getParentsOfDomainModel( domainModel, mdReader ) );
+            List<DomainModel> parentModels = getParentsOfDomainModel( domainModel, mdReader );
+            
+            if( parentModels == null )
+                throw new DependencyProcessorException( "cannot read parent for " + bmd.getGAV() );
+            
+            domainModels.addAll( parentModels );
         }
         catch ( IOException e )
         {
@@ -115,8 +120,7 @@ public final class MavenDependencyProcessor
 
         PomTransformer transformer = new PomTransformer( new MavenDomainModelFactory() );
         ModelTransformerContext ctx =
-            new ModelTransformerContext( Arrays.asList( new ArtifactModelContainerFactory(),
-                                                        new IdModelContainerFactory() ) );
+            new ModelTransformerContext( PomTransformer.MODEL_CONTAINER_INFOS );
 
         try
         {
@@ -132,13 +136,18 @@ public final class MavenDependencyProcessor
     }
 
     private static List<DomainModel> getParentsOfDomainModel( MavenDomainModel domainModel, MetadataReader mdReader )
-        throws IOException, MetadataReaderException
+        throws IOException, MetadataReaderException, DependencyProcessorException
     {
         List<DomainModel> domainModels = new ArrayList<DomainModel>();
         if ( domainModel.hasParent() )
         {
+            byte[] b = mdReader.readMetadata( domainModel.getParentMetadata() );
+
+            if ( b == null || b.length < 1 )
+                throw new DependencyProcessorException( "cannot read metadata for " + domainModel.getParentMetadata() );
+
             MavenDomainModel parentDomainModel =
-                new MavenDomainModel( mdReader.readMetadata( domainModel.getParentMetadata() ) );
+                new MavenDomainModel( b );
             domainModels.add( parentDomainModel );
             domainModels.addAll( getParentsOfDomainModel( parentDomainModel, mdReader ) );
         }

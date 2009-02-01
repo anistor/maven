@@ -26,7 +26,6 @@ import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -59,6 +58,7 @@ public class DefaultProfileInjector
         injectModules( profile, model );
 
         model.setRepositories( ModelUtils.mergeRepositoryLists( profile.getRepositories(), model.getRepositories() ) );
+        model.setPluginRepositories( ModelUtils.mergeRepositoryLists( profile.getPluginRepositories(), model.getPluginRepositories() ) );
 
         injectReporting( profile, model );
 
@@ -397,7 +397,7 @@ public class DefaultProfileInjector
             }
             else
             {
-                Map depsMap = new HashMap();
+                Map depsMap = new LinkedHashMap();
 
                 List deps = modelDepMgmt.getDependencies();
 
@@ -445,7 +445,7 @@ public class DefaultProfileInjector
                     modelReporting.setOutputDirectory( profileReporting.getOutputDirectory() );
                 }
 
-                Map mergedReportPlugins = new HashMap();
+                Map mergedReportPlugins = new LinkedHashMap();
 
                 Map profileReportersByKey = profileReporting.getReportPluginsAsMap();
 
@@ -513,7 +513,7 @@ public class DefaultProfileInjector
 
         recessive.setConfiguration( merge( dominantConfig, recessiveConfig ) );
 
-        Map mergedReportSets = new HashMap();
+        Map mergedReportSets = new LinkedHashMap();
 
         Map dominantReportSetsById = dominant.getReportSetsAsMap();
 

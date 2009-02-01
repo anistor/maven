@@ -78,6 +78,8 @@ public class ProfilesConversionUtils
                 os.setFamily( profileOs.getFamily() );
                 os.setName( profileOs.getName() );
                 os.setVersion( profileOs.getVersion() );
+
+                activation.setOs( os );
             }
 
             org.apache.maven.profiles.ActivationFile profileFile = profileActivation.getFile();
@@ -93,10 +95,6 @@ public class ProfilesConversionUtils
             }
 
             profile.setActivation( activation );
-        }
-        else
-        {
-            profile.setActivation( new AlwaysOnActivation() );
         }
 
         profile.setProperties( profileXmlProfile.getProperties() );
