@@ -36,6 +36,10 @@ public class PluginMixin implements InputStreamDomainModel {
     public PluginMixin(Plugin plugin)
         throws IOException
     {
+        if(plugin == null)
+        {
+            throw new IllegalArgumentException("plugin: null");
+        }
         Model model = new Model();
         Build build = new Build();
         build.addPlugin(plugin);

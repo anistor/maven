@@ -33,15 +33,19 @@ import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.project.harness.PomTestWrapper;
 import org.codehaus.plexus.PlexusTestCase;
+import org.codehaus.plexus.configuration.PlexusConfiguration;
+import org.codehaus.plexus.configuration.xml.XmlPlexusConfiguration;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
 public class PomConstructionTest
     extends PlexusTestCase
 {
 
-    private static String BASE_POM_DIR = "src/test/resources-project-builder";
+    private static String BASE_DIR = "src/test";
 
-    private static String BASE_MIXIN_DIR = "src/test/resources-mixins";
+    private static String BASE_POM_DIR = BASE_DIR + "/resources-project-builder";
+
+    private static String BASE_MIXIN_DIR = BASE_DIR + "/resources-mixins";
 
     private ProjectBuilder projectBuilder;
 
