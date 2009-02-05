@@ -475,12 +475,6 @@ under the License.
     <!--start-->
   </dependencyManagement>
   <!--end-->
-  <distributionManagement>
-    <site>
-      <id>apache.website</id>
-      <url>scp://people.apache.org/www/maven.apache.org/ref/${project.version}/</url>
-    </site>
-  </distributionManagement>
   <profiles>
     <profile>
       <id>osgi</id>
@@ -577,5 +571,9 @@ under the License.
       <name>${distMgmtSnapshotsName}</name>
       <url>${distMgmtSnapshotsUrl}</url>
     </snapshotRepository>
+    <site>
+      <id>apache.website</id>
+      <url>scp://people.apache.org/www/maven.apache.org/ref/${project.version}/</url>
+    </site>    
   </distributionManagement>  
 </project>
