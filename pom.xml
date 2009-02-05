@@ -59,6 +59,8 @@ under the License.
     <mercuryMp3Version>1.0-alpha-1</mercuryMp3Version>
     <woodstoxVersion>3.2.6</woodstoxVersion>
     <modelloVersion>1.0-alpha-22</modelloVersion>
+    <distMgmtSnapshotsName>Apache Snapshot Repository</distMgmtSnapshotsName>
+    <distMgmtSnapshotsUrl>https://repository.zones.apache.org/content/repositories/snapshots</distMgmtSnapshotsUrl>
   </properties>  
   <issueManagement>
     <system>jira</system>
@@ -564,4 +566,16 @@ under the License.
       </build>
     </profile>
   </profiles>
+  <distributionManagement>
+    <repository>
+      <id>apache.repository</id>
+      <name>Apache Staging</name>
+      <url>https://repository.zones.apache.org/service/local/staging/deploy/maven2/</url>
+    </repository>
+    <snapshotRepository>
+      <id>apache.repository</id>
+      <name>${distMgmtSnapshotsName}</name>
+      <url>${distMgmtSnapshotsUrl}</url>
+    </snapshotRepository>
+  </distributionManagement>  
 </project>
