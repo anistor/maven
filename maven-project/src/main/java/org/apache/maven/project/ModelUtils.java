@@ -98,7 +98,10 @@ public final class ModelUtils
                 int idx = normalized.indexOf( currentPlugin );
                 Plugin firstPlugin = (Plugin) normalized.get( idx );
 
-                mergePluginDefinitions( firstPlugin, currentPlugin, false );
+                // MNG-3719: merge currentPlugin with firstPlugin as parent,
+                // then use updated currentPlugin as new parent
+                mergePluginDefinitions( currentPlugin, firstPlugin, false );
+                normalized.set(idx, currentPlugin);
             }
             else
             {
