@@ -119,7 +119,17 @@ public class DefaultMavenProjectBuilder
     
     public MavenProject build( File projectDescriptor, ProjectBuilderConfiguration config )
         throws ProjectBuildingException
-    {  
+    {
+        if(projectDescriptor == null)
+        {
+            throw new IllegalArgumentException("projectDescriptor: null");
+        }
+
+        if(config == null)
+        {
+            throw new IllegalArgumentException("config: null");
+        }
+        
        List<ArtifactRepository> artifactRepositories = new ArrayList<ArtifactRepository>( );
        artifactRepositories.addAll( mavenTools.buildArtifactRepositories( projectBuilder.getSuperModel() ) );
        if(config.getRemoteRepositories() != null) 
@@ -398,7 +408,8 @@ public class DefaultMavenProjectBuilder
                                                               null, 
                                                               interpolatorProperties, 
                                                               resolver,
-                                                              config );
+                                                              config,
+                                                              this);
         }
         catch ( IOException e )
         {
@@ -449,7 +460,7 @@ public class DefaultMavenProjectBuilder
     private static void setBuildOutputDirectoryOnParent( MavenProject project )
     {
         MavenProject parent = project.getParent();
-        if ( parent != null )
+        if ( parent != null && parent.getFile() != null && parent.getModel().getBuild() != null)
         {
             parent.getModel().getBuild().setDirectory( parent.getFile().getAbsolutePath() );
             setBuildOutputDirectoryOnParent( parent );

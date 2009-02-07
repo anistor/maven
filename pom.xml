@@ -59,6 +59,7 @@ under the License.
     <mercuryMp3Version>1.0-alpha-1</mercuryMp3Version>
     <woodstoxVersion>3.2.6</woodstoxVersion>
     <modelloVersion>1.0-alpha-22</modelloVersion>
+    <jxpathVersion>1.3</jxpathVersion>
   </properties>  
   <issueManagement>
     <system>jira</system>
@@ -250,6 +251,11 @@ under the License.
       <!--start-->
       <dependency>
         <groupId>org.apache.maven</groupId>
+        <artifactId>maven-mercury</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.maven</groupId>
         <artifactId>maven-lifecycle</artifactId>
         <version>${project.version}</version>
       </dependency>
@@ -400,6 +406,11 @@ under the License.
           </exclusion>
         </exclusions>
       </dependency>
+      <dependency>
+        <groupId>commons-jxpath</groupId>
+        <artifactId>commons-jxpath</artifactId>
+        <version>${jxpathVersion}</version>
+      </dependency>
 
       <!--  Mercury -->
       <dependency>
@@ -412,11 +423,11 @@ under the License.
         <artifactId>mercury-external</artifactId>
         <version>${mercuryVersion}</version>
       </dependency>
-    <dependency>
-      <groupId>org.sonatype.mercury</groupId>
-      <artifactId>mercury-mp3-cli</artifactId>
+      <dependency>
+        <groupId>org.sonatype.mercury</groupId>
+        <artifactId>mercury-mp3-cli</artifactId>
         <version>${mercuryMp3Version}</version>
-    </dependency>
+      </dependency>
       
       <!--  Mercury test dependencies -->
       <dependency>

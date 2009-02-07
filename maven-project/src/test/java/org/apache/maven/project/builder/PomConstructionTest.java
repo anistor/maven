@@ -25,13 +25,23 @@ import java.io.FileInputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Arrays;
 
 import org.apache.maven.MavenTools;
+import org.apache.maven.profiles.DefaultProfileManager;
+import org.apache.maven.profiles.activation.DefaultProfileActivationContext;
+import org.apache.maven.profiles.activation.ProfileActivationContext;
+import org.apache.maven.shared.model.InterpolatorProperty;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
 import org.apache.maven.artifact.Artifact;
+import org.apache.maven.artifact.repository.DefaultArtifactRepository;
+import org.apache.maven.artifact.repository.layout.DefaultRepositoryLayout;
 import org.apache.maven.project.harness.PomTestWrapper;
+import org.apache.maven.project.MavenProjectBuilder;
+import org.apache.maven.project.ProjectBuilderConfiguration;
+import org.apache.maven.project.DefaultProjectBuilderConfiguration;
 import org.codehaus.plexus.PlexusTestCase;
 import org.codehaus.plexus.configuration.PlexusConfiguration;
 import org.codehaus.plexus.configuration.xml.XmlPlexusConfiguration;
@@ -49,6 +59,8 @@ public class PomConstructionTest
 
     private ProjectBuilder projectBuilder;
 
+    private MavenProjectBuilder mavenProjectBuilder;
+
     private Mixer mixer;
 
     private MavenTools mavenTools;
@@ -64,6 +76,7 @@ public class PomConstructionTest
     {
         testDirectory = new File( getBasedir(), BASE_POM_DIR );
         testMixinDirectory = new File( getBasedir(), BASE_MIXIN_DIR );
+        mavenProjectBuilder = lookup( MavenProjectBuilder.class );
         projectBuilder = lookup( ProjectBuilder.class );
         mixer = (Mixer) projectBuilder;
         mavenTools = lookup( MavenTools.class );
@@ -77,6 +90,22 @@ public class PomConstructionTest
             }
 
         };
+    }
+
+    /*MNG-3995*/
+    public void testExecutionConfigurationJoin()
+       throws Exception
+    {
+        PomTestWrapper pom = buildPom( "execution-configuration-join" );
+        assertEquals( 2, ( (List<?>) pom.getValue( "build/plugins[1]/executions[1]/configuration[1]/fileset[1]" ) ).size() );
+    }
+
+    /*MNG-3803*/
+    public void testPluginConfigProperties()
+       throws Exception
+    {
+        PomTestWrapper pom = buildPom( "plugin-config-properties" );
+        assertEquals( "my.property", pom.getValue( "build/plugins[1]/configuration[1]/systemProperties[1]/property[1]/name" ) );
     }
 
     public void testPluginMergeSimple()
@@ -128,6 +157,15 @@ public class PomConstructionTest
 
     }
 
+    /*MNG- 4008*/
+    public void testMultipleFilters()
+        throws Exception
+    {
+        PomTestWrapper pom = buildPom( "multiple-filters" );
+        assertEquals( 4, ( (List<?>) pom.getValue( "build/filters" ) ).size() );
+
+    }
+
     /*MNG-4005 - not implemented
     public void testDependenciesDifferentVersions()
         throws Exception
@@ -136,6 +174,31 @@ public class PomConstructionTest
 
     }
     */
+      /*MNG-3803*/
+    public void testDependenciesWithDifferentVersions()
+       throws Exception
+    {
+        PomTestWrapper pom = buildPom( "dependencies-with-different-versions" );
+        assertEquals( 1, ( (List<?>) pom.getValue( "dependencies" ) ).size() );
+    }
+
+    /* MNG-3567*/
+    public void testParentInterpolation()
+        throws Exception
+    {
+        PomTestWrapper pom = buildPomFromMavenProject( "parent-interpolation/sub" );
+        pom = new PomTestWrapper(pom.getMavenProject().getParent());
+        assertEquals( "1.3.0-SNAPSHOT", pom.getValue( "build/plugins[1]/version" ) );
+    }
+
+
+    /* MNG-3567*/
+    public void testPluginManagementInherited()
+        throws Exception
+    {
+        PomTestWrapper pom = buildPom( "pluginmanagement-inherited/sub" );
+        assertEquals( "1.0-alpha-21", pom.getValue( "build/plugins[1]/version" ) );
+    }
 
     public void testPluginOrder()
         throws Exception
@@ -722,11 +785,12 @@ public class PomConstructionTest
         assertPathWithNormalizedFileSeparators( pom.getValue( "reporting/outputDirectory" ) );
     }
 
-    /* FIXME: cf. MNG-4008
+    /* MNG-4008 */
     public void testMergedFilterOrder()
         throws Exception
     {
         PomTestWrapper pom = buildPom( "merged-filter-order/sub" );
+
         System.out.println(pom.getValue( "build/filters" ));
         assertEquals( 7, ( (List<?>) pom.getValue( "build/filters" ) ).size() );
         assertTrue( pom.getValue( "build/filters[1]" ).toString().endsWith( "child-a.properties" ) );
@@ -737,7 +801,7 @@ public class PomConstructionTest
         assertTrue( pom.getValue( "build/filters[6]" ).toString().endsWith( "parent-b.properties" ) );
         assertTrue( pom.getValue( "build/filters[7]" ).toString().endsWith( "parent-d.properties" ) );
     }
-    //*/
+
 
     private void assertPathWithNormalizedFileSeparators( Object value )
     {
@@ -758,6 +822,23 @@ public class PomConstructionTest
             pomFile = new File( pomFile, "pom.xml" );
         }
         return new PomTestWrapper( pomFile, projectBuilder.buildModel( pomFile, null, pomArtifactResolver ) );
+    }
+
+    private PomTestWrapper buildPomFromMavenProject( String pomPath )
+        throws IOException
+    {
+        File pomFile = new File( testDirectory , pomPath );
+        if ( pomFile.isDirectory() )
+        {
+            pomFile = new File( pomFile, "pom.xml" );
+        }
+        ProjectBuilderConfiguration config = new DefaultProjectBuilderConfiguration();
+        config.setLocalRepository(new DefaultArtifactRepository("default", "", new DefaultRepositoryLayout()));
+        ProfileActivationContext pCtx = new DefaultProfileActivationContext(null, true);
+        pCtx.setExplicitlyActiveProfileIds(Arrays.asList("release"));
+        config.setGlobalProfileManager(new DefaultProfileManager(this.getContainer(), pCtx));
+        return new PomTestWrapper( pomFile, projectBuilder.buildFromLocalPath( pomFile, null, null, pomArtifactResolver,
+                config, mavenProjectBuilder ) );
     }
 
     private Model buildMixin( String mixinPath )
