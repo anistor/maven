@@ -4,6 +4,5 @@ import org.apache.maven.execution.MavenSession;
 
 public interface MavenModelEventProcessor
 {
-    void processModelContainers( MavenSession session )
-        throws MavenModelEventProcessingException;
+    void processModelContainers( MavenSession session );
 }

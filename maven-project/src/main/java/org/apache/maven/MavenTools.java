@@ -19,19 +19,18 @@ package org.apache.maven;
  * under the License.
  */
 
+import java.io.IOException;
+import java.util.List;
+
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.InvalidRepositoryException;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.artifact.repository.ArtifactRepositoryPolicy;
-import org.apache.maven.artifact.repository.layout.ArtifactRepositoryLayout;
 import org.apache.maven.model.DeploymentRepository;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.Repository;
 import org.apache.maven.project.ProjectBuildingException;
 import org.apache.maven.wagon.events.TransferListener;
-
-import java.io.IOException;
-import java.util.List;
 
 /**
  * @author Jason van Zyl

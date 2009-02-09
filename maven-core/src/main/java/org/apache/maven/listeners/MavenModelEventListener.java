@@ -6,6 +6,5 @@ import org.apache.maven.shared.model.ModelEventListener;
 public interface MavenModelEventListener
     extends ModelEventListener
 {
-    void processModelContainers( MavenSession session ) 
-        throws MavenModelEventProcessingException;
+    void processModelContainers( MavenSession session );
 }

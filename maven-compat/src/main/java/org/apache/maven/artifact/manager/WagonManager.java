@@ -111,4 +111,7 @@ public interface WagonManager
     void getArtifactMetadataFromDeploymentRepository( ArtifactMetadata metadata, ArtifactRepository remoteRepository,
                                                       File file, String checksumPolicyWarn )
         throws TransferFailedException, ResourceDoesNotExistException;
+
+    // All the tests fail that are specifically look for the contents of the listener fail without this.
+    void setDownloadMonitor( TransferListener listener );    
 }

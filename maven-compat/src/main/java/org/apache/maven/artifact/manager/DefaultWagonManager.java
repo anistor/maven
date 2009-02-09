@@ -1002,4 +1002,11 @@ public class DefaultWagonManager
     {
         return httpUserAgent;
     }
+    
+    // Things to remove
+    
+    public void setDownloadMonitor( TransferListener listener )
+    {
+        this.downloadMonitor = listener;
+    }
 }

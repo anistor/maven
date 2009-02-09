@@ -39,8 +39,6 @@ import org.apache.maven.execution.RuntimeInformation;
 import org.apache.maven.lifecycle.LifecycleExecutionException;
 import org.apache.maven.lifecycle.LifecycleExecutor;
 import org.apache.maven.lifecycle.TaskValidationResult;
-import org.apache.maven.listeners.MavenModelEventProcessingException;
-import org.apache.maven.listeners.MavenModelEventProcessor;
 import org.apache.maven.monitor.event.DeprecationEventDispatcher;
 import org.apache.maven.monitor.event.EventDispatcher;
 import org.apache.maven.monitor.event.MavenEvents;
@@ -81,9 +79,6 @@ public class DefaultMaven
     @Requirement
     protected RuntimeInformation runtimeInformation;
 
-    @Requirement 
-    protected MavenModelEventProcessor modelEventProcessor;
-    
     private Logger logger;
 
     // ----------------------------------------------------------------------
@@ -206,17 +201,7 @@ public class DefaultMaven
                 getLogger().info( "  " + project.getName() );
             }
         }
-        
-        try
-        {
-            modelEventProcessor.processModelContainers( session );
-        }
-        catch ( MavenModelEventProcessingException e )
-        {
-            result.addException( e );
-            return result;
-        }
-        
+
         try
         {
             lifecycleExecutor.execute( session, reactorManager, dispatcher );

@@ -81,6 +81,7 @@ public class ArtifactUpdatePolicyTest
 
         wagonManager = (WagonManager) lookup( WagonManager.ROLE );
         listener = new TestTransferListener();
+        wagonManager.setDownloadMonitor( listener );
 
         localRepository = localRepository();
         FileUtils.deleteDirectory( new File( localRepository.getBasedir() ) );
@@ -135,17 +136,6 @@ public class ArtifactUpdatePolicyTest
         a.addMetadata( snapshotMetadata );
 
         return a;
-    }
-
-    public void testForceLocalDoesNotExist()
-        throws Exception
-    {
-        Artifact a = createRemoteArtifact( "o", "0.0.1-SNAPSHOT" );
-
-        artifactResolver.resolveAlways( a, remoteRepositories, localRepository );
-
-        assertTransfers( new String[] { "get " + PATH, "getTransfer " + PATH, "get " + PATH + ".sha1",
-            "get " + PATH + ".md5" } );
     }
 
     public void testForceButNoNewUpdates()

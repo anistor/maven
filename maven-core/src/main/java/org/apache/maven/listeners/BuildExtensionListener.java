@@ -1,6 +1,5 @@
 package org.apache.maven.listeners;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -13,7 +12,6 @@ import org.apache.maven.project.builder.ProjectUri;
 import org.apache.maven.shared.model.DataSourceException;
 import org.apache.maven.shared.model.ModelContainer;
 import org.apache.maven.shared.model.ModelContainerFactory;
-import org.apache.maven.shared.model.ModelEventListener;
 import org.apache.maven.shared.model.ModelProperty;
 import org.codehaus.plexus.classworlds.realm.ClassRealm;
 import org.codehaus.plexus.component.annotations.Component;
@@ -35,7 +33,7 @@ import org.sonatype.plexus.plugin.manager.PluginResolutionResult;
  * @author Jason van Zyl
  *
  */
-@Component(role = ModelEventListener.class, hint="extensions" )
+@Component(role = MavenModelEventListener.class, hint="extensions", instantiationStrategy="per-lookup" )
 public class BuildExtensionListener
     implements MavenModelEventListener
 {
@@ -131,16 +129,14 @@ public class BuildExtensionListener
      * @param session Maven session used as the execution context for the current Maven project.
      */
     public void processModelContainers( MavenSession session )
-        throws MavenModelEventProcessingException
-    {
-        System.out.println( buildExtensions.size() );
+    {       
         for ( BuildExtension be : buildExtensions )
         {
             PluginResolutionRequest request = new PluginResolutionRequest()
                 .setPluginMetadata( new PluginMetadata( be.groupId, be.artifactId, be.version ) )
-                .addLocalRepository( new File( session.getRequest().getLocalRepository().getBasedir() ) )
+                .addLocalRepository( session.getRequest().getLocalRepositoryPath() )
                 .setRemoteRepositories( convertToMercuryRepositories( session.getRequest().getRemoteRepositories() ) );
-            
+
             PluginResolutionResult result = null;
 
             try
@@ -155,11 +151,11 @@ public class BuildExtensionListener
             }
             catch ( Exception e )
             {
-                throw new MavenModelEventProcessingException( "" );
+                e.printStackTrace();
             }
         }
     } 
-        
+    
     List<String> convertToMercuryRepositories( List<ArtifactRepository> repositories )
     {
         List<String> repos = new ArrayList<String>();
@@ -168,8 +164,6 @@ public class BuildExtensionListener
         {
             for ( ArtifactRepository r : repositories )
             {
-                System.out.println( "###### " + r );
-                
                 repos.add( r.getUrl() );
             }
         }
