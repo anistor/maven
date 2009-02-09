@@ -35,6 +35,8 @@ import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.ArtifactUtils;
 import org.apache.maven.artifact.InvalidRepositoryException;
 import org.apache.maven.artifact.factory.ArtifactFactory;
+import org.apache.maven.artifact.manager.DefaultWagonManager;
+import org.apache.maven.artifact.manager.StringWagon;
 import org.apache.maven.artifact.manager.WagonManager;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.artifact.repository.ArtifactRepositoryFactory;
@@ -49,6 +51,9 @@ import org.apache.maven.model.Model;
 import org.apache.maven.model.Repository;
 import org.apache.maven.model.RepositoryPolicy;
 import org.apache.maven.project.ProjectBuildingException;
+import org.apache.maven.wagon.ResourceDoesNotExistException;
+import org.apache.maven.wagon.TransferFailedException;
+import org.apache.maven.wagon.UnsupportedProtocolException;
 import org.apache.maven.wagon.authentication.AuthenticationInfo;
 import org.apache.maven.wagon.events.TransferListener;
 import org.apache.maven.wagon.proxy.ProxyInfo;
@@ -637,4 +642,180 @@ public class DefaultMavenTools
             serverPermissionsMap.put( repositoryId, permissions );
         }
     }    
+    
+    // Test for this stuff
+    
+    /*
+     
+    public void testAddMirrorWithNullRepositoryId()
+    {
+        wagonManager.addMirror( null, "test", "http://www.nowhere.com/" );
+    }
+    
+    public void testGetArtifactSha1MissingMd5Present()
+        throws IOException, UnsupportedProtocolException, TransferFailedException, ResourceDoesNotExistException
+    {
+        Artifact artifact = createTestPomArtifact( "target/test-data/get-remote-artifact" );
+
+        ArtifactRepository repo = createStringRepo();
+
+        StringWagon wagon = (StringWagon) wagonManager.getWagon( "string" );
+        wagon.addExpectedContent( repo.getLayout().pathOf( artifact ), "expected" );
+        wagon.addExpectedContent( repo.getLayout().pathOf( artifact ) + ".md5", "bad_checksum" );
+        
+        wagonManager.getArtifact( artifact, repo, true );
+
+        assertTrue( artifact.getFile().exists() );
+    }
+    
+    public void testExternalURL()
+    {
+        DefaultWagonManager mgr = new DefaultWagonManager();
+        assertTrue( mgr.isExternalRepo( getRepo( "foo", "http://somehost" ) ) );
+        assertTrue( mgr.isExternalRepo( getRepo( "foo", "http://somehost:9090/somepath" ) ) );
+        assertTrue( mgr.isExternalRepo( getRepo( "foo", "ftp://somehost" ) ) );
+        assertTrue( mgr.isExternalRepo( getRepo( "foo", "http://192.168.101.1" ) ) );
+        assertTrue( mgr.isExternalRepo( getRepo( "foo", "http://" ) ) );
+        // these are local
+        assertFalse( mgr.isExternalRepo( getRepo( "foo", "http://localhost:8080" ) ) );
+        assertFalse( mgr.isExternalRepo( getRepo( "foo", "http://127.0.0.1:9090" ) ) );
+        assertFalse( mgr.isExternalRepo( getRepo( "foo", "file://localhost/somepath" ) ) );
+        assertFalse( mgr.isExternalRepo( getRepo( "foo", "file://localhost/D:/somepath" ) ) );
+        assertFalse( mgr.isExternalRepo( getRepo( "foo", "http://localhost" ) ) );
+        assertFalse( mgr.isExternalRepo( getRepo( "foo", "http://127.0.0.1" ) ) );
+        assertFalse( mgr.isExternalRepo( getRepo( "foo", "file:///somepath" ) ) );
+        assertFalse( mgr.isExternalRepo( getRepo( "foo", "file://D:/somepath" ) ) );
+
+        // not a proper url so returns false;
+        assertFalse( mgr.isExternalRepo( getRepo( "foo", "192.168.101.1" ) ) );
+        assertFalse( mgr.isExternalRepo( getRepo( "foo", "" ) ) );
+    }
+
+    public void testMirrorLookup()
+    {
+        wagonManager.addMirror( "a", "a", "http://a" );
+        wagonManager.addMirror( "b", "b", "http://b" );
+
+        ArtifactRepository repo = null;
+        repo = wagonManager.getMirrorRepository( getRepo( "a", "http://a.a" ) );
+        assertEquals( "http://a", repo.getUrl() );
+
+        repo = wagonManager.getMirrorRepository( getRepo( "b", "http://a.a" ) );
+        assertEquals( "http://b", repo.getUrl() );
+
+        repo = wagonManager.getMirrorRepository( getRepo( "c", "http://c.c" ) );
+        assertEquals( "http://c.c", repo.getUrl() );
+
+    }
+
+    public void testMirrorWildcardLookup()
+    {
+        wagonManager.addMirror( "a", "a", "http://a" );
+        wagonManager.addMirror( "b", "b", "http://b" );
+        wagonManager.addMirror( "c", "*", "http://wildcard" );
+
+        ArtifactRepository repo = null;
+        repo = wagonManager.getMirrorRepository( getRepo( "a", "http://a.a" ) );
+        assertEquals( "http://a", repo.getUrl() );
+
+        repo = wagonManager.getMirrorRepository( getRepo( "b", "http://a.a" ) );
+        assertEquals( "http://b", repo.getUrl() );
+
+        repo = wagonManager.getMirrorRepository( getRepo( "c", "http://c.c" ) );
+        assertEquals( "http://wildcard", repo.getUrl() );
+
+    }
+
+    public void testMirrorStopOnFirstMatch()
+    {
+        //exact matches win first
+        wagonManager.addMirror( "a2", "a,b", "http://a2" );
+        wagonManager.addMirror( "a", "a", "http://a" );
+        //make sure repeated entries are skipped
+        wagonManager.addMirror( "a", "a", "http://a3" );
+        
+        wagonManager.addMirror( "b", "b", "http://b" );
+        wagonManager.addMirror( "c", "d,e", "http://de" );
+        wagonManager.addMirror( "c", "*", "http://wildcard" );
+        wagonManager.addMirror( "c", "e,f", "http://ef" );
+        
+    
+
+        ArtifactRepository repo = null;
+        repo = wagonManager.getMirrorRepository( getRepo( "a", "http://a.a" ) );
+        assertEquals( "http://a", repo.getUrl() );
+
+        repo = wagonManager.getMirrorRepository( getRepo( "b", "http://a.a" ) );
+        assertEquals( "http://b", repo.getUrl() );
+
+        repo = wagonManager.getMirrorRepository( getRepo( "c", "http://c.c" ) );
+        assertEquals( "http://wildcard", repo.getUrl() );
+        
+        repo = wagonManager.getMirrorRepository( getRepo( "d", "http://d" ) );
+        assertEquals( "http://de", repo.getUrl() );
+        
+        repo = wagonManager.getMirrorRepository( getRepo( "e", "http://e" ) );
+        assertEquals( "http://de", repo.getUrl() );
+        
+        repo = wagonManager.getMirrorRepository( getRepo( "f", "http://f" ) );
+        assertEquals( "http://wildcard", repo.getUrl() );
+
+    }
+
+    
+    public void testPatterns()
+    {
+        DefaultWagonManager mgr = new DefaultWagonManager();
+
+        assertTrue( mgr.matchPattern( getRepo( "a" ), "*" ) );
+        assertTrue( mgr.matchPattern( getRepo( "a" ), "*," ) );
+        assertTrue( mgr.matchPattern( getRepo( "a" ), ",*," ) );
+        assertTrue( mgr.matchPattern( getRepo( "a" ), "*," ) );
+
+        assertTrue( mgr.matchPattern( getRepo( "a" ), "a" ) );
+        assertTrue( mgr.matchPattern( getRepo( "a" ), "a," ) );
+        assertTrue( mgr.matchPattern( getRepo( "a" ), ",a," ) );
+        assertTrue( mgr.matchPattern( getRepo( "a" ), "a," ) );
+
+        assertFalse( mgr.matchPattern( getRepo( "b" ), "a" ) );
+        assertFalse( mgr.matchPattern( getRepo( "b" ), "a," ) );
+        assertFalse( mgr.matchPattern( getRepo( "b" ), ",a" ) );
+        assertFalse( mgr.matchPattern( getRepo( "b" ), ",a," ) );
+
+        assertTrue( mgr.matchPattern( getRepo( "a" ), "a,b" ) );
+        assertTrue( mgr.matchPattern( getRepo( "b" ), "a,b" ) );
+
+        assertFalse( mgr.matchPattern( getRepo( "c" ), "a,b" ) );
+
+        assertTrue( mgr.matchPattern( getRepo( "a" ), "*" ) );
+        assertTrue( mgr.matchPattern( getRepo( "a" ), "*,b" ) );
+        assertTrue( mgr.matchPattern( getRepo( "a" ), "*,!b" ) );
+
+        assertFalse( mgr.matchPattern( getRepo( "a" ), "*,!a" ) );
+        assertFalse( mgr.matchPattern( getRepo( "a" ), "!a,*" ) );
+
+        assertTrue( mgr.matchPattern( getRepo( "c" ), "*,!a" ) );
+        assertTrue( mgr.matchPattern( getRepo( "c" ), "!a,*" ) );
+
+        assertFalse( mgr.matchPattern( getRepo( "c" ), "!a,!c" ) );
+        assertFalse( mgr.matchPattern( getRepo( "d" ), "!a,!c*" ) );
+    }
+
+    public void testPatternsWithExternal()
+    {
+        DefaultWagonManager mgr = new DefaultWagonManager();
+
+        assertTrue( mgr.matchPattern( getRepo( "a", "http://localhost" ), "*" ) );
+        assertFalse( mgr.matchPattern( getRepo( "a", "http://localhost" ), "external:*" ) );
+
+        assertTrue( mgr.matchPattern( getRepo( "a", "http://localhost" ), "external:*,a" ) );
+        assertFalse( mgr.matchPattern( getRepo( "a", "http://localhost" ), "external:*,!a" ) );
+        assertTrue( mgr.matchPattern( getRepo( "a", "http://localhost" ), "a,external:*" ) );
+        assertFalse( mgr.matchPattern( getRepo( "a", "http://localhost" ), "!a,external:*" ) );
+
+        assertFalse( mgr.matchPattern( getRepo( "c", "http://localhost" ), "!a,external:*" ) );
+        assertTrue( mgr.matchPattern( getRepo( "c", "http://somehost" ), "!a,external:*" ) );
+    }
+     
+     */
 }
