@@ -70,7 +70,7 @@ import org.codehaus.plexus.util.xml.Xpp3Dom;
 /** @plexus.component */
 public class DefaultWagonManager
     extends AbstractLogEnabled
-    implements WagonManager, Contextualizable
+    implements WagonManager
 {
     private static final String[] CHECKSUM_IDS = {"md5", "sha1"};
 
@@ -175,8 +175,6 @@ public class DefaultWagonManager
                                 TransferListener downloadMonitor )
         throws TransferFailedException
     {
-        failIfNotOnline();
-
         String protocol = repository.getProtocol();
 
         Wagon wagon;
@@ -387,7 +385,7 @@ public class DefaultWagonManager
 
             try
             {
-                getRemoteFile( getMirrorRepository( repository ), artifact.getFile(), remotePath, downloadMonitor, policy.getChecksumPolicy(), false );
+                getRemoteFile( repository, artifact.getFile(), remotePath, downloadMonitor, policy.getChecksumPolicy(), false );
             }
             finally
             {
@@ -412,7 +410,7 @@ public class DefaultWagonManager
 
                 try
                 {
-                    getRemoteFile( getMirrorRepository( repository ), artifact.getFile(), remotePath, downloadMonitor, policy.getChecksumPolicy(), false );
+                    getRemoteFile( repository, artifact.getFile(), remotePath, downloadMonitor, policy.getChecksumPolicy(), false );
                 }
                 catch ( ResourceDoesNotExistException e )
                 {
@@ -444,7 +442,7 @@ public class DefaultWagonManager
         {
             getLogger().debug( "Trying repository " + repository.getId() );
 
-            getRemoteFile( getMirrorRepository( repository ), artifact.getFile(), remotePath, downloadMonitor, policy.getChecksumPolicy(), false );
+            getRemoteFile( repository, artifact.getFile(), remotePath, downloadMonitor, policy.getChecksumPolicy(), false );
 
             getLogger().debug( "  Artifact resolved" );
 
@@ -460,7 +458,7 @@ public class DefaultWagonManager
     {
         String remotePath = repository.pathOfRemoteRepositoryMetadata( metadata );
 
-        getRemoteFile( getMirrorRepository( repository ), destination, remotePath, null, checksumPolicy, true );
+        getRemoteFile( repository, destination, remotePath, null, checksumPolicy, true );
     }
 
     public void getArtifactMetadataFromDeploymentRepository( ArtifactMetadata metadata, ArtifactRepository repository,
@@ -480,10 +478,6 @@ public class DefaultWagonManager
                                 boolean force )
         throws TransferFailedException, ResourceDoesNotExistException
     {
-        // TODO: better excetpions - transfer failed is not enough?
-
-        failIfNotOnline();
-
         String protocol = repository.getProtocol();
 
         Wagon wagon;
@@ -705,15 +699,6 @@ public class DefaultWagonManager
         }
     }
 
-    private void failIfNotOnline()
-        throws TransferFailedException
-    {
-        if ( !isOnline() )
-        {
-            throw new TransferFailedException( "System is offline." );
-        }
-    }
-
     private void handleChecksumFailure( String checksumPolicy,
                                         String message,
                                         Throwable cause )
@@ -827,92 +812,7 @@ public class DefaultWagonManager
     public AuthenticationInfo getAuthenticationInfo( String id )
         throws CredentialsDataSourceException
     {
-        return credentialsDataSource == null
-            ? authenticationInfoMap.get( id )
-            : credentialsDataSource.get( id );
-    }
-
-    /**
-     * This method finds a matching mirror for the selected repository. If there is an exact match, this will be used.
-     * If there is no exact match, then the list of mirrors is examined to see if a pattern applies.
-     *
-     * @param originalRepository See if there is a mirror for this repository.
-     * @return the selected mirror or null if none are found.
-     */
-    public ArtifactRepository getMirror( ArtifactRepository originalRepository )
-    {
-        ArtifactRepository selectedMirror = mirrors.get( originalRepository.getId() );
-        if ( null == selectedMirror )
-        {
-            // Process the patterns in order. First one that matches wins.
-            Set<String> keySet = mirrors.keySet();
-            if ( keySet != null )
-            {
-                for (String pattern : keySet) 
-                {
-                    if (matchPattern(originalRepository, pattern)) 
-                    {
-                        selectedMirror = mirrors.get(pattern);
-                        break;
-                    }
-                }
-            }
-
-        }
-        return selectedMirror;
-    }
-
-    /**
-     * This method checks if the pattern matches the originalRepository.
-     * Valid patterns:
-     * * = everything
-     * external:* = everything not on the localhost and not file based.
-     * repo,repo1 = repo or repo1
-     * *,!repo1 = everything except repo1
-     *
-     * @param originalRepository to compare for a match.
-     * @param pattern used for match. Currently only '*' is supported.
-     * @return true if the repository is a match to this pattern.
-     */
-    public boolean matchPattern( ArtifactRepository originalRepository, String pattern )
-    {
-        boolean result = false;
-        String originalId = originalRepository.getId();
-
-        // simple checks first to short circuit processing below.
-        if ( WILDCARD.equals( pattern ) || pattern.equals( originalId ) )
-        {
-            result = true;
-        }
-        else
-        {
-            // process the list
-            String[] repos = pattern.split( "," );
-            for (String repo : repos) {
-                // see if this is a negative match
-                if (repo.length() > 1 && repo.startsWith("!")) {
-                    if (originalId.equals(repo.substring(1))) {
-                        // explicitly exclude. Set result and stop processing.
-                        result = false;
-                        break;
-                    }
-                }
-                // check for exact match
-                else if (originalId.equals(repo)) {
-                    result = true;
-                    break;
-                }
-                // check for external:*
-                else if (EXTERNAL_WILDCARD.equals(repo) && isExternalRepo(originalRepository)) {
-                    result = true;
-                    // don't stop processing in case a future segment explicitly excludes this repo
-                } else if (WILDCARD.equals(repo)) {
-                    result = true;
-                    // don't stop processing in case a future segment explicitly excludes this repo
-                }
-            }
-        }
-        return result;
+        return authenticationInfoMap.get( id );
     }
 
     /**
@@ -984,32 +884,6 @@ public class DefaultWagonManager
         authenticationInfoMap.put( repositoryId, authInfo );
     }
 
-    // This is the new way of handling authentication that will allow us to help users setup
-    // authentication requirements.
-    public void addAuthenticationCredentials( String repositoryId,
-                                              String username,
-                                              String password,
-                                              String privateKey,
-                                              String passphrase
-    )
-        throws CredentialsDataSourceException
-    {
-        AuthenticationInfo authInfo = new AuthenticationInfo();
-        authInfo.setUserName( username );
-        authInfo.setPassword( password );
-        authInfo.setPrivateKey( privateKey );
-        authInfo.setPassphrase( passphrase );
-
-        if ( credentialsDataSource == null )
-        {
-            authenticationInfoMap.put( repositoryId, authInfo );
-        }
-        else
-        {
-            credentialsDataSource.set( new CredentialsChangeRequest( repositoryId, authInfo, null ) );
-        }
-    }
-
     public void addPermissionInfo( String repositoryId,
                                    String filePermissions,
                                    String directoryPermissions )
@@ -1034,35 +908,6 @@ public class DefaultWagonManager
         {
             serverPermissionsMap.put( repositoryId, permissions );
         }
-    }
-
-    public void addMirror( String id,
-                           String mirrorOf,
-                           String url )
-    {
-        if ( id == null )
-        {
-            id = "mirror-" + anonymousMirrorIdSeed++;
-            getLogger().warn( "You are using a mirror that doesn't declare an <id/> element. Using \'" + id + "\' instead:\nId: " + id + "\nmirrorOf: " + mirrorOf + "\nurl: " + url + "\n" );
-        }
-        
-        ArtifactRepository mirror = new DefaultArtifactRepository( id, url, null );
-
-        //to preserve first wins, don't add repeated mirrors.
-        if (!mirrors.containsKey( mirrorOf ))
-        {
-            mirrors.put( mirrorOf, mirror );
-        }
-    }
-
-    public void setOnline( boolean online )
-    {
-        this.online = online;
-    }
-
-    public boolean isOnline()
-    {
-        return online;
     }
 
     public void setInteractive( boolean interactive )
@@ -1108,10 +953,6 @@ public class DefaultWagonManager
         throws WagonConfigurationException
     {
         PlexusConfiguration config = (PlexusConfiguration) serverConfigurationMap.get( repositoryId ); 
-        if ( protocol.startsWith( "http" ) || protocol.startsWith( "dav" ) )
-        {
-            config = updateUserAgentForHttp( wagon, config );
-        }
         
         if ( config != null )
         {
@@ -1143,28 +984,6 @@ public class DefaultWagonManager
 
             }
         }
-    }
-
-    private PlexusConfiguration updateUserAgentForHttp( Wagon wagon, PlexusConfiguration config )
-    {
-        if ( config == null )
-        {
-            config = new XmlPlexusConfiguration( "configuration" );
-        }
-
-        XmlPlexusConfiguration propertyConfig = new XmlPlexusConfiguration( "property" );
-        PlexusConfiguration headerConfig = config.getChild( "httpHeaders", true );
-        headerConfig.addChild( propertyConfig );
-        
-        XmlPlexusConfiguration nameConfig = new XmlPlexusConfiguration( "name" );
-        nameConfig.setValue( "User-Agent" );
-        propertyConfig.addChild( nameConfig );
-        
-        XmlPlexusConfiguration versionConfig = new XmlPlexusConfiguration( "value" );
-        versionConfig.setValue( httpUserAgent );
-        propertyConfig.addChild( versionConfig );
-                
-        return config;
     }
     
     /**
