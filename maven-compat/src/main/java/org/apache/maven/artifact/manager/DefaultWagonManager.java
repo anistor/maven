@@ -77,6 +77,7 @@ public class DefaultWagonManager
     /** have to match the CHECKSUM_IDS */
     private static final String[] CHECKSUM_ALGORITHMS = {"MD5", "SHA-1"};
         
+    /** @plexus.requirement */
     private PlexusContainer container;
 
     // TODO: proxies, authentication and mirrors are via settings, and should come in via an alternate method - perhaps
