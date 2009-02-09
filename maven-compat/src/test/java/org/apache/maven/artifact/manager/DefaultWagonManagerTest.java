@@ -92,7 +92,6 @@ public class DefaultWagonManagerTest
         };
         TransferListener listener = new TransferListener();
 
-        wagonManager.setDownloadMonitor(listener);
         wagonManager.getArtifact( artifact, repos, false );
 
         assertEquals(1, listener.events.size());
@@ -106,7 +105,6 @@ public class DefaultWagonManagerTest
         
         MockControl control = MockControl.createControl( UpdateCheckManager.class );
         UpdateCheckManager updateCheckManager = (UpdateCheckManager) control.getMock();
-        wagonManager.setUpdateCheckManager( updateCheckManager );
         
         updateCheckManager.isPomUpdateRequired( artifact, repo );
         control.setReturnValue( true );
@@ -137,7 +135,6 @@ public class DefaultWagonManagerTest
         
         MockControl control = MockControl.createControl( UpdateCheckManager.class );
         UpdateCheckManager updateCheckManager = (UpdateCheckManager) control.getMock();
-        wagonManager.setUpdateCheckManager( updateCheckManager );
         
         updateCheckManager.isPomUpdateRequired( artifact, repo );
         control.setReturnValue( false );
@@ -167,7 +164,6 @@ public class DefaultWagonManagerTest
         
         MockControl control = MockControl.createControl( UpdateCheckManager.class );
         UpdateCheckManager updateCheckManager = (UpdateCheckManager) control.getMock();
-        wagonManager.setUpdateCheckManager( updateCheckManager );
         
         updateCheckManager.touch( artifact, repo );        
         control.replay();        
@@ -201,7 +197,6 @@ public class DefaultWagonManagerTest
 
         MockControl control = MockControl.createControl( UpdateCheckManager.class );
         UpdateCheckManager updateCheckManager = (UpdateCheckManager) control.getMock();
-        wagonManager.setUpdateCheckManager( updateCheckManager );
 
         updateCheckManager.isPomUpdateRequired( artifact, repo );
         control.setReturnValue( true );
@@ -229,7 +224,6 @@ public class DefaultWagonManagerTest
 
         MockControl control = MockControl.createControl( UpdateCheckManager.class );
         UpdateCheckManager updateCheckManager = (UpdateCheckManager) control.getMock();
-        wagonManager.setUpdateCheckManager( updateCheckManager );
 
         control.replay();
 
@@ -294,7 +288,6 @@ public class DefaultWagonManagerTest
 
         MockControl control = MockControl.createControl( UpdateCheckManager.class );
         UpdateCheckManager updateCheckManager = (UpdateCheckManager) control.getMock();
-        wagonManager.setUpdateCheckManager( updateCheckManager );
 
         control.replay();
 
@@ -320,7 +313,6 @@ public class DefaultWagonManagerTest
 
         MockControl control = MockControl.createControl( UpdateCheckManager.class );
         UpdateCheckManager updateCheckManager = (UpdateCheckManager) control.getMock();
-        wagonManager.setUpdateCheckManager( updateCheckManager );
 
         control.replay();
 
@@ -345,7 +337,6 @@ public class DefaultWagonManagerTest
 
         MockControl control = MockControl.createControl( UpdateCheckManager.class );
         UpdateCheckManager updateCheckManager = (UpdateCheckManager) control.getMock();
-        wagonManager.setUpdateCheckManager( updateCheckManager );
 
         updateCheckManager.isUpdateRequired( artifact, repo );
         control.setReturnValue( true );
@@ -376,7 +367,6 @@ public class DefaultWagonManagerTest
 
         MockControl control = MockControl.createControl( UpdateCheckManager.class );
         UpdateCheckManager updateCheckManager = (UpdateCheckManager) control.getMock();
-        wagonManager.setUpdateCheckManager( updateCheckManager );
 
         updateCheckManager.isUpdateRequired( artifact, repo );
         control.setReturnValue( false );
@@ -405,7 +395,6 @@ public class DefaultWagonManagerTest
 
         MockControl control = MockControl.createControl( UpdateCheckManager.class );
         UpdateCheckManager updateCheckManager = (UpdateCheckManager) control.getMock();
-        wagonManager.setUpdateCheckManager( updateCheckManager );
 
         updateCheckManager.isUpdateRequired( artifact, repo );
         control.setReturnValue( true );
@@ -436,7 +425,6 @@ public class DefaultWagonManagerTest
 
         MockControl control = MockControl.createControl( UpdateCheckManager.class );
         UpdateCheckManager updateCheckManager = (UpdateCheckManager) control.getMock();
-        wagonManager.setUpdateCheckManager( updateCheckManager );
 
         updateCheckManager.touch( artifact, repo );
         
@@ -482,27 +470,6 @@ public class DefaultWagonManagerTest
         return artifact;
     }
 
-    public void testAddMirrorWithNullRepositoryId()
-    {
-        wagonManager.addMirror( null, "test", "http://www.nowhere.com/" );
-    }
-    
-    public void testGetArtifactSha1MissingMd5Present()
-        throws IOException, UnsupportedProtocolException, TransferFailedException, ResourceDoesNotExistException
-    {
-        Artifact artifact = createTestPomArtifact( "target/test-data/get-remote-artifact" );
-
-        ArtifactRepository repo = createStringRepo();
-
-        StringWagon wagon = (StringWagon) wagonManager.getWagon( "string" );
-        wagon.addExpectedContent( repo.getLayout().pathOf( artifact ), "expected" );
-        wagon.addExpectedContent( repo.getLayout().pathOf( artifact ) + ".md5", "bad_checksum" );
-        
-        wagonManager.getArtifact( artifact, repo, true );
-
-        assertTrue( artifact.getFile().exists() );
-    }
-
     private ArtifactRepository createStringRepo()
     {
         ArtifactRepository repo =
@@ -510,174 +477,6 @@ public class DefaultWagonManagerTest
         return repo;
     }
     
-    /**
-     * checks the handling of urls
-     */
-    public void testExternalURL()
-    {
-        DefaultWagonManager mgr = new DefaultWagonManager();
-        assertTrue( mgr.isExternalRepo( getRepo( "foo", "http://somehost" ) ) );
-        assertTrue( mgr.isExternalRepo( getRepo( "foo", "http://somehost:9090/somepath" ) ) );
-        assertTrue( mgr.isExternalRepo( getRepo( "foo", "ftp://somehost" ) ) );
-        assertTrue( mgr.isExternalRepo( getRepo( "foo", "http://192.168.101.1" ) ) );
-        assertTrue( mgr.isExternalRepo( getRepo( "foo", "http://" ) ) );
-        // these are local
-        assertFalse( mgr.isExternalRepo( getRepo( "foo", "http://localhost:8080" ) ) );
-        assertFalse( mgr.isExternalRepo( getRepo( "foo", "http://127.0.0.1:9090" ) ) );
-        assertFalse( mgr.isExternalRepo( getRepo( "foo", "file://localhost/somepath" ) ) );
-        assertFalse( mgr.isExternalRepo( getRepo( "foo", "file://localhost/D:/somepath" ) ) );
-        assertFalse( mgr.isExternalRepo( getRepo( "foo", "http://localhost" ) ) );
-        assertFalse( mgr.isExternalRepo( getRepo( "foo", "http://127.0.0.1" ) ) );
-        assertFalse( mgr.isExternalRepo( getRepo( "foo", "file:///somepath" ) ) );
-        assertFalse( mgr.isExternalRepo( getRepo( "foo", "file://D:/somepath" ) ) );
-
-        // not a proper url so returns false;
-        assertFalse( mgr.isExternalRepo( getRepo( "foo", "192.168.101.1" ) ) );
-        assertFalse( mgr.isExternalRepo( getRepo( "foo", "" ) ) );
-    }
-
-    /**
-     * Check that lookups with exact matches work and that no matches don't corrupt the repo.
-     */
-    public void testMirrorLookup()
-    {
-        wagonManager.addMirror( "a", "a", "http://a" );
-        wagonManager.addMirror( "b", "b", "http://b" );
-
-        ArtifactRepository repo = null;
-        repo = wagonManager.getMirrorRepository( getRepo( "a", "http://a.a" ) );
-        assertEquals( "http://a", repo.getUrl() );
-
-        repo = wagonManager.getMirrorRepository( getRepo( "b", "http://a.a" ) );
-        assertEquals( "http://b", repo.getUrl() );
-
-        repo = wagonManager.getMirrorRepository( getRepo( "c", "http://c.c" ) );
-        assertEquals( "http://c.c", repo.getUrl() );
-
-    }
-
-    /**
-     * Check that wildcards don't override exact id matches.
-     */
-    public void testMirrorWildcardLookup()
-    {
-        wagonManager.addMirror( "a", "a", "http://a" );
-        wagonManager.addMirror( "b", "b", "http://b" );
-        wagonManager.addMirror( "c", "*", "http://wildcard" );
-
-        ArtifactRepository repo = null;
-        repo = wagonManager.getMirrorRepository( getRepo( "a", "http://a.a" ) );
-        assertEquals( "http://a", repo.getUrl() );
-
-        repo = wagonManager.getMirrorRepository( getRepo( "b", "http://a.a" ) );
-        assertEquals( "http://b", repo.getUrl() );
-
-        repo = wagonManager.getMirrorRepository( getRepo( "c", "http://c.c" ) );
-        assertEquals( "http://wildcard", repo.getUrl() );
-
-    }
-
-    /**
-     * Check that first match wins
-     */
-    public void testMirrorStopOnFirstMatch()
-    {
-        //exact matches win first
-        wagonManager.addMirror( "a2", "a,b", "http://a2" );
-        wagonManager.addMirror( "a", "a", "http://a" );
-        //make sure repeated entries are skipped
-        wagonManager.addMirror( "a", "a", "http://a3" );
-        
-        wagonManager.addMirror( "b", "b", "http://b" );
-        wagonManager.addMirror( "c", "d,e", "http://de" );
-        wagonManager.addMirror( "c", "*", "http://wildcard" );
-        wagonManager.addMirror( "c", "e,f", "http://ef" );
-        
-    
-
-        ArtifactRepository repo = null;
-        repo = wagonManager.getMirrorRepository( getRepo( "a", "http://a.a" ) );
-        assertEquals( "http://a", repo.getUrl() );
-
-        repo = wagonManager.getMirrorRepository( getRepo( "b", "http://a.a" ) );
-        assertEquals( "http://b", repo.getUrl() );
-
-        repo = wagonManager.getMirrorRepository( getRepo( "c", "http://c.c" ) );
-        assertEquals( "http://wildcard", repo.getUrl() );
-        
-        repo = wagonManager.getMirrorRepository( getRepo( "d", "http://d" ) );
-        assertEquals( "http://de", repo.getUrl() );
-        
-        repo = wagonManager.getMirrorRepository( getRepo( "e", "http://e" ) );
-        assertEquals( "http://de", repo.getUrl() );
-        
-        repo = wagonManager.getMirrorRepository( getRepo( "f", "http://f" ) );
-        assertEquals( "http://wildcard", repo.getUrl() );
-
-    }
-
-    
-    /**
-     * Check that patterns are processed correctly Valid patterns: * = everything external:* = everything not on the
-     * localhost and not file based. repo,repo1 = repo or repo1 *,!repo1 = everything except repo1
-     */
-    public void testPatterns()
-    {
-        DefaultWagonManager mgr = new DefaultWagonManager();
-
-        assertTrue( mgr.matchPattern( getRepo( "a" ), "*" ) );
-        assertTrue( mgr.matchPattern( getRepo( "a" ), "*," ) );
-        assertTrue( mgr.matchPattern( getRepo( "a" ), ",*," ) );
-        assertTrue( mgr.matchPattern( getRepo( "a" ), "*," ) );
-
-        assertTrue( mgr.matchPattern( getRepo( "a" ), "a" ) );
-        assertTrue( mgr.matchPattern( getRepo( "a" ), "a," ) );
-        assertTrue( mgr.matchPattern( getRepo( "a" ), ",a," ) );
-        assertTrue( mgr.matchPattern( getRepo( "a" ), "a," ) );
-
-        assertFalse( mgr.matchPattern( getRepo( "b" ), "a" ) );
-        assertFalse( mgr.matchPattern( getRepo( "b" ), "a," ) );
-        assertFalse( mgr.matchPattern( getRepo( "b" ), ",a" ) );
-        assertFalse( mgr.matchPattern( getRepo( "b" ), ",a," ) );
-
-        assertTrue( mgr.matchPattern( getRepo( "a" ), "a,b" ) );
-        assertTrue( mgr.matchPattern( getRepo( "b" ), "a,b" ) );
-
-        assertFalse( mgr.matchPattern( getRepo( "c" ), "a,b" ) );
-
-        assertTrue( mgr.matchPattern( getRepo( "a" ), "*" ) );
-        assertTrue( mgr.matchPattern( getRepo( "a" ), "*,b" ) );
-        assertTrue( mgr.matchPattern( getRepo( "a" ), "*,!b" ) );
-
-        assertFalse( mgr.matchPattern( getRepo( "a" ), "*,!a" ) );
-        assertFalse( mgr.matchPattern( getRepo( "a" ), "!a,*" ) );
-
-        assertTrue( mgr.matchPattern( getRepo( "c" ), "*,!a" ) );
-        assertTrue( mgr.matchPattern( getRepo( "c" ), "!a,*" ) );
-
-        assertFalse( mgr.matchPattern( getRepo( "c" ), "!a,!c" ) );
-        assertFalse( mgr.matchPattern( getRepo( "d" ), "!a,!c*" ) );
-    }
-
-    /**
-     * make sure the external if is fully exercised. We can assume file and ips are also handled because they have a
-     * separate test above.
-     */
-    public void testPatternsWithExternal()
-    {
-        DefaultWagonManager mgr = new DefaultWagonManager();
-
-        assertTrue( mgr.matchPattern( getRepo( "a", "http://localhost" ), "*" ) );
-        assertFalse( mgr.matchPattern( getRepo( "a", "http://localhost" ), "external:*" ) );
-
-        assertTrue( mgr.matchPattern( getRepo( "a", "http://localhost" ), "external:*,a" ) );
-        assertFalse( mgr.matchPattern( getRepo( "a", "http://localhost" ), "external:*,!a" ) );
-        assertTrue( mgr.matchPattern( getRepo( "a", "http://localhost" ), "a,external:*" ) );
-        assertFalse( mgr.matchPattern( getRepo( "a", "http://localhost" ), "!a,external:*" ) );
-
-        assertFalse( mgr.matchPattern( getRepo( "c", "http://localhost" ), "!a,external:*" ) );
-        assertTrue( mgr.matchPattern( getRepo( "c", "http://somehost" ), "!a,external:*" ) );
-    }
 
     /**
      * Build an ArtifactRepository object.
@@ -801,7 +600,6 @@ public class DefaultWagonManagerTest
         /* getArtifact */
         assertFalse( "Transfer listener is registered before test",
                      wagon.getTransferEventSupport().hasTransferListener( transferListener ) );
-        wagonManager.setDownloadMonitor( transferListener );
         wagonManager.getArtifact( artifact, repo );
         assertFalse( "Transfer listener still registered after getArtifact",
                      wagon.getTransferEventSupport().hasTransferListener( transferListener ) );
@@ -812,7 +610,6 @@ public class DefaultWagonManagerTest
 
         assertFalse( "Transfer listener is registered before test",
                      wagon.getTransferEventSupport().hasTransferListener( transferListener ) );
-        wagonManager.setDownloadMonitor( transferListener );
         wagonManager.putArtifact( sampleFile, artifact, repo );
         assertFalse( "Transfer listener still registered after putArtifact",
                      wagon.getTransferEventSupport().hasTransferListener( transferListener ) );
@@ -944,8 +741,6 @@ public class DefaultWagonManagerTest
         configurableField.setValue( s );
 
         conf.addChild( configurableField );
-
-        wagonManager.addConfiguration( repository.getId(), conf );
 
         WagonMock wagon = (WagonMock) wagonManager.getWagon( repository );
 

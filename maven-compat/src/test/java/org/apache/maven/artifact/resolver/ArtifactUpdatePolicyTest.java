@@ -81,7 +81,6 @@ public class ArtifactUpdatePolicyTest
 
         wagonManager = (WagonManager) lookup( WagonManager.ROLE );
         listener = new TestTransferListener();
-        wagonManager.setDownloadMonitor( listener );
 
         localRepository = localRepository();
         FileUtils.deleteDirectory( new File( localRepository.getBasedir() ) );
@@ -91,8 +90,6 @@ public class ArtifactUpdatePolicyTest
     protected void tearDown()
         throws Exception
     {
-        wagonManager.setDownloadMonitor( null );
-        wagonManager.setOnline( true );
         super.tearDown();
     }
 
@@ -324,18 +321,6 @@ public class ArtifactUpdatePolicyTest
 
         assertTrue( j.isResolved() );
         assertTrue( j.getFile().canRead() );
-    }
-
-    public void testResolveExistingLocalArtifactInOfflineMode()
-        throws Exception
-    {
-        Artifact a = createLocalArtifact( "a", "1.0.0" );
-
-        wagonManager.setOnline( false );
-
-        artifactResolver.resolve( a, remoteRepositories(), localRepository() );
-
-        assertTrue( a.isResolved() );
     }
 
     public void testMultipleRemoteRepositories()

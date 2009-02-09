@@ -89,7 +89,6 @@ public class DefaultRepositoryMetadataManagerTest
         localRepo.getId();
         localRepoCtl.setReturnValue( "local", MockControl.ZERO_OR_MORE );
 
-        wagonManager.isOnline();
         wagonManagerCtl.setReturnValue( true, MockControl.ZERO_OR_MORE );
 
         try
@@ -179,7 +178,6 @@ public class DefaultRepositoryMetadataManagerTest
         localRepo.setBlacklisted( false );
         localRepoCtl.setVoidCallable( MockControl.ZERO_OR_MORE );
 
-        wagonManager.isOnline();
         wagonManagerCtl.setReturnValue( true, MockControl.ZERO_OR_MORE );
 
         try
@@ -274,7 +272,6 @@ public class DefaultRepositoryMetadataManagerTest
         localRepo.getId();
         localRepoCtl.setReturnValue( "local", MockControl.ZERO_OR_MORE );
 
-        wagonManager.isOnline();
         wagonManagerCtl.setReturnValue( true, MockControl.ZERO_OR_MORE );
 
         try
@@ -376,7 +373,6 @@ public class DefaultRepositoryMetadataManagerTest
         localRepo.getId();
         localRepoCtl.setReturnValue( "local", MockControl.ZERO_OR_MORE );
 
-        wagonManager.isOnline();
         wagonManagerCtl.setReturnValue( true, MockControl.ZERO_OR_MORE );
 
         try
