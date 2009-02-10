@@ -278,7 +278,7 @@ under the License.
   <properties>
     <distMgmtSnapshotsName>Apache Development Snapshot Repository</distMgmtSnapshotsName>
     <distMgmtSnapshotsUrl>https://repository.apache.org/content/repositories/snapshots</distMgmtSnapshotsUrl>
-    <mavenVersion>2.0.10</mavenVersion>
+    <mavenVersion>2.0.10-RC10-SNAPSHOT</mavenVersion>
     <wagonVersion>1.0-beta-2</wagonVersion>
   </properties>
 
