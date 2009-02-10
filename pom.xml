@@ -256,8 +256,28 @@ under the License.
     <module>maven-toolchain</module>
     <module>apache-maven</module>
   </modules>
+  
+  <!--temporary until new parent is released -->
+  <distributionManagement>
+    <repository>
+      <id>apache.releases</id>
+      <name>Apache Release Distribution Repository</name>
+      <url>https://repository.apache.org/service/local/staging/deploy/maven2</url>
+    </repository>
+    <snapshotRepository>
+      <id>apache.snapshots</id>
+      <name>${distMgmtSnapshotsName}</name>
+      <url>${distMgmtSnapshotsUrl}</url>
+    </snapshotRepository>
+    <site>
+      <id>apache.website</id>
+      <url>scp://people.apache.org/www/maven.apache.org/ref/${project.version}/</url>
+    </site>
+  </distributionManagement>
 
   <properties>
+    <distMgmtSnapshotsName>Apache Development Snapshot Repository</distMgmtSnapshotsName>
+    <distMgmtSnapshotsUrl>https://repository.apache.org/content/repositories/snapshots</distMgmtSnapshotsUrl>
     <mavenVersion>2.0.10-RC9-SNAPSHOT</mavenVersion>
     <wagonVersion>1.0-beta-2</wagonVersion>
   </properties>
@@ -439,13 +459,6 @@ under the License.
     <!--start-->
   </dependencyManagement>
   <!--end-->
-
-  <distributionManagement>
-    <site>
-      <id>apache.website</id>
-      <url>scp://people.apache.org/www/maven.apache.org/ref/${project.version}/</url>
-    </site>
-  </distributionManagement>
 
   <profiles>
     <profile>
