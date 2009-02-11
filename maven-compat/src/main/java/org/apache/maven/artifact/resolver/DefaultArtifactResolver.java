@@ -38,13 +38,15 @@ import org.apache.maven.artifact.resolver.filter.ArtifactFilter;
 import org.apache.maven.artifact.transform.ArtifactTransformationManager;
 import org.apache.maven.wagon.ResourceDoesNotExistException;
 import org.apache.maven.wagon.TransferFailedException;
+import org.codehaus.plexus.component.annotations.Component;
+import org.codehaus.plexus.component.annotations.Requirement;
 import org.codehaus.plexus.logging.AbstractLogEnabled;
 import org.codehaus.plexus.util.FileUtils;
 
 /**
  * @author Jason van Zyl
- * @plexus.component
  */
+@Component(role=ArtifactResolver.class)
 public class DefaultArtifactResolver
     extends AbstractLogEnabled
     implements ArtifactResolver
@@ -53,16 +55,16 @@ public class DefaultArtifactResolver
     // Components
     // ----------------------------------------------------------------------
 
-    /** @plexus.requirement */
+    @Requirement
     private WagonManager wagonManager;
 
-    /** @plexus.requirement */
+    @Requirement
     private ArtifactTransformationManager transformationManager;
 
-    /** @plexus.requirement */
+    @Requirement
     protected ArtifactFactory artifactFactory;
 
-    /** @plexus.requirement */
+    @Requirement
     private ArtifactCollector artifactCollector;
 
     // ----------------------------------------------------------------------
