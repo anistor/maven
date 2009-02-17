@@ -58,7 +58,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.Locale;
@@ -585,6 +584,9 @@ public class MavenCli
         System.out.println( msg );
 
         System.out.println( "Java version: " + System.getProperty( "java.version", "<unknown java version>" ) );
+
+        System.out.println( "Default locale: " + Locale.getDefault() + ", platform encoding: "
+                            + System.getProperty( "file.encoding", "<unknown encoding>" ) );
 
         System.out.println( "OS name: \"" + Os.OS_NAME + "\" version: \"" + Os.OS_VERSION +
                             "\" arch: \"" + Os.OS_ARCH + "\" Family: \"" + Os.OS_FAMILY + "\"" );
