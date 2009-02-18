@@ -79,7 +79,7 @@ public class DefaultWagonManager
     /** have to match the CHECKSUM_IDS */
     private static final String[] CHECKSUM_ALGORITHMS = {"MD5", "SHA-1"};
         
-    /** @plexus.requirement */
+    @Requirement
     private PlexusContainer container;
 
     // TODO: proxies, authentication and mirrors are via settings, and should come in via an alternate method - perhaps
@@ -112,7 +112,7 @@ public class DefaultWagonManager
     @Requirement(role=Wagon.class)
     private Map wagons;
 
-    @Requirement
+    //@Requirement
     private CredentialsDataSource credentialsDataSource;
 
     @Requirement
@@ -131,6 +131,7 @@ public class DefaultWagonManager
             throw new UnsupportedProtocolException( "The repository " + repository + " does not specify a protocol" );
         }
 
+        
         Wagon wagon = getWagon( protocol );
 
         configureWagon( wagon, repository.getId(), protocol );
