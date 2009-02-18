@@ -55,12 +55,13 @@ under the License.
     <plexusUtilsVersion>1.5.8</plexusUtilsVersion>
     <wagonVersion>1.0-beta-4</wagonVersion>
     <modelBuilderVersion>1.3</modelBuilderVersion>
-    <mercuryVersion>1.0.0-alpha-2</mercuryVersion>
+    <mercuryVersion>1.0.0-alpha-4</mercuryVersion>
     <mercuryMp3Version>1.0-alpha-1</mercuryMp3Version>
+    <securityDispatcherVersion>1.0-alpha-4-SNAPSHOT</securityDispatcherVersion>
     <woodstoxVersion>3.2.6</woodstoxVersion>
     <modelloVersion>1.0.1-SNAPSHOT</modelloVersion>
     <jxpathVersion>1.3</jxpathVersion>
-  </properties>  
+  </properties>
   <issueManagement>
     <system>jira</system>
     <url>http://jira.codehaus.org/browse/MNG</url>
@@ -184,6 +185,9 @@ under the License.
           <groupId>org.codehaus.modello</groupId>
           <artifactId>modello-maven-plugin</artifactId>
           <version>${modelloVersion}</version>
+          <configuration>
+            <useJava5>true</useJava5>
+          </configuration>
           <executions>
             <execution>
               <id>site-docs</id>
@@ -411,12 +415,11 @@ under the License.
           </exclusion>
         </exclusions>
       </dependency>
-    <dependency>
-    	<groupId>commons-jxpath</groupId>
-    	<artifactId>commons-jxpath</artifactId>
+      <dependency>
+        <groupId>commons-jxpath</groupId>
+        <artifactId>commons-jxpath</artifactId>
         <version>${jxpathVersion}</version>
-    </dependency>
-
+      </dependency>
       <!--  Mercury -->
       <dependency>
         <groupId>org.apache.maven.mercury</groupId>
@@ -433,7 +436,13 @@ under the License.
       <artifactId>mercury-mp3-cli</artifactId>
         <version>${mercuryMp3Version}</version>
     </dependency>
-      
+      <dependency>
+        <groupId>org.sonatype.plexus</groupId>
+        <artifactId>plexus-sec-dispatcher</artifactId>
+        <version>${securityDispatcherVersion}</version>
+      </dependency>
+
+
       <!--  Mercury test dependencies -->
       <dependency>
         <groupId>org.apache.maven.mercury</groupId>

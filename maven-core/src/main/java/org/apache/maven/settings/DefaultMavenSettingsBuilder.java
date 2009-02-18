@@ -19,6 +19,13 @@ package org.apache.maven.settings;
  * under the License.
  */
 
+import java.io.File;
+import java.io.IOException;
+import java.io.Reader;
+import java.io.StringReader;
+import java.io.StringWriter;
+import java.util.List;
+
 import org.apache.maven.execution.MavenExecutionRequest;
 import org.apache.maven.settings.io.xpp3.SettingsXpp3Reader;
 import org.apache.maven.settings.io.xpp3.SettingsXpp3Writer;
@@ -34,13 +41,6 @@ import org.codehaus.plexus.logging.AbstractLogEnabled;
 import org.codehaus.plexus.util.IOUtil;
 import org.codehaus.plexus.util.ReaderFactory;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.Reader;
-import java.io.StringReader;
-import java.io.StringWriter;
-import java.util.List;
 
 /**
  * @author jdcasey
@@ -114,6 +114,7 @@ public class DefaultMavenSettingsBuilder
 
         return userSettings;
     }
+    
 
     private Settings interpolate( Settings settings, MavenExecutionRequest request )
         throws IOException, XmlPullParserException

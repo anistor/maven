@@ -27,6 +27,7 @@ import java.util.Properties;
 
 import org.apache.maven.Maven;
 import org.apache.maven.MavenTools;
+import org.apache.maven.artifact.InvalidRepositoryException;
 import org.apache.maven.artifact.manager.WagonManager;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.artifact.repository.ArtifactRepositoryPolicy;
@@ -60,6 +61,8 @@ import org.codehaus.plexus.component.repository.exception.ComponentLookupExcepti
 import org.codehaus.plexus.logging.AbstractLogEnabled;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
+import org.sonatype.plexus.components.sec.dispatcher.SecDispatcher;
+import org.sonatype.plexus.components.sec.dispatcher.SecDispatcherException;
 
 /**
  * Things that we deal with in this populator to ensure that we have a valid {@MavenExecutionRequest}
@@ -82,11 +85,19 @@ public class DefaultMavenExecutionRequestPopulator
     private PlexusContainer container;
 
     @Requirement
+    private WagonManager wagonManager;
+
+    @Requirement
     private MavenSettingsBuilder settingsBuilder;
 
     @Requirement
     private MavenTools mavenTools;
-    
+
+    // 2009-02-12 Oleg: this component is defined in maven-core components.xml
+    // because it already has another declared (not generated) component
+    @Requirement( hint = "maven" )
+    private SecDispatcher securityDispatcher;
+
     public MavenExecutionRequest populateDefaults( MavenExecutionRequest request,
                                                    Configuration configuration )
         throws MavenEmbedderException
@@ -180,6 +191,7 @@ public class DefaultMavenExecutionRequestPopulator
     }
 
     private void processSettings( MavenExecutionRequest request, Configuration configuration )
+        throws MavenEmbedderException
     {
         ProfileManager profileManager = request.getProfileManager();
 
@@ -207,37 +219,15 @@ public class DefaultMavenExecutionRequestPopulator
                 {
                     Repository r = (Repository) j.next();
 
-                    ArtifactRepositoryPolicy releases = new ArtifactRepositoryPolicy();
-
-                    if ( r.getReleases() != null )
+                    ArtifactRepository ar;
+                    try
                     {
-                        releases.setChecksumPolicy( r.getReleases().getChecksumPolicy() );
-
-                        releases.setUpdatePolicy( r.getReleases().getUpdatePolicy() );
+                        ar = mavenTools.buildArtifactRepository( r );
                     }
-                    else
+                    catch ( InvalidRepositoryException e )
                     {
-                        releases.setChecksumPolicy( ArtifactRepositoryPolicy.UPDATE_POLICY_DAILY );
-
-                        releases.setUpdatePolicy( ArtifactRepositoryPolicy.CHECKSUM_POLICY_WARN );
+                        throw new MavenEmbedderException( "Cannot create remote repository " + r.getId(), e );
                     }
-
-                    ArtifactRepositoryPolicy snapshots = new ArtifactRepositoryPolicy();
-
-                    if ( r.getSnapshots() != null )
-                    {
-                        snapshots.setChecksumPolicy( r.getSnapshots().getChecksumPolicy() );
-
-                        snapshots.setUpdatePolicy( r.getSnapshots().getUpdatePolicy() );
-                    }
-                    else
-                    {
-                        snapshots.setChecksumPolicy( ArtifactRepositoryPolicy.UPDATE_POLICY_DAILY );
-
-                        snapshots.setUpdatePolicy( ArtifactRepositoryPolicy.CHECKSUM_POLICY_WARN );
-                    }
-
-                    ArtifactRepository ar = mavenTools.createRepository( r.getId(), r.getUrl(), snapshots, releases );
 
                     request.addRemoteRepository( ar );
                 }
@@ -322,7 +312,8 @@ public class DefaultMavenExecutionRequestPopulator
         }
     }
 
-    private void localRepository( MavenExecutionRequest request, Configuration configuration )
+    private void localRepository( MavenExecutionRequest request,
+                                  Configuration configuration )
         throws MavenEmbedderException
     {
         // ------------------------------------------------------------------------
@@ -401,19 +392,21 @@ public class DefaultMavenExecutionRequestPopulator
 
         if ( request.isOffline() )
         {
-            mavenTools.setOnline( false );
+            wagonManager.setOnline( false );
         }
         else if ( ( request.getSettings() != null ) && request.getSettings().isOffline() )
         {
-            mavenTools.setOnline( false );
+            wagonManager.setOnline( false );
         }
         else
         {
-            mavenTools.setInteractive( request.isInteractiveMode() );
+            wagonManager.findAndRegisterWagons( container );
 
-            mavenTools.setDownloadMonitor( request.getTransferListener() );
+            wagonManager.setInteractive( request.isInteractiveMode() );
 
-            mavenTools.setOnline( true );
+            wagonManager.setDownloadMonitor( request.getTransferListener() );
+
+            wagonManager.setOnline( true );
         }
 
         try
@@ -429,32 +422,95 @@ public class DefaultMavenExecutionRequestPopulator
     private void resolveParameters( Settings settings )
         throws ComponentLookupException, ComponentLifecycleException, SettingsConfigurationException
     {
-        Proxy proxy = settings.getActiveProxy();
+        WagonManager wagonManager = container.lookup( WagonManager.class );
 
-        if ( proxy != null )
+        try
         {
-            if ( proxy.getHost() == null )
+            Proxy proxy = settings.getActiveProxy();
+
+            if ( proxy != null )
             {
-                throw new SettingsConfigurationException( "Proxy in settings.xml has no host" );
+                if ( proxy.getHost() == null )
+                {
+                    throw new SettingsConfigurationException( "Proxy in settings.xml has no host" );
+                }
+
+                wagonManager.addProxy( proxy.getProtocol(), proxy.getHost(), proxy.getPort(), proxy.getUsername(), proxy.getPassword(), proxy.getNonProxyHosts() );
             }
 
-            mavenTools.addProxy( proxy.getProtocol(), proxy.getHost(), proxy.getPort(), proxy.getUsername(), proxy.getPassword(), proxy.getNonProxyHosts() );
+            for ( Iterator i = settings.getServers().iterator(); i.hasNext(); )
+            {
+                Server server = (Server) i.next();
+                
+                String pass = securityDispatcher.decrypt( server.getPassword() );
+                
+                String phrase = securityDispatcher.decrypt( server.getPassphrase() );
+
+                wagonManager.addAuthenticationInfo( server.getId(), server.getUsername(), pass, server.getPrivateKey(), phrase );
+
+                wagonManager.addPermissionInfo( server.getId(), server.getFilePermissions(), server.getDirectoryPermissions() );
+
+                if ( server.getConfiguration() != null )
+                {
+                    wagonManager.addConfiguration( server.getId(), (Xpp3Dom) server.getConfiguration() );
+                }
+            }
+
+            RepositoryPermissions defaultPermissions = new RepositoryPermissions();
+            
+            defaultPermissions.setDirectoryMode( "775" );
+
+            defaultPermissions.setFileMode( "664" );
+
+            wagonManager.setDefaultRepositoryPermissions( defaultPermissions );
+
+            for ( Iterator i = settings.getMirrors().iterator(); i.hasNext(); )
+            {
+                Mirror mirror = (Mirror) i.next();
+
+                wagonManager.addMirror( mirror.getId(), mirror.getMirrorOf(), mirror.getUrl() );
+            }
         }
-
-        for ( Iterator i = settings.getServers().iterator(); i.hasNext(); )
+        catch ( SecDispatcherException e )
         {
-            Server server = (Server) i.next();
-
-            mavenTools.addAuthenticationInfo( server.getId(), server.getUsername(), server.getPassword(), server.getPrivateKey(), server.getPassphrase() );
-
-            mavenTools.addPermissionInfo( server.getId(), server.getFilePermissions(), server.getDirectoryPermissions() );
+            throw new SettingsConfigurationException( e.getMessage() );
         }
-
-        for ( Iterator i = settings.getMirrors().iterator(); i.hasNext(); )
+        finally
         {
-            Mirror mirror = (Mirror) i.next();
+            container.release( wagonManager );
+        }
+    }
 
-            mavenTools.addMirror( mirror.getId(), mirror.getMirrorOf(), mirror.getUrl() );
+    /**
+     * decrypt settings passwords and passphrases
+     * 
+     * @param settings settings to process
+     * @throws IOException 
+     */
+    @SuppressWarnings("unchecked")
+    private void decrypt( Settings settings )
+    throws IOException
+    {
+        List<Server> servers = settings.getServers();
+        
+        if ( servers != null && !servers.isEmpty() )
+        {
+            try
+            {
+                for ( Server server : servers )
+                {
+                    if ( server.getPassword() != null )
+                    {
+                        server.setPassword( securityDispatcher.decrypt( server.getPassword() ) );
+                    }
+                }
+            }
+            catch ( Exception e )
+            {
+                // 2009-02-12 Oleg: get do this because 2 levels up Exception is
+                // caught, not exception type does not matter
+                throw new IOException( e.getMessage() );
+            }
         }
     }
 
@@ -497,10 +553,13 @@ public class DefaultMavenExecutionRequestPopulator
     // Eventing
     // ------------------------------------------------------------------------
 
-    private void eventing( MavenExecutionRequest request, Configuration configuration )
+    private void eventing( MavenExecutionRequest request,
+                           Configuration configuration )
     {
         // ------------------------------------------------------------------------
         // Event Monitor/Logging
+        //
+        //
         // ------------------------------------------------------------------------
 
         if ( ( request.getEventMonitors() == null ) || request.getEventMonitors().isEmpty() )

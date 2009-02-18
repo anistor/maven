@@ -113,6 +113,9 @@ public class DefaultWagonManager
     private Map wagons;
 
     @Requirement
+    private CredentialsDataSource credentialsDataSource;
+
+    @Requirement
     private UpdateCheckManager updateCheckManager;
 
     private String httpUserAgent = "Apache-Maven/3.0-alpha-1";
