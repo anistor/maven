@@ -146,6 +146,7 @@ public class DefaultWagonManager
         {
             throw new UnsupportedProtocolException( "Unspecified protocol" );
         }
+        
 
         String hint = protocol.toLowerCase( java.util.Locale.ENGLISH );
         Wagon wagon = (Wagon) wagons.get( hint );

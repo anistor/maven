@@ -1,4 +1,4 @@
-package org.apache.maven.project.builder.impl;
+package org.apache.maven.project;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -19,36 +19,27 @@ package org.apache.maven.project.builder.impl;
  * under the License.
  */
 
-import java.io.File;
-import java.io.IOException;
-import java.io.Reader;
-import java.io.StringReader;
+import java.io.*;
 import java.util.*;
 
 import org.apache.maven.MavenTools;
-import org.apache.maven.profiles.activation.ProfileActivationContext;
 import org.apache.maven.mercury.PomProcessor;
 import org.apache.maven.mercury.PomProcessorException;
 import org.apache.maven.mercury.MavenDomainModel;
 import org.apache.maven.mercury.MavenDomainModelFactory;
 import org.apache.maven.mercury.builder.api.MetadataReader;
 import org.apache.maven.mercury.builder.api.MetadataReaderException;
-import org.apache.maven.mercury.builder.api.DependencyProcessorException;
 import org.apache.maven.mercury.artifact.ArtifactBasicMetadata;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.InvalidRepositoryException;
 import org.apache.maven.artifact.factory.ArtifactFactory;
 import org.apache.maven.model.Model;
-import org.apache.maven.model.Parent;
-import org.apache.maven.model.Plugin;
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
-import org.apache.maven.project.MavenProject;
-import org.apache.maven.project.ProjectBuilderConfiguration;
-import org.apache.maven.project.MavenProjectBuilder;
+import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
+import org.apache.maven.project.*;
 import org.apache.maven.project.builder.*;
 import org.apache.maven.project.builder.ProjectUri;
 import org.apache.maven.project.builder.profile.ProfileContext;
-import org.apache.maven.project.builder.profile.ProfileUri;
 import org.apache.maven.shared.model.*;
 import org.apache.maven.shared.model.impl.DefaultModelDataSource;
 import org.codehaus.plexus.component.annotations.Component;
@@ -57,20 +48,15 @@ import org.codehaus.plexus.logging.LogEnabled;
 import org.codehaus.plexus.logging.Logger;
 import org.codehaus.plexus.util.IOUtil;
 import org.codehaus.plexus.util.ReaderFactory;
-import org.codehaus.plexus.util.xml.Xpp3DomBuilder;
-import org.codehaus.plexus.util.xml.Xpp3Dom;
+import org.codehaus.plexus.util.WriterFactory;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
-import org.codehaus.plexus.configuration.PlexusConfiguration;
-import org.codehaus.plexus.configuration.xml.XmlPlexusConfiguration;
-import org.apache.maven.shared.model.ModelMarshaller;
-import org.apache.commons.jxpath.JXPathContext;
 
 /**
  * Default implementation of the project builder.
  */
 @Component(role = ProjectBuilder.class)
 public class DefaultProjectBuilder
-    implements ProjectBuilder, Mixer, PomProcessor, LogEnabled
+    implements ProjectBuilder, PomProcessor, LogEnabled
 {
     @Requirement
     private ArtifactFactory artifactFactory;
@@ -78,7 +64,7 @@ public class DefaultProjectBuilder
     @Requirement
     private MavenTools mavenTools;
 
-    @Requirement(role = ModelEventListener.class)
+    @Requirement
     List<ModelEventListener> listeners;
 
     private Logger logger;
@@ -166,13 +152,13 @@ public class DefaultProjectBuilder
                                              PomArtifactResolver resolver )
         throws IOException    
     {
-        return buildModel( pom, null, interpolatorProperties, null, resolver );
+        return buildModel( pom, null, interpolatorProperties, null, null, resolver );
     }    
     
-    private PomClassicDomainModel buildModel( File pom,
+    private PomClassicDomainModel buildModel(File pom,
                                              List<Model> mixins,
                                              Collection<InterpolatorProperty> interpolatorProperties,
-                                             Collection<String> activeProfileIds,
+                                             Collection<String> activeProfileIds, Collection<String> inactiveProfileIds,
                                              PomArtifactResolver resolver ) 
         throws IOException    
     {
@@ -201,6 +187,10 @@ public class DefaultProjectBuilder
         {
             activeProfileIds = new ArrayList<String>();
         }
+        if ( inactiveProfileIds == null )
+        {
+            inactiveProfileIds = new ArrayList<String>();
+        }
 
         List<InterpolatorProperty> properties;
         if ( interpolatorProperties == null )
@@ -219,7 +209,7 @@ public class DefaultProjectBuilder
 
         //Process Profile on most specialized child model
         ProfileContext profileContext = new ProfileContext(new DefaultModelDataSource(domainModel.getModelProperties(),
-                PomTransformer.MODEL_CONTAINER_FACTORIES), activeProfileIds, properties);
+                PomTransformer.MODEL_CONTAINER_FACTORIES), activeProfileIds, inactiveProfileIds, properties);
 
         Collection<ModelContainer> profileContainers = profileContext.getActiveProfiles();
 
@@ -241,16 +231,20 @@ public class DefaultProjectBuilder
 
         File parentFile = null;
         int lineageCount = 0;
-        if ( domainModel.getModel().getParent() != null )
+        if ( domainModel.getParentId() != null )
         {
             List<DomainModel> mavenParents;
-            if ( isParentLocal( domainModel.getModel().getParent(), pom.getParentFile() ) )
+            if ( isParentLocal( domainModel.getRelativePathOfParent(), pom.getParentFile() ) )
             {
-                mavenParents = getDomainModelParentsFromLocalPath( domainModel, resolver, pom.getParentFile(), properties, activeProfileIds );
+                mavenParents =
+                    getDomainModelParentsFromLocalPath( domainModel, resolver, pom.getParentFile(), properties,
+                                                        activeProfileIds, inactiveProfileIds );
             }
             else
             {
-                mavenParents = getDomainModelParentsFromRepository( domainModel, resolver, properties, activeProfileIds );
+                mavenParents =
+                    getDomainModelParentsFromRepository( domainModel, resolver, properties, activeProfileIds,
+                                                         inactiveProfileIds );
             }
             
             if ( mavenParents.size() > 0 )
@@ -266,10 +260,10 @@ public class DefaultProjectBuilder
 
         for ( Model model : mixins )
         {
-            domainModels.add( new PomClassicDomainModel( model ) );
+            domainModels.add( convertToDomainModel( model ) );
         }
         
-        PomClassicTransformer transformer = new PomClassicTransformer( new PomClassicDomainModelFactory() );
+        PomTransformer transformer = new PomTransformer( new PomClassicDomainModelFactory() );
         
         ModelTransformerContext ctx = new ModelTransformerContext(PomTransformer.MODEL_CONTAINER_INFOS );
         
@@ -285,6 +279,30 @@ public class DefaultProjectBuilder
         
         return transformedDomainModel;
     }
+
+    private PomClassicDomainModel convertToDomainModel(Model model) throws IOException
+    {
+                if ( model == null )
+        {
+            throw new IllegalArgumentException( "model: null" );
+        }
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        Writer out = null;
+        MavenXpp3Writer writer = new MavenXpp3Writer();
+        try
+        {
+            out = WriterFactory.newXmlWriter( baos );
+            writer.write( out, model );
+        }
+        finally
+        {
+            if ( out != null )
+            {
+                out.close();
+            }
+        }
+        return new PomClassicDomainModel(new ByteArrayInputStream(baos.toByteArray()));
+    }
     
     public MavenProject buildFromLocalPath( File pom, 
                                             List<Model> mixins,
@@ -295,21 +313,25 @@ public class DefaultProjectBuilder
         throws IOException
     {
 
-       List<String> profileIds = (projectBuilderConfiguration != null &&
+       List<String> activeProfileIds = (projectBuilderConfiguration != null &&
                 projectBuilderConfiguration.getGlobalProfileManager() != null &&
                 projectBuilderConfiguration.getGlobalProfileManager().getProfileActivationContext() != null) ?
                projectBuilderConfiguration.getGlobalProfileManager().getProfileActivationContext().getExplicitlyActiveProfileIds() : new ArrayList<String>();
 
+       List<String> inactiveProfileIds =
+           ( projectBuilderConfiguration != null && projectBuilderConfiguration.getGlobalProfileManager() != null && 
+                           projectBuilderConfiguration.getGlobalProfileManager().getProfileActivationContext() != null ) ? 
+                           projectBuilderConfiguration.getGlobalProfileManager().getProfileActivationContext().getExplicitlyInactiveProfileIds() : new ArrayList<String>();
 
         PomClassicDomainModel domainModel = buildModel( pom, 
                                                         mixins, 
                                                         interpolatorProperties,
-                                                        profileIds,
+                                                        activeProfileIds, inactiveProfileIds,
                                                         resolver ); 
         
         try
         {
-            MavenProject mavenProject = new MavenProject( domainModel.getModel(), 
+            MavenProject mavenProject = new MavenProject( convertFromInputStreamToModel(domainModel.getInputStream()),
                                                           artifactFactory, 
                                                           mavenTools, 
                                                           mavenProjectBuilder, 
@@ -325,18 +347,32 @@ public class DefaultProjectBuilder
         }
     }
 
+    private static Model convertFromInputStreamToModel(InputStream inputStream) throws IOException
+    {
+
+        try
+        {
+            return new MavenXpp3Reader().read( ReaderFactory.newXmlReader( inputStream ) );
+        }
+        catch ( XmlPullParserException e )
+        {
+            throw new IOException( e.getMessage() );
+        }
+
+    }
+
     /**
      * Returns true if the relative path of the specified parent references a pom, otherwise returns false.
      *
-     * @param parent           the parent model info
+     * @param relativePath         the parent model info
      * @param projectDirectory the project directory of the child pom
      * @return true if the relative path of the specified parent references a pom, otherwise returns fals
      */
-    private boolean isParentLocal( Parent parent, File projectDirectory )
+    private boolean isParentLocal( String relativePath, File projectDirectory )
     {
         try
         {
-            File f = new File( projectDirectory, parent.getRelativePath() ).getCanonicalFile();
+            File f = new File( projectDirectory, relativePath ).getCanonicalFile();
             
             if ( f.isDirectory() )
             {
@@ -354,28 +390,30 @@ public class DefaultProjectBuilder
     private List<DomainModel> getDomainModelParentsFromRepository( PomClassicDomainModel domainModel,
                                                                    PomArtifactResolver artifactResolver,
                                                                    List<InterpolatorProperty> properties,
-                                                                   Collection<String> activeProfileIds)
+                                                                   Collection<String> activeProfileIds,
+                                                                   Collection<String> inactiveProfileIds )
         throws IOException
     {
         List<DomainModel> domainModels = new ArrayList<DomainModel>();
 
-        Parent parent = domainModel.getModel().getParent();
+        String parentId = domainModel.getParentId();
 
-        if ( parent == null )
+        if ( parentId == null )
         {
             return domainModels;
         }
 
-        Artifact artifactParent = artifactFactory.createParentArtifact( parent.getGroupId(), parent.getArtifactId(), parent.getVersion() );
+        Artifact artifactParent = artifactFactory.createParentArtifact( domainModel.getParentGroupId(),
+                domainModel.getParentArtifactId(), domainModel.getParentVersion() );
         
         artifactResolver.resolve( artifactParent );
 
         PomClassicDomainModel parentDomainModel = new PomClassicDomainModel( artifactParent.getFile() );
 
-        if ( !parentDomainModel.matchesParent( domainModel.getModel().getParent() ) )
+        if ( !parentDomainModel.matchesParentOf( domainModel ) )
         {
             logger.debug( "Parent pom ids do not match: Parent File = " + artifactParent.getFile().getAbsolutePath() +
-                ": Child ID = " + domainModel.getModel().getId() );
+                ": Child ID = " + domainModel.getId() );
             return domainModels;
         }
 
@@ -383,7 +421,7 @@ public class DefaultProjectBuilder
 
         //Process Profiles
         ProfileContext profileContext = new ProfileContext(new DefaultModelDataSource(parentDomainModel.getModelProperties(),
-                PomTransformer.MODEL_CONTAINER_FACTORIES), activeProfileIds, properties);
+                PomTransformer.MODEL_CONTAINER_FACTORIES), activeProfileIds, inactiveProfileIds, properties);
         Collection<ModelContainer> profileContainers = profileContext.getActiveProfiles();
 
         for(ModelContainer mc : profileContainers)
@@ -403,7 +441,8 @@ public class DefaultProjectBuilder
             domainModels.add(new PomClassicDomainModel(transformed));
         }        
 
-        domainModels.addAll( getDomainModelParentsFromRepository( parentDomainModel, artifactResolver, properties, activeProfileIds ) );
+        domainModels.addAll( getDomainModelParentsFromRepository( parentDomainModel, artifactResolver, properties,
+                                                                  activeProfileIds, inactiveProfileIds ) );
         return domainModels;
     }
 
@@ -420,21 +459,22 @@ public class DefaultProjectBuilder
                                                                   PomArtifactResolver artifactResolver,
                                                                   File projectDirectory,
                                                                   List<InterpolatorProperty> properties,
-                                                                  Collection<String> activeProfileIds)
+                                                                  Collection<String> activeProfileIds,
+                                                                  Collection<String> inactiveProfileIds )
         throws IOException
     {
         List<DomainModel> domainModels = new ArrayList<DomainModel>();
 
-        Parent parent = domainModel.getModel().getParent();
+        String parentId = domainModel.getParentId();
 
-        if ( parent == null )
+        if ( parentId == null )
         {
             return domainModels;
         }
 
-        Model model = domainModel.getModel();
+       // Model model = domainModel.getModel();
 
-        File parentFile = new File( projectDirectory, model.getParent().getRelativePath() ).getCanonicalFile();
+        File parentFile = new File( projectDirectory, domainModel.getRelativePathOfParent() ).getCanonicalFile();
         if ( parentFile.isDirectory() )
         {
             parentFile = new File( parentFile.getAbsolutePath(), "pom.xml" );
@@ -450,7 +490,7 @@ public class DefaultProjectBuilder
 
         //Process Profiles
         ProfileContext profileContext = new ProfileContext(new DefaultModelDataSource(parentDomainModel.getModelProperties(),
-                PomTransformer.MODEL_CONTAINER_FACTORIES), activeProfileIds, properties);
+                PomTransformer.MODEL_CONTAINER_FACTORIES), activeProfileIds, inactiveProfileIds, properties);
         Collection<ModelContainer> profileContainers = profileContext.getActiveProfiles();
 
         for(ModelContainer mc : profileContainers)
@@ -469,18 +509,20 @@ public class DefaultProjectBuilder
             domainModels.add(new PomClassicDomainModel(transformed));
         }
 
-        if ( !parentDomainModel.matchesParent( domainModel.getModel().getParent() ) )
+        if ( !parentDomainModel.matchesParentOf( domainModel ) )
         {
-            logger.debug( "Parent pom ids do not match: Parent File = " + parentFile.getAbsolutePath() + ", Parent ID = "
+            logger.info( "Parent pom ids do not match: Parent File = " + parentFile.getAbsolutePath() + ", Parent ID = "
                     + parentDomainModel.getId() + ", Child ID = " + domainModel.getId() + ", Expected Parent ID = "
-                    + domainModel.getModel().getParent().getId() );
+                    + domainModel.getParentId() );
             
-            List<DomainModel> parentDomainModels = getDomainModelParentsFromRepository( domainModel, artifactResolver, properties, activeProfileIds );
+            List<DomainModel> parentDomainModels =
+                getDomainModelParentsFromRepository( domainModel, artifactResolver, properties, activeProfileIds,
+                                                     inactiveProfileIds );
             
             if(parentDomainModels.size() == 0)
             {
                 throw new IOException("Unable to find parent pom on local path or repo: "
-                        + domainModel.getModel().getParent().getId());
+                        + domainModel.getParentId());
             }
             
             domainModels.addAll( parentDomainModels );
@@ -488,16 +530,19 @@ public class DefaultProjectBuilder
         }
 
         domainModels.add( parentDomainModel );
-        if ( parentDomainModel.getModel().getParent() != null )
+        if ( domainModel.getParentId() != null )
         {
-            if ( isParentLocal( parentDomainModel.getModel().getParent(), parentFile.getParentFile() ) )
+            if ( isParentLocal(parentDomainModel.getRelativePathOfParent(), parentFile.getParentFile() ) )
             {
                 domainModels.addAll( getDomainModelParentsFromLocalPath( parentDomainModel, artifactResolver,
-                                                                         parentFile.getParentFile(), properties, activeProfileIds ) );
+                                                                         parentFile.getParentFile(), properties,
+                                                                         activeProfileIds, inactiveProfileIds ) );
             }
             else
             {
-                domainModels.addAll( getDomainModelParentsFromRepository( parentDomainModel, artifactResolver, properties, activeProfileIds ) );
+                domainModels.addAll( getDomainModelParentsFromRepository( parentDomainModel, artifactResolver,
+                                                                          properties, activeProfileIds,
+                                                                          inactiveProfileIds ) );
             }
         }
 
@@ -542,124 +587,6 @@ public class DefaultProjectBuilder
         }
         
         return superModel;        
-    }
-
-    public Model mixPlugin(Plugin plugin, Model model) throws IOException
-    {
-        //TODO - interpolation
-        List<DomainModel> domainModels = new ArrayList<DomainModel>();       
-        domainModels.add( new PomClassicDomainModel(model) );
-        domainModels.add( new PluginMixin(plugin) );
-
-        PomClassicTransformer transformer = new PomClassicTransformer( new PomClassicDomainModelFactory() );
-
-        ModelTransformerContext ctx = new ModelTransformerContext(PomTransformer.MODEL_CONTAINER_INFOS );
-
-        PomClassicDomainModel transformedDomainModel = ( (PomClassicDomainModel) ctx.transform( domainModels,
-                                                                                                transformer,
-                                                                                                transformer,
-                                                                                                Collections.EMPTY_LIST,
-                                                                                                null,
-                                                                                                listeners ) );
-        return transformedDomainModel.getModel();
-        
-    }
-
-    public PlexusConfiguration mixPluginAndReturnConfig(Plugin plugin, Xpp3Dom dom, Model model, List<InterpolatorProperty> props)
-            throws IOException,  XmlPullParserException
-    {
-        List<ModelProperty> mps = mixPluginAndReturnConfigAsProperties(plugin, dom, model, null);
-
-        return !mps.isEmpty() ?
-            new XmlPlexusConfiguration(Xpp3DomBuilder.build(
-                    new StringReader(ModelMarshaller.unmarshalModelPropertiesToXml(mps, ProjectUri.Build.Plugins.Plugin.xUri))) ) : null;
-    }
-   
-   public Object mixPluginAndReturnConfigAsDom(Plugin plugin, Model model) throws IOException, XmlPullParserException
-   {
-       List<ModelProperty> mps = mixPluginAndReturnConfigAsProperties(plugin, null, model, null);
-       return  !mps.isEmpty() ? Xpp3DomBuilder.build(
-               new StringReader(ModelMarshaller.unmarshalModelPropertiesToXml(mps, ProjectUri.Build.Plugins.Plugin.xUri) ) ) : null;
-   }
-
-   public Object mixPluginAndReturnConfigAsDom(Plugin plugin, Model model, String xpathExpression) throws IOException,
-           XmlPullParserException
-   {
-       Object dom = mixPluginAndReturnConfigAsDom(plugin, model);
-       if(dom == null)
-       {
-           return null;
-       }
-       return JXPathContext.newContext( dom ).getValue(xpathExpression);
-   }
-
-   private List<ModelProperty> mixPluginAndReturnConfigAsProperties(Plugin plugin, Xpp3Dom dom, Model model,
-                                                                    List<InterpolatorProperty> props) throws IOException
-   {
-       List<DomainModel> domainModels = new ArrayList<DomainModel>();
-       domainModels.add(new PomClassicDomainModel(model));
-       domainModels.add(new PluginMixin(plugin));
-
-       if (dom != null)
-       {
-           Plugin p = new Plugin();
-           p.setGroupId(plugin.getGroupId());
-           p.setArtifactId(plugin.getArtifactId());
-           p.setVersion(p.getVersion());
-           p.setConfiguration(dom);
-           domainModels.add(new PluginMixin(p));
-       }
-
-        PomClassicTransformer transformer = new PomClassicTransformer( new PomClassicDomainModelFactory() );
-
-        ModelTransformerContext ctx = new ModelTransformerContext(PomTransformer.MODEL_CONTAINER_INFOS );
-
-        PomClassicDomainModel transformedDomainModel = ( (PomClassicDomainModel) ctx.transform( domainModels,
-                                                                                                transformer,
-                                                                                                transformer,
-                                                                                                Collections.EMPTY_LIST,
-                                                                                                props,
-                                                                                                listeners ) );
-        ModelDataSource source =
-                new DefaultModelDataSource(transformedDomainModel.getModelProperties(), PomTransformer.MODEL_CONTAINER_FACTORIES);
-        for(ModelContainer pluginContainer : source.queryFor(ProjectUri.Build.Plugins.Plugin.xUri))
-        {
-            if(matchesIdOfPlugin(pluginContainer, plugin))
-            {
-                List<ModelProperty> config = new ArrayList<ModelProperty>();
-                for(ModelProperty mp : pluginContainer.getProperties())
-                {
-                    if(mp.getUri().startsWith(ProjectUri.Build.Plugins.Plugin.configuration))
-                    {
-                        config.add(mp);
-                    }
-                }
-                return config;
-
-            }
-        }
-        return new ArrayList<ModelProperty>();
-   }
-
-    private static boolean matchesIdOfPlugin(ModelContainer mc, Plugin plugin)
-    {   
-        List<ModelProperty> props = mc.getProperties();
-
-        return //getValueByUri(ProjectUri.Build.Plugins.Plugin.groupId, props).equals(plugin.getGroupId())
-                getValueByUri(ProjectUri.Build.Plugins.Plugin.artifactId, props).equals(plugin.getArtifactId())
-                && getValueByUri(ProjectUri.Build.Plugins.Plugin.version, props).equals(plugin.getVersion());
-    }
-
-    private static String getValueByUri(String uri, List<ModelProperty> modelProperties)
-    {
-        for(ModelProperty mp : modelProperties)
-        {
-            if(mp.getUri().equals(uri))
-            {
-                return mp.getResolvedValue();
-            }
-        }
-        return "";
     }
 
     private static List<DomainModel> getParentsOfDomainModel( MavenDomainModel domainModel, MetadataReader mdReader )

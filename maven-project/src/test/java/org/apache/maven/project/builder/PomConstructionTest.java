@@ -29,15 +29,12 @@ import org.apache.maven.profiles.DefaultProfileManager;
 import org.apache.maven.profiles.activation.DefaultProfileActivationContext;
 import org.apache.maven.profiles.activation.ProfileActivationContext;
 import org.apache.maven.model.Model;
-import org.apache.maven.model.Plugin;
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.repository.DefaultArtifactRepository;
 import org.apache.maven.artifact.repository.layout.DefaultRepositoryLayout;
 import org.apache.maven.project.harness.PomTestWrapper;
-import org.apache.maven.project.MavenProjectBuilder;
-import org.apache.maven.project.ProjectBuilderConfiguration;
-import org.apache.maven.project.DefaultProjectBuilderConfiguration;
+import org.apache.maven.project.*;
 import org.codehaus.plexus.PlexusTestCase;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
@@ -55,8 +52,6 @@ public class PomConstructionTest
 
     private MavenProjectBuilder mavenProjectBuilder;
 
-    private Mixer mixer;
-
     private MavenTools mavenTools;
 
     private PomArtifactResolver pomArtifactResolver;
@@ -72,7 +67,6 @@ public class PomConstructionTest
         testMixinDirectory = new File( getBasedir(), BASE_MIXIN_DIR );
         mavenProjectBuilder = lookup( MavenProjectBuilder.class );
         projectBuilder = lookup( ProjectBuilder.class );
-        mixer = (Mixer) projectBuilder;
         mavenTools = lookup( MavenTools.class );
         pomArtifactResolver = new PomArtifactResolver()
         {
@@ -84,6 +78,17 @@ public class PomConstructionTest
             }
 
         };
+    }
+
+    /**
+     * Will throw exception if doesn't find parent(s) in build
+     *
+     * @throws Exception
+     */
+    public void testParentInheritance()
+        throws Exception
+    {
+        buildPom( "parent-inheritance/sub" );
     }
 
     /*MNG-3995*/
@@ -102,17 +107,6 @@ public class PomConstructionTest
         assertEquals( "my.property", pom.getValue( "build/plugins[1]/configuration[1]/systemProperties[1]/property[1]/name" ) );
     }
 
-    public void testPluginMergeSimple()
-        throws Exception
-    {
-        Model model = buildPom( "plugin-merge-simple" ).getDomainModel().getModel();
-        Model plugin = buildMixin("plugins/simple");
-
-        model = mixer.mixPlugin((Plugin) plugin.getBuild().getPlugins().get(0), model);
-
-        PomTestWrapper pom = new PomTestWrapper( model );
-        assertEquals( "FAILED", pom.getValue( "build/plugins[1]/configuration[1]/propertiesFile" ) );
-    }
 
     // Some better conventions for the test poms needs to be created and each of these tests
     // that represent a verification of a specification item needs to be a couple lines at most.
@@ -129,7 +123,7 @@ public class PomConstructionTest
         PomClassicDomainModel model = projectBuilder.buildModel( pom, null, resolver );
         // This should be 2
         //assertEquals( 2, model.getLineageCount() );
-        PomTestWrapper tester = new PomTestWrapper( model );
+        PomTestWrapper tester = new PomTestWrapper( (PomClassicDomainModel) model );
         assertModelEquals( tester, "child-descriptor", "build/plugins[1]/executions[1]/goals[1]" );
     }
 
@@ -886,7 +880,7 @@ public class PomConstructionTest
         {
             pomFile = new File( pomFile, "pom.xml" );
         }
-        return new PomTestWrapper( pomFile, projectBuilder.buildModel( pomFile, null, pomArtifactResolver ) );
+        return new PomTestWrapper( pomFile, (PomClassicDomainModel) projectBuilder.buildModel( pomFile, null, pomArtifactResolver ) );
     }
 
     private PomTestWrapper buildPomFromMavenProject( String pomPath, String profileId )
