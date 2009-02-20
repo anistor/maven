@@ -146,6 +146,7 @@ END SNIPPET: ant-bootstrap -->
           <arg value="false"/> <!-- package with version -->
           <arg value="true"/> <!-- use Java 5 -->
           <arg value="UTF-8"/> <!-- encoding -->
+          <arg value="false"/>
         </java>
       </sequential>
     </macrodef>
