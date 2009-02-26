@@ -985,6 +985,34 @@ public class DefaultMavenProjectBuilder
         // We don't need all the project methods that are added over those in the model, but we do need basedir
         Map context = new HashMap();
 
+        // --------------------------------------------------------------------------------
+        // MNG-3641: print a warning if one of the profiles to be activated explicitly
+        // was not activated
+
+        if ( config != null && config.getGlobalProfileManager() != null )
+        {
+            // get all activated profile ids
+            List activeProfileIds = new ArrayList();
+
+            for ( Iterator it = activeProfiles.iterator(); it.hasNext(); )
+            {
+                activeProfileIds.add( ( (Profile) it.next() ).getId() );
+            }
+
+            for ( Iterator it = config.getGlobalProfileManager().getExplicitlyActivatedIds().iterator(); it.hasNext(); )
+            {
+                String explicitProfileId = (String) it.next();
+
+                if ( !activeProfileIds.contains( explicitProfileId ) )
+                {
+                    getLogger().warn( "Profile with id: \'" + explicitProfileId + "\' has not been activated." );
+                }
+
+            }
+        }
+        
+        // --------------------------------------------------------------------------------
+        
         Build build = model.getBuild();
 
         if ( projectDir != null )
