@@ -32,6 +32,7 @@ import org.apache.maven.execution.ReactorManager;
 import org.apache.maven.execution.RuntimeInformation;
 import org.apache.maven.lifecycle.LifecycleExecutionException;
 import org.apache.maven.lifecycle.LifecycleExecutor;
+import org.apache.maven.model.Profile;
 import org.apache.maven.monitor.event.DefaultEventDispatcher;
 import org.apache.maven.monitor.event.EventDispatcher;
 import org.apache.maven.monitor.event.MavenEvents;
@@ -72,9 +73,11 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 import java.util.TimeZone;
 
 /**
@@ -318,6 +321,12 @@ public class DefaultMaven
             throw new BuildFailureException( e.getMessage(), e );
         }
 
+        // --------------------------------------------------------------------------------
+        // MNG-3641: print a warning if one of the profiles to be activated explicitly
+        // was not activated
+
+        validateActivatedProfiles( globalProfileManager, projects );
+
         if ( rm.hasMultipleProjects() )
         {
             getLogger().info( "Reactor build order: " );
@@ -336,6 +345,35 @@ public class DefaultMaven
         lifecycleExecutor.execute( session, rm, dispatcher );
 
         return rm;
+    }
+
+    private void validateActivatedProfiles( ProfileManager globalProfileManager, List projects )
+    {
+        if ( globalProfileManager != null )
+        {
+            // get all activated profile ids
+            Set activeProfileIds = new HashSet();
+
+            for ( Iterator i = projects.iterator(); i.hasNext(); )
+            {
+                MavenProject project = (MavenProject) i.next();
+                
+                for ( Iterator j = project.getActiveProfiles().iterator(); j.hasNext(); )
+                {
+                    activeProfileIds.add( ( (Profile) j.next() ).getId() );
+                }
+            }
+
+            for ( Iterator i = globalProfileManager.getExplicitlyActivatedIds().iterator(); i.hasNext(); )
+            {
+                String explicitProfileId = (String) i.next();
+
+                if ( !activeProfileIds.contains( explicitProfileId ) )
+                {
+                    getLogger().warn( "\n\tProfile with id: \'" + explicitProfileId + "\' has not been activated.\n" );
+                }
+            }
+        }
     }
 
     private MavenProject getSuperProject( MavenExecutionRequest request )
