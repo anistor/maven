@@ -63,6 +63,7 @@ import org.apache.maven.model.Resource;
 import org.apache.maven.model.Scm;
 import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
 import org.apache.maven.project.artifact.ActiveProjectArtifact;
+import org.apache.maven.project.artifact.ActiveProjectOutputArtifact;
 import org.apache.maven.project.artifact.InvalidDependencyVersionException;
 import org.apache.maven.project.artifact.MavenMetadataSource;
 import org.codehaus.plexus.logging.Logger;
@@ -1773,22 +1774,19 @@ public class MavenProject
             MavenProject ref = (MavenProject) getProjectReferences().get( refId );
             if ( ref != null )
             {
+                // first, try the main artifact
                 if ( ref.getArtifact() != null
                     && ref.getArtifact().getDependencyConflictId().equals( pluginArtifact.getDependencyConflictId() ) )
                 {
                     // if the project artifact doesn't exist, don't use it. We haven't built that far.
                     if ( ref.getArtifact().getFile() != null && ref.getArtifact().getFile().exists() )
                     {
-                        // FIXME: Why aren't we using project.getArtifact() for the second parameter here??
                         Artifact resultArtifact = new ActiveProjectArtifact( ref, pluginArtifact );
                         return resultArtifact;
                     }
-                    else
-                    {
-                        logMissingSiblingProjectArtifact( pluginArtifact );
-                    }
                 }
 
+                // next, check the attached artifacts
                 Artifact attached = findMatchingArtifact( ref.getAttachedArtifacts(), pluginArtifact );
                 if ( attached != null )
                 {
@@ -1798,10 +1796,18 @@ public class MavenProject
                         resultArtifact.setScope( pluginArtifact.getScope() );
                         return resultArtifact;
                     }
-                    else
-                    {
-                        logMissingSiblingProjectArtifact( pluginArtifact );
-                    }
+                }
+
+                // finally, try to satisfy from project main/test output directory
+                Artifact output = ActiveProjectOutputArtifact.newInstance( ref, pluginArtifact );
+                if ( output != null && output.getFile() != null )
+                {
+                    logMissingSiblingProjectArtifact( pluginArtifact, false );
+                    return output;
+                }
+                else
+                {
+                    logMissingSiblingProjectArtifact( pluginArtifact, true );
                 }
             }
         }
@@ -1873,19 +1879,30 @@ public class MavenProject
         return buffer.toString();
     }
 
-    private void logMissingSiblingProjectArtifact( Artifact artifact )
+    private void logMissingSiblingProjectArtifact( Artifact artifact, boolean repository )
     {
         if ( logger == null )
         {
             return;
         }
         
-        StringBuffer message = new StringBuffer();
-        message.append( "A dependency of the current project (or of one the plugins used in its build) was found in the reactor, " );
-        message.append( "\nbut had not been built at the time it was requested. It will be resolved from the repository instead." );
+        StringBuffer message = new StringBuffer( 1024 );
+        message.append( "A dependency of the current project (or of one the plugins used in its build)" );
+        message.append( "\nwas found in the reactor, but had not been built at the time it was requested." );
+        if ( repository )
+        {
+            message.append( "\nIt will be resolved from the repository instead. Hence, the build result can" );
+            message.append( "\nbe inaccurate due to the repository containing an outdated JAR." );
+        }
+        else
+        {
+            message.append( "\nIt will be resolved from the project output directory instead. Hence, the" );
+            message.append( "\nbuild result can be inaccurate due to differences from the final JAR." );
+        }
         message.append( "\n\nCurrent Project: " ).append( getName() );
         message.append( "\nRequested Dependency: " ).append( artifact.getId() );
-        message.append( "\n\nNOTE: You may need to run this build to the 'compile' lifecycle phase, or farther, in order to build the dependency artifact." );
+        message.append( "\n\nNOTE: You may need to run this build to the lifecycle phase 'compile' or even" );
+        message.append( "\n'package', in order to properly resolve the dependency artifact." );
         message.append( "\n" );
         
         logger.warn( message.toString() );
