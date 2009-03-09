@@ -65,6 +65,10 @@ public class ActiveProjectOutputArtifact
      */
     public static Artifact newInstance( MavenProject project, Artifact artifact )
     {
+        if ( artifact instanceof ActiveProjectOutputArtifact )
+        {
+            return artifact;
+        }
         if ( artifact.getArtifactHandler().isAddedToClasspath() )
         {
             return new ActiveProjectOutputArtifact( project, artifact );
@@ -89,6 +93,12 @@ public class ActiveProjectOutputArtifact
     /** {@inheritDoc} */
     public File getFile()
     {
+        File file = artifact.getFile();
+        if ( file != null && file.exists() )
+        {
+            return file;
+        }
+
         String path;
         if ( isTestArtifact( artifact ) )
         {
@@ -98,7 +108,7 @@ public class ActiveProjectOutputArtifact
         {
             path = project.getBuild().getOutputDirectory();
         }
-        File file = new File( path );
+        file = new File( path );
         return file.isDirectory() ? file : null;
     }
 
@@ -124,7 +134,7 @@ public class ActiveProjectOutputArtifact
     /** {@inheritDoc} */
     public void setFile( File destination )
     {
-        throw new UnsupportedOperationException();
+        artifact.setFile( destination );
     }
 
     /** {@inheritDoc} */
