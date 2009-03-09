@@ -58,6 +58,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.jar.JarFile;
@@ -121,12 +122,14 @@ public class DefaultExtensionManager
             Set rgArtifacts = resolutionGroup.getArtifacts();
             rgArtifacts = DefaultPluginManager.checkPlexusUtils( rgArtifacts, artifactFactory );
 
-            rgArtifacts.add( artifact );
+            Set dependencies = new LinkedHashSet();
+            dependencies.add( artifact );
+            dependencies.addAll( rgArtifacts );
 
             // Make sure that we do not influence the dependenecy resolution of extensions with the project's
             // dependencyManagement
 
-            ArtifactResolutionResult result = artifactResolver.resolveTransitively( rgArtifacts, project.getArtifact(),
+            ArtifactResolutionResult result = artifactResolver.resolveTransitively( dependencies, project.getArtifact(),
                                                                                     Collections.EMPTY_MAP,
                                                                                     //project.getManagedVersionMap(),
                                                                                     localRepository,
@@ -197,6 +200,7 @@ public class DefaultExtensionManager
 
                 if ( getLogger().isDebugEnabled() )
                 {
+                    getLogger().debug( "Extension container contents:" );
                     extensionContainer.getContainerRealm().display();
                 }
             }
@@ -264,12 +268,18 @@ public class DefaultExtensionManager
             try
             {
                 Map wagons = extensionContainer.lookupMap( Wagon.ROLE );
+                getLogger().debug( "Wagons to register: " + wagons.keySet() );
                 wagonManager.registerWagons( wagons.keySet(), extensionContainer );
             }
             catch ( ComponentLookupException e )
             {
                 // no wagons found in the extension
+                getLogger().debug( "No wagons found in the extensions or other internal error: " + e.getMessage(), e );
             }
+        }
+        else
+        {
+            getLogger().debug( "Wagons could not be registered as the extension container was never created" );
         }
     }
 

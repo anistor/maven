@@ -209,6 +209,11 @@ under the License.
     <component>
       <role>org.apache.maven.ConfigurationInterpolator</role>
       <implementation>org.apache.maven.ReflectionConfigurationInterpolator</implementation>
+      <requirements>
+        <requirement>
+          <role>org.apache.maven.project.path.PathTranslator</role>
+        </requirement>
+      </requirements>
     </component>
     
     <!--
@@ -260,6 +265,7 @@ under the License.
               <phase>test-compile</phase>
               <phase>process-test-classes</phase>
               <phase>test</phase>
+              <phase>prepare-package</phase>
               <phase>package</phase>
               <phase>pre-integration-test</phase>
               <phase>integration-test</phase>
@@ -297,7 +303,7 @@ under the License.
         </lifecycles>
         <!-- START SNIPPET: default-reports -->
         <defaultReports>
-          <report>org.apache.maven.plugins:maven-project-info-reports-plugin</report>
+          <report>org.apache.maven.plugins:maven-project-info-reports-plugin:2.1</report>
           <!-- TODO: currently in mojo - should they be defaults any more?
           <report>org.apache.maven.plugins:maven-checkstyle-plugin</report>
           <report>org.apache.maven.plugins:maven-javadoc-plugin</report>
@@ -597,18 +603,21 @@ under the License.
         </requirement>
       </requirements>
     </component>
-    
-    <!--  TODO: Re-enable this once maven-shade-plugin 1.2 is release and can be 
-          used to merge this configuration with that of the wagon artifacts.
-          We also need a way not to filter in the os.name, etc during the build, just the project version
+
     <component>
-      <role>org.apache.maven.artifact.manager.WagonManager</role>
-      <role-hint>default</role-hint>
-      <implementation>org.apache.maven.artifact.manager.DefaultWagonManager</implementation>
+      <role>org.sonatype.plexus.components.sec.dispatcher.SecDispatcher</role>
+      <role-hint>maven</role-hint>
+      <implementation>org.sonatype.plexus.components.sec.dispatcher.DefaultSecDispatcher</implementation>
+      <description>Maven Security dispatcher</description>
+      <requirements>
+        <requirement>
+          <role>org.sonatype.plexus.components.cipher.PlexusCipher</role>
+          <field-name>_cipher</field-name>
+        </requirement>
+      </requirements>
       <configuration>
-        <httpUserAgent>Apache-Maven/${project.version} maven-artifact/${project.version} (Java @java.version@; @os.name@ @os.version@)</httpUserAgent>
+        <_configuration-file>~/.m2/settings-security.xml</_configuration-file>
       </configuration>
-    </component>
-     -->
+    </component>    
   </components>
 </component-set>

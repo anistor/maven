@@ -19,11 +19,29 @@ package org.apache.maven.project;
  * under the License.
  */
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.Reader;
+import java.io.StringReader;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.ArtifactStatus;
 import org.apache.maven.artifact.ArtifactUtils;
 import org.apache.maven.artifact.InvalidRepositoryException;
-import org.apache.maven.artifact.factory.ArtifactFactory;
 import org.apache.maven.artifact.manager.WagonManager;
 import org.apache.maven.artifact.metadata.ArtifactMetadataSource;
 import org.apache.maven.artifact.repository.ArtifactRepository;
@@ -60,6 +78,7 @@ import org.apache.maven.profiles.ProfilesConversionUtils;
 import org.apache.maven.profiles.ProfilesRoot;
 import org.apache.maven.profiles.activation.ProfileActivationException;
 import org.apache.maven.project.artifact.InvalidDependencyVersionException;
+import org.apache.maven.project.artifact.ProjectArtifactFactory;
 import org.apache.maven.project.inheritance.ModelInheritanceAssembler;
 import org.apache.maven.project.injection.ModelDefaultsInjector;
 import org.apache.maven.project.injection.ProfileInjector;
@@ -81,26 +100,6 @@ import org.codehaus.plexus.util.IOUtil;
 import org.codehaus.plexus.util.ReaderFactory;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
-
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.Reader;
-import java.io.StringReader;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
-import java.util.TreeMap;
 
 /*:apt
 
@@ -152,7 +151,7 @@ public class DefaultMavenProjectBuilder
 
     protected ArtifactMetadataSource artifactMetadataSource;
 
-    private ArtifactFactory artifactFactory;
+    private ProjectArtifactFactory artifactFactory;
 
     private ModelInheritanceAssembler modelInheritanceAssembler;
 
@@ -990,7 +989,9 @@ public class DefaultMavenProjectBuilder
         List injectedProfiles = injectActiveProfiles( profileMgr, model );
 
         activeProfiles.addAll( injectedProfiles );
-
+        
+        // --------------------------------------------------------------------------------
+        
         Build dynamicBuild = model.getBuild();
 
         model.setBuild( ModelUtils.cloneBuild( dynamicBuild ) );
@@ -1015,17 +1016,17 @@ public class DefaultMavenProjectBuilder
         Model originalModel = project.getOriginalModel();
 
         // We will return a different project object using the new model (hence the need to return a project, not just modify the parameter)
-        project = new MavenProject( model );
+        project = new MavenProject( model, getLogger() );
 
         project.setOriginalModel( originalModel );
         
         project.setActiveProfiles( activeProfiles );
 
         // TODO: maybe not strictly correct, while we should enfore that packaging has a type handler of the same id, we don't
-        Artifact projectArtifact = artifactFactory.createBuildArtifact( project.getGroupId(), project.getArtifactId(),
-                                                                        project.getVersion(), project.getPackaging() );
-
+        Artifact projectArtifact = artifactFactory.create( project );
+        
         project.setArtifact( projectArtifact );
+        project.setProjectBuilderConfiguration( config );
 
         project.setPluginArtifactRepositories( ProjectUtils.buildArtifactRepositories( model.getPluginRepositories(),
                                                                                        artifactRepositoryFactory,
@@ -1166,22 +1167,6 @@ public class DefaultMavenProjectBuilder
     {
         Model originalModel = ModelUtils.cloneModel( model );
 
-
-        if ( !model.getRepositories().isEmpty() )
-        {
-            List respositories = buildArtifactRepositories( model );
-
-            for ( Iterator it = respositories.iterator(); it.hasNext(); )
-            {
-                ArtifactRepository repository = (ArtifactRepository) it.next();
-
-                if ( !aggregatedRemoteWagonRepositories.contains( repository ) )
-                {
-                    aggregatedRemoteWagonRepositories.add( repository );
-                }
-            }
-        }
-
         ProfileManager externalProfileManager = config.getGlobalProfileManager();
         ProfileManager profileManager;
         if ( externalProfileManager != null )
@@ -1219,7 +1204,22 @@ public class DefaultMavenProjectBuilder
                 e.getMessage(), e );
         }
 
-        MavenProject project = new MavenProject( model );
+        if ( !model.getRepositories().isEmpty() )
+        {
+            List respositories = buildArtifactRepositories( model );
+
+            for ( Iterator it = respositories.iterator(); it.hasNext(); )
+            {
+                ArtifactRepository repository = (ArtifactRepository) it.next();
+
+                if ( !aggregatedRemoteWagonRepositories.contains( repository ) )
+                {
+                    aggregatedRemoteWagonRepositories.add( repository );
+                }
+            }
+        }
+
+        MavenProject project = new MavenProject( model, getLogger() );
 
         project.setActiveProfiles( activeProfiles );
         project.setOriginalModel( originalModel );
@@ -1262,7 +1262,7 @@ public class DefaultMavenProjectBuilder
 
             if ( parentProject != null )
             {
-                model = ModelUtils.cloneModel( parentProject.getModel() );
+                model = ModelUtils.cloneModel( parentProject.getOriginalModel() );
 
                 parentDescriptor = parentProject.getFile();
             }
@@ -1655,7 +1655,7 @@ public class DefaultMavenProjectBuilder
                                          List plugins )
         throws ProjectBuildingException
     {
-        Set pluginArtifacts = new HashSet();
+        Set pluginArtifacts = new LinkedHashSet();
 
         for ( Iterator i = plugins.iterator(); i.hasNext(); )
         {
@@ -1698,7 +1698,7 @@ public class DefaultMavenProjectBuilder
                                          List reports )
         throws ProjectBuildingException
     {
-        Set pluginArtifacts = new HashSet();
+        Set pluginArtifacts = new LinkedHashSet();
 
         if ( reports != null )
         {
@@ -1744,7 +1744,7 @@ public class DefaultMavenProjectBuilder
                                             List extensions )
         throws ProjectBuildingException
     {
-        Set extensionArtifacts = new HashSet();
+        Set extensionArtifacts = new LinkedHashSet();
 
         if ( extensions != null )
         {
@@ -1833,7 +1833,12 @@ public class DefaultMavenProjectBuilder
     private void calculateConcreteStateInternal( MavenProject project, ProjectBuilderConfiguration config, boolean processProjectReferences, Set processedProjects )
         throws ModelInterpolationException
     {
-        restoreDynamicState( project, config, false );
+        if ( processProjectReferences )
+        {
+            processedProjects.add( project.getId() );
+        }
+        
+        restoreDynamicStateInternal( project, config, processProjectReferences, processProjectReferences ? new HashSet( processedProjects ) : null );
         
         if ( !project.isConcrete() )
         {
@@ -1914,7 +1919,6 @@ public class DefaultMavenProjectBuilder
 
         if ( processProjectReferences )
         {
-            processedProjects.add( project.getId() );
             calculateConcreteProjectReferences( project, config, processedProjects );
         }
     }
@@ -2003,6 +2007,11 @@ public class DefaultMavenProjectBuilder
     private void restoreDynamicStateInternal( MavenProject project, ProjectBuilderConfiguration config, boolean processProjectReferences, Set processedProjects )
         throws ModelInterpolationException
     {
+        if ( processProjectReferences )
+        {
+            processedProjects.add( project.getId() );
+        }
+        
         if ( project.isConcrete() && projectWasChanged( project ) )
         {
             if ( project.getParent() != null )
@@ -2023,7 +2032,6 @@ public class DefaultMavenProjectBuilder
 
         if ( processProjectReferences )
         {
-            processedProjects.add( project.getId() );
             restoreDynamicProjectReferences( project, config, processedProjects );
         }
     }

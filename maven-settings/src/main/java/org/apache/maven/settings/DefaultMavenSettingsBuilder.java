@@ -89,7 +89,7 @@ public class DefaultMavenSettingsBuilder
     {
         Settings settings = null;
 
-        if ( settingsFile.exists() && settingsFile.isFile() )
+        if ( settingsFile != null && settingsFile.exists() && settingsFile.isFile() )
         {
             Reader reader = null;
             try
@@ -119,7 +119,7 @@ public class DefaultMavenSettingsBuilder
 
                 SettingsXpp3Reader modelReader = new SettingsXpp3Reader();
 
-                settings = modelReader.read( sReader );
+                settings = modelReader.read( sReader, true );
 
                 RuntimeInfo rtInfo = new RuntimeInfo( settings );
 
@@ -192,11 +192,6 @@ public class DefaultMavenSettingsBuilder
         for ( Iterator profiles = settings.getProfiles().iterator(); profiles.hasNext(); )
         {
             Profile profile = (Profile) profiles.next();
-            if ( profile.getId() == null )
-            {
-                profile.setId( "default" );
-            }
-            
             if ( profile.getActivation() != null && profile.getActivation().isActiveByDefault()
                 && !activeProfiles.contains( profile.getId() ) )
             {
@@ -229,6 +224,13 @@ public class DefaultMavenSettingsBuilder
             }
 
             localRepository = new File( mavenUserConfigurationDirectory, "repository" ).getAbsolutePath();
+        }
+
+        // for the special case of a drive-relative Windows path, make sure it's absolute to save plugins from trouble
+        File file = new File( localRepository );
+        if ( !file.isAbsolute() && file.getPath().startsWith( File.separator ) )
+        {
+            localRepository = file.getAbsolutePath();
         }
 
         userSettings.setLocalRepository( localRepository );

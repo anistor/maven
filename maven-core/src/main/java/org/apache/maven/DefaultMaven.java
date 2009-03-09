@@ -20,10 +20,26 @@ package org.apache.maven;
  */
 
 
-import org.apache.maven.artifact.manager.WagonManager;
+import java.io.File;
+import java.io.IOException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Properties;
+import java.util.Set;
+import java.util.TimeZone;
+
 import org.apache.maven.artifact.manager.DefaultWagonManager;
+import org.apache.maven.artifact.manager.WagonManager;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.artifact.resolver.ArtifactResolutionException;
+import org.apache.maven.artifact.resolver.ArtifactResolver;
+import org.apache.maven.artifact.resolver.DefaultArtifactResolver;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
 import org.apache.maven.artifact.versioning.DefaultArtifactVersion;
 import org.apache.maven.execution.BuildFailure;
@@ -34,6 +50,7 @@ import org.apache.maven.execution.ReactorManager;
 import org.apache.maven.execution.RuntimeInformation;
 import org.apache.maven.lifecycle.LifecycleExecutionException;
 import org.apache.maven.lifecycle.LifecycleExecutor;
+import org.apache.maven.model.Profile;
 import org.apache.maven.monitor.event.DefaultEventDispatcher;
 import org.apache.maven.monitor.event.EventDispatcher;
 import org.apache.maven.monitor.event.MavenEvents;
@@ -42,6 +59,7 @@ import org.apache.maven.profiles.activation.ProfileActivationException;
 import org.apache.maven.project.DuplicateProjectException;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.MavenProjectBuilder;
+import org.apache.maven.project.MissingProjectException;
 import org.apache.maven.project.ProjectBuildingException;
 import org.apache.maven.reactor.MavenExecutionException;
 import org.apache.maven.settings.Mirror;
@@ -50,7 +68,6 @@ import org.apache.maven.settings.Server;
 import org.apache.maven.settings.Settings;
 import org.apache.maven.usability.SystemWarnings;
 import org.apache.maven.usability.diagnostics.ErrorDiagnostics;
-import org.apache.maven.wagon.repository.RepositoryPermissions;
 import org.codehaus.plexus.PlexusConstants;
 import org.codehaus.plexus.PlexusContainer;
 import org.codehaus.plexus.component.repository.exception.ComponentLifecycleException;
@@ -64,18 +81,8 @@ import org.codehaus.plexus.util.Os;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.dag.CycleDetectedException;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
-
-import java.io.File;
-import java.io.IOException;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Properties;
-import java.util.TimeZone;
+import org.sonatype.plexus.components.sec.dispatcher.SecDispatcher;
+import org.sonatype.plexus.components.sec.dispatcher.SecDispatcherException;
 
 /**
  * @author <a href="mailto:jason@maven.org">Jason van Zyl </a>
@@ -267,7 +274,7 @@ public class DefaultMaven
 
         try
         {
-            resolveParameters( request.getSettings() );
+            resolveParameters( request.getSettings(), request.getExecutionProperties() );
         }
         catch ( ComponentLookupException e )
         {
@@ -299,14 +306,16 @@ public class DefaultMaven
         ReactorManager rm;
         try
         {
-            rm = new ReactorManager( projects );
+            String resumeFrom = request.getResumeFrom();
+            
+            List projectList = request.getSelectedProjects();
+            
+            String makeBehavior = request.getMakeBehavior();
+            
+            rm = new ReactorManager( projects, projectList, resumeFrom, makeBehavior );
 
-            String requestFailureBehavior = request.getFailureBehavior();
-
-            if ( requestFailureBehavior != null )
-            {
-                rm.setFailureBehavior( requestFailureBehavior );
-            }
+            rm.setFailureBehavior( request.getFailureBehavior() );
+            
         }
         catch ( CycleDetectedException e )
         {
@@ -317,6 +326,16 @@ public class DefaultMaven
         {
             throw new BuildFailureException( e.getMessage(), e );
         }
+        catch ( MissingProjectException e )
+        {
+            throw new BuildFailureException( e.getMessage(), e );
+        }
+
+        // --------------------------------------------------------------------------------
+        // MNG-3641: print a warning if one of the profiles to be activated explicitly
+        // was not activated
+
+        validateActivatedProfiles( globalProfileManager, projects );
 
         if ( rm.hasMultipleProjects() )
         {
@@ -336,6 +355,35 @@ public class DefaultMaven
         lifecycleExecutor.execute( session, rm, dispatcher );
 
         return rm;
+    }
+
+    private void validateActivatedProfiles( ProfileManager globalProfileManager, List projects )
+    {
+        if ( globalProfileManager != null )
+        {
+            // get all activated profile ids
+            Set activeProfileIds = new HashSet();
+
+            for ( Iterator i = projects.iterator(); i.hasNext(); )
+            {
+                MavenProject project = (MavenProject) i.next();
+                
+                for ( Iterator j = project.getActiveProfiles().iterator(); j.hasNext(); )
+                {
+                    activeProfileIds.add( ( (Profile) j.next() ).getId() );
+                }
+            }
+
+            for ( Iterator i = globalProfileManager.getExplicitlyActivatedIds().iterator(); i.hasNext(); )
+            {
+                String explicitProfileId = (String) i.next();
+
+                if ( !activeProfileIds.contains( explicitProfileId ) )
+                {
+                    getLogger().warn( "\n\tProfile with id: \'" + explicitProfileId + "\' has not been activated.\n" );
+                }
+            }
+        }
     }
 
     private MavenProject getSuperProject( MavenExecutionRequest request )
@@ -601,7 +649,7 @@ public class DefaultMaven
      * @todo [JC] we should at least provide a mapping of protocol-to-proxy for
      * the wagons, shouldn't we?
      */
-    private void resolveParameters( Settings settings )
+    private void resolveParameters( Settings settings, Properties executionProperties )
         throws ComponentLookupException, ComponentLifecycleException, SettingsConfigurationException
     {
         // TODO: remove when components.xml can be used to configure this instead
@@ -652,6 +700,19 @@ public class DefaultMaven
         try
         {
             Proxy proxy = settings.getActiveProxy();
+            
+            SecDispatcher sd = null;
+            
+            try
+            {
+                sd = (SecDispatcher) container.lookup( SecDispatcher.ROLE, "maven" );
+            }
+            catch (Exception e)
+            {
+                getLogger().warn( "security features are disabled. Cannot find plexus component "+SecDispatcher.ROLE +":maven");
+                
+                line();
+            }
 
             if ( proxy != null )
             {
@@ -659,24 +720,59 @@ public class DefaultMaven
                 {
                     throw new SettingsConfigurationException( "Proxy in settings.xml has no host" );
                 }
+                
+                String pass = proxy.getPassword();
+                
+                if ( sd != null )
+                {
+                    try
+                    {
+                        pass = sd.decrypt( pass );
+                    }
+                    catch ( SecDispatcherException e )
+                    {
+                        throw new SettingsConfigurationException( e.getMessage() );
+                    }
+                }
 
                 wagonManager.addProxy( proxy.getProtocol(), proxy.getHost(), proxy.getPort(), proxy.getUsername(),
-                                       proxy.getPassword(), proxy.getNonProxyHosts() );
+                                       pass, proxy.getNonProxyHosts() );
             }
-
+            
             for ( Iterator i = settings.getServers().iterator(); i.hasNext(); )
             {
                 Server server = (Server) i.next();
+                
+                String passWord = server.getPassword();
 
-                wagonManager.addAuthenticationInfo( server.getId(), server.getUsername(), server.getPassword(),
-                                                    server.getPrivateKey(), server.getPassphrase() );
-
-                // Remove once Wagon is upgraded to 1.0-beta-5
-                if ( server.getPassword() != null )
+                if ( sd != null )
                 {
-                    // setting this globally is not ideal, but not harmful
-                    com.jcraft.jsch.JSch.setConfig( "PreferredAuthentications", "gssapi-with-mic,publickey,password,keyboard-interactive" );
+                    try
+                    {
+                        passWord = sd.decrypt( passWord );
+                    }
+                    catch ( SecDispatcherException e )
+                    {
+                        throw new SettingsConfigurationException( e.getMessage() );
+                    }
                 }
+                
+                String passPhrase = server.getPassphrase();
+
+                if ( sd != null )
+                {
+                    try
+                    {
+                        passPhrase = sd.decrypt( passPhrase );
+                    }
+                    catch ( SecDispatcherException e )
+                    {
+                        throw new SettingsConfigurationException( e.getMessage() );
+                    }
+                }
+
+                wagonManager.addAuthenticationInfo( server.getId(), server.getUsername(), passWord,
+                                                    server.getPrivateKey(), passPhrase );
 
                 wagonManager.addPermissionInfo( server.getId(), server.getFilePermissions(),
                                                 server.getDirectoryPermissions() );
@@ -686,14 +782,6 @@ public class DefaultMaven
                     wagonManager.addConfiguration( server.getId(), (Xpp3Dom) server.getConfiguration() );
                 }
             }
-
-            RepositoryPermissions defaultPermissions = new RepositoryPermissions();
-
-            defaultPermissions.setDirectoryMode( "775" );
-
-            defaultPermissions.setFileMode( "664" );
-
-            wagonManager.setDefaultRepositoryPermissions( defaultPermissions );
 
             for ( Iterator i = settings.getMirrors().iterator(); i.hasNext(); )
             {
@@ -705,6 +793,40 @@ public class DefaultMaven
         finally
         {
             container.release( wagonManager );
+        }
+        
+        // Would be better in settings.xml, but it is not extensible yet
+        String numThreads = System.getProperty( "maven.artifact.threads" );
+        if ( numThreads != null )
+        {
+            int threads = 0;
+            try
+            {
+                threads = Integer.valueOf( numThreads ).intValue();
+
+                if ( threads < 1 )
+                {
+                    getLogger().warn( "Invalid number of threads '" + threads + "' will be ignored" );
+                }
+            }
+            catch ( NumberFormatException e )
+            {
+                getLogger().warn( "Invalid number of threads '" + numThreads + "' will be ignored: " + e.getMessage() );
+            }
+            
+            if ( threads > 0 )
+            {
+                DefaultArtifactResolver artifactResolver = (DefaultArtifactResolver) container.lookup( ArtifactResolver.ROLE );
+                try
+                {
+                    artifactResolver.configureNumberOfThreads( threads );
+                    getLogger().debug( "Resolution thread pool size set to: " + threads );
+                }
+                finally
+                {
+                    container.release( artifactResolver );
+                }
+            }
         }
     }
 

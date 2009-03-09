@@ -251,7 +251,6 @@ public class DefaultWagonManager
                 }
             }
 
-//            wagon.connect( artifactRepository, getAuthenticationInfo( repository.getId() ), getProxy( protocol ) );
             wagon.connect( artifactRepository, getAuthenticationInfo( repository.getId() ), new ProxyInfoProvider()
             {
                 public ProxyInfo getProxyInfo( String protocol )
@@ -280,7 +279,7 @@ public class DefaultWagonManager
                 // TODO: shouldn't need a file intermediatary - improve wagon to take a stream
                 File temp = File.createTempFile( "maven-artifact", null );
                 temp.deleteOnExit();
-                FileUtils.fileWrite( temp.getAbsolutePath(), (String) sums.get( extension ) );
+                FileUtils.fileWrite( temp.getAbsolutePath(), "UTF-8", (String) sums.get( extension ) );
 
                 wagon.put( temp, remotePath + "." + extension );
             }
@@ -334,13 +333,13 @@ public class DefaultWagonManager
                 // This one we will eat when looking through remote repositories
                 // because we want to cycle through them all before squawking.
 
-                getLogger().debug( "Unable to get resource '" + artifact.getId() + "' from repository " +
+                getLogger().info( "Unable to find resource '" + artifact.getId() + "' in repository " +
                     repository.getId() + " (" + repository.getUrl() + ")" );
             }
             catch ( TransferFailedException e )
             {
-                getLogger().debug( "Unable to get resource '" + artifact.getId() + "' from repository " +
-                    repository.getId() + " (" + repository.getUrl() + ")" );
+                getLogger().warn( "Unable to get resource '" + artifact.getId() + "' from repository " +
+                    repository.getId() + " (" + repository.getUrl() + "): " + e.getMessage() );
             }
         }
 
@@ -693,13 +692,14 @@ public class DefaultWagonManager
             tempChecksumFile.deleteOnExit();
             wagon.get( remotePath + checksumFileExtension, tempChecksumFile );
 
-            String expectedChecksum = FileUtils.fileRead( tempChecksumFile );
+            String expectedChecksum = FileUtils.fileRead( tempChecksumFile, "UTF-8" );
 
             // remove whitespaces at the end
             expectedChecksum = expectedChecksum.trim();
 
-            // check for 'MD5 (name) = CHECKSUM'
-            if ( expectedChecksum.startsWith( "MD5" ) )
+            // check for 'ALGO (name) = CHECKSUM' like used by openssl
+            if ( expectedChecksum.regionMatches( true, 0, "MD", 0, 2 )
+                || expectedChecksum.regionMatches( true, 0, "SHA", 0, 3 ) )
             {
                 int lastSpacePos = expectedChecksum.lastIndexOf( ' ' );
                 expectedChecksum = expectedChecksum.substring( lastSpacePos + 1 );
@@ -802,6 +802,7 @@ public class DefaultWagonManager
                     if ( matchPattern( originalRepository, pattern ) )
                     {
                         selectedMirror = (ArtifactRepository) mirrors.get( pattern );
+                        break;
                     }
                 }
             }
@@ -992,7 +993,11 @@ public class DefaultWagonManager
         
         ArtifactRepository mirror = new DefaultArtifactRepository( id, url, null );
 
-        mirrors.put( mirrorOf, mirror );
+        //to preserve first wins, don't add repeated mirrors.
+        if (!mirrors.containsKey( mirrorOf ))
+        {
+            mirrors.put( mirrorOf, mirror );
+        }
     }
 
     public void setOnline( boolean online )
@@ -1033,9 +1038,7 @@ public class DefaultWagonManager
         configureWagon( wagon, repository.getId(), repository.getProtocol() );
     }
 
-    private void configureWagon( Wagon wagon,
-                                 String repositoryId,
-                                 String protocol )
+    private void configureWagon( Wagon wagon, String repositoryId, String protocol )
         throws WagonConfigurationException
     {
         PlexusConfiguration config = (PlexusConfiguration) serverConfigurationMap.get( repositoryId ); 
@@ -1049,7 +1052,7 @@ public class DefaultWagonManager
             ComponentConfigurator componentConfigurator = null;
             try
             {
-                componentConfigurator = (ComponentConfigurator) container.lookup( ComponentConfigurator.ROLE );
+                componentConfigurator = (ComponentConfigurator) container.lookup( ComponentConfigurator.ROLE, "wagon" );
                 componentConfigurator.configureComponent( wagon, config, container.getContainerRealm() );
             }
             catch ( final ComponentLookupException e )

@@ -21,8 +21,8 @@ package org.apache.maven.project;
 
 import java.util.ArrayList;
 import java.util.Enumeration;
-import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -229,7 +229,10 @@ public final class ModelUtils
                 int idx = normalized.indexOf( currentPlugin );
                 Plugin firstPlugin = (Plugin) normalized.get( idx );
 
-                mergePluginDefinitions( firstPlugin, currentPlugin, false );
+                // MNG-3719: merge currentPlugin with firstPlugin as parent,
+                // then use updated currentPlugin as new parent
+                mergePluginDefinitions( currentPlugin, firstPlugin, false );
+                normalized.set(idx, currentPlugin);
             }
             else
             {
@@ -461,16 +464,16 @@ public final class ModelUtils
      *
      *   X -> Y -> A -> B -> C -> D -> E -> F
      */
-    public static void mergePluginLists( PluginContainer childContainer, PluginContainer parentContainer,
+    public static void mergePluginLists( PluginContainer child, PluginContainer parent,
                                          boolean handleAsInheritance )
     {
-        if ( ( childContainer == null ) || ( parentContainer == null ) )
+        if ( ( child == null ) || ( parent == null ) )
         {
             // nothing to do.
             return;
         }
 
-        List parentPlugins = parentContainer.getPlugins();
+        List parentPlugins = parent.getPlugins();
 
         if ( ( parentPlugins != null ) && !parentPlugins.isEmpty() )
         {
@@ -495,7 +498,7 @@ public final class ModelUtils
 
             List assembledPlugins = new ArrayList();
 
-            Map childPlugins = childContainer.getPluginsAsMap();
+            Map childPlugins = child.getPluginsAsMap();
 
             for ( Iterator it = parentPlugins.iterator(); it.hasNext(); )
             {
@@ -535,12 +538,12 @@ public final class ModelUtils
                 // very important to use the parentPlugins List, rather than parentContainer.getPlugins()
                 // since this list is a local one, and may have been modified during processing.
                 List results = ModelUtils.orderAfterMerge( assembledPlugins, parentPlugins,
-                                                                        childContainer.getPlugins() );
+                                                                        child.getPlugins() );
 
 
-                childContainer.setPlugins( results );
+                child.setPlugins( results );
 
-                childContainer.flushPluginMap();
+                child.flushPluginMap();
             }
         }
     }
@@ -602,6 +605,14 @@ public final class ModelUtils
         return results;
     }
 
+    /**
+     * Merge the list of reporting plugins from parent pom and child pom
+     * TODO it's pretty much a copy of {@link #mergePluginLists(PluginContainer, PluginContainer, boolean)}
+     * 
+     * @param child
+     * @param parent
+     * @param handleAsInheritance
+     */
     public static void mergeReportPluginLists( Reporting child, Reporting parent, boolean handleAsInheritance )
     {
         if ( ( child == null ) || ( parent == null ) )
@@ -614,7 +625,26 @@ public final class ModelUtils
 
         if ( ( parentPlugins != null ) && !parentPlugins.isEmpty() )
         {
-            Map assembledPlugins = new TreeMap();
+            parentPlugins = new ArrayList( parentPlugins );
+
+            // If we're processing this merge as an inheritance, we have to build up a list of
+            // plugins that were considered for inheritance.
+            if ( handleAsInheritance )
+            {
+                for ( Iterator it = parentPlugins.iterator(); it.hasNext(); )
+                {
+                    ReportPlugin plugin = (ReportPlugin) it.next();
+
+                    String inherited = plugin.getInherited();
+
+                    if ( ( inherited != null ) && !Boolean.valueOf( inherited ).booleanValue() )
+                    {
+                        it.remove();
+                    }
+                }
+            }
+
+            List assembledPlugins = new ArrayList();
 
             Map childPlugins = child.getReportPluginsAsMap();
 
@@ -624,43 +654,44 @@ public final class ModelUtils
 
                 String parentInherited = parentPlugin.getInherited();
 
+                // only merge plugin definition from the parent if at least one
+                // of these is true:
+                // 1. we're not processing the plugins in an inheritance-based merge
+                // 2. the parent's <inherited/> flag is not set
+                // 3. the parent's <inherited/> flag is set to true
                 if ( !handleAsInheritance || ( parentInherited == null ) ||
                     Boolean.valueOf( parentInherited ).booleanValue() )
                 {
-
-                    ReportPlugin assembledPlugin = parentPlugin;
-
                     ReportPlugin childPlugin = (ReportPlugin) childPlugins.get( parentPlugin.getKey() );
 
-                    if ( childPlugin != null )
+                    if ( ( childPlugin != null ) && !assembledPlugins.contains( childPlugin ) )
                     {
-                        assembledPlugin = childPlugin;
+                        ReportPlugin assembledPlugin = childPlugin;
 
                         mergeReportPluginDefinitions( childPlugin, parentPlugin, handleAsInheritance );
+
+                        // fix for MNG-2221 (assembly cache was not being populated for later reference):
+                        assembledPlugins.add( assembledPlugin );
                     }
 
+                    // if we're processing this as an inheritance-based merge, and
+                    // the parent's <inherited/> flag is not set, then we need to
+                    // clear the inherited flag in the merge result.
                     if ( handleAsInheritance && ( parentInherited == null ) )
                     {
-                        assembledPlugin.unsetInheritanceApplied();
+                        parentPlugin.unsetInheritanceApplied();
                     }
-
-                    assembledPlugins.put( assembledPlugin.getKey(), assembledPlugin );
                 }
+
+                // very important to use the parentPlugins List, rather than parentContainer.getPlugins()
+                // since this list is a local one, and may have been modified during processing.
+                List results = ModelUtils.orderAfterMerge( assembledPlugins, parentPlugins,
+                                                                        child.getPlugins() );
+
+                child.setPlugins( results );
+
+                child.flushReportPluginMap();
             }
-
-            for ( Iterator it = childPlugins.values().iterator(); it.hasNext(); )
-            {
-                ReportPlugin childPlugin = (ReportPlugin) it.next();
-
-                if ( !assembledPlugins.containsKey( childPlugin.getKey() ) )
-                {
-                    assembledPlugins.put( childPlugin.getKey(), childPlugin );
-                }
-            }
-
-            child.setPlugins( new ArrayList( assembledPlugins.values() ) );
-
-            child.flushReportPluginMap();
         }
     }
 
@@ -767,11 +798,22 @@ public final class ModelUtils
             child.setVersion( parent.getVersion() );
         }
 
-        // from here to the end of the method is dealing with merging of the <executions/> section.
         String parentInherited = parent.getInherited();
 
         boolean parentIsInherited = ( parentInherited == null ) || Boolean.valueOf( parentInherited ).booleanValue();
 
+        // merge configuration just like with build plugins	
+        if ( parentIsInherited )
+        {
+            Xpp3Dom childConfiguration = (Xpp3Dom) child.getConfiguration();
+            Xpp3Dom parentConfiguration = (Xpp3Dom) parent.getConfiguration();
+
+            childConfiguration = Xpp3Dom.mergeXpp3Dom( childConfiguration, parentConfiguration );
+
+            child.setConfiguration( childConfiguration );
+        }
+
+        // from here to the end of the method is dealing with merging of the <executions/> section.
         List parentReportSets = parent.getReportSets();
 
         if ( ( parentReportSets != null ) && !parentReportSets.isEmpty() )
@@ -1461,14 +1503,34 @@ public final class ModelUtils
 
     public static void mergeExtensionLists( Build childBuild, Build parentBuild )
     {
-        for ( Iterator i = parentBuild.getExtensions().iterator(); i.hasNext(); )
+        Map extMap = new LinkedHashMap();
+
+        List ext = childBuild.getExtensions();
+
+        if ( ext != null )
         {
-            Extension e = (Extension) i.next();
-            if ( !childBuild.getExtensions().contains( e ) )
+            for ( Iterator it = ext.iterator(); it.hasNext(); )
             {
-                childBuild.addExtension( e );
+                Extension extension = (Extension) it.next();
+                extMap.put( extension.getKey(), extension );
             }
         }
+
+        ext = parentBuild.getExtensions();
+
+        if ( ext != null )
+        {
+            for ( Iterator it = ext.iterator(); it.hasNext(); )
+            {
+                Extension extension = (Extension) it.next();
+                if ( !extMap.containsKey( extension.getKey() ) )
+                {
+                    extMap.put( extension.getKey(), extension );
+                }
+            }
+        }
+
+        childBuild.setExtensions( new ArrayList( extMap.values() ) );
     }
 
     public static void mergeResourceLists( List childResources, List parentResources )
@@ -1497,16 +1559,7 @@ public final class ModelUtils
 
     public static List mergeDependencyList( List child, List parent )
     {
-        Map depsMap = new HashMap();
-
-        if ( parent != null )
-        {
-            for ( Iterator it = parent.iterator(); it.hasNext(); )
-            {
-                Dependency dependency = (Dependency) it.next();
-                depsMap.put( dependency.getManagementKey(), dependency );
-            }
-        }
+        Map depsMap = new LinkedHashMap();
 
         if ( child != null )
         {
@@ -1514,6 +1567,18 @@ public final class ModelUtils
             {
                 Dependency dependency = (Dependency) it.next();
                 depsMap.put( dependency.getManagementKey(), dependency );
+            }
+        }
+
+        if ( parent != null )
+        {
+            for ( Iterator it = parent.iterator(); it.hasNext(); )
+            {
+                Dependency dependency = (Dependency) it.next();
+                if ( !depsMap.containsKey( dependency.getManagementKey() ) )
+                {
+                    depsMap.put( dependency.getManagementKey(), dependency );
+                }
             }
         }
 

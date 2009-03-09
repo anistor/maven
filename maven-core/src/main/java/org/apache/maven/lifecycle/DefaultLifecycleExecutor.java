@@ -168,7 +168,7 @@ public class DefaultLifecycleExecutor
             buffer.append( "Please see\n" );
             buffer.append( "http://maven.apache.org/guides/introduction/introduction-to-the-lifecycle.html\n" );
             buffer.append( "for a complete description of available lifecycle phases.\n\n" );
-            buffer.append( "Use \"mvn -?\" to show general usage information about Maven's command line.\n\n" );
+            buffer.append( "Use \"mvn --help\" to show general usage information about Maven's command line.\n\n" );
 
             throw new BuildFailureException( buffer.toString() );
         }
@@ -193,6 +193,7 @@ public class DefaultLifecycleExecutor
                 Extension extension = (Extension) j.next();
                 try
                 {
+                    getLogger().debug( "Adding extension: " + extension );
                     extensionManager.addExtension( extension, project, session.getLocalRepository() );
                 }
                 catch ( PlexusContainerException e )
@@ -704,20 +705,6 @@ public class DefaultLifecycleExecutor
             {
                 throw new LifecycleExecutionException( e.getMessage(), e );
             }
-            
-            // NOTE: Ordinarily, we might be tempted to set all pertinent executionProjects
-            // to null here, to release some memory. HOWEVER, the problem is that
-            // the reactorProjects construct doesn't track successive levels of
-            // forked execution properly, so we MUST NOT SET THE executionProject
-            // INSTANCES TO NULL. If we do this inside a two-or-more-level-deep
-            // fork, it can result in passing a null project instance through
-            // to the plugin manager, since successive iterations of the n-1
-            // fork to execute fork n with each project in reactorProjects MUST
-            // HAVE ACCESS TO THE executionProject for every project.
-            //
-            // Just please don't set executionProjects == null here. Not until
-            // we have a mechanism for tracking (stack push/pull) successive
-            // forked lifecycles in the reactorProjects collection.
         }
     }
     
@@ -852,14 +839,16 @@ public class DefaultLifecycleExecutor
                 String report = (String) i.next();
 
                 StringTokenizer tok = new StringTokenizer( report, ":" );
-                if ( tok.countTokens() != 2 )
+                int count = tok.countTokens();
+                if ( count != 2 && count != 3 )
                 {
-                    getLogger().warn( "Invalid default report ignored: '" + report + "' (must be groupId:artifactId)" );
+                    getLogger().warn( "Invalid default report ignored: '" + report + "' (must be groupId:artifactId[:version])" );
                 }
                 else
                 {
                     String groupId = tok.nextToken();
                     String artifactId = tok.nextToken();
+                    String version = tok.hasMoreTokens() ? tok.nextToken() : null;
 
                     boolean found = false;
                     for ( Iterator j = reportPlugins.iterator(); j.hasNext() && !found; )
@@ -877,6 +866,7 @@ public class DefaultLifecycleExecutor
                         ReportPlugin reportPlugin = new ReportPlugin();
                         reportPlugin.setGroupId( groupId );
                         reportPlugin.setArtifactId( artifactId );
+                        reportPlugin.setVersion( version );
                         reportPlugins.add( reportPlugin );
                     }
                 }
@@ -1023,6 +1013,8 @@ public class DefaultLifecycleExecutor
                                        MavenProject project )
         throws LifecycleExecutionException, BuildFailureException, PluginNotFoundException
     {
+        project = project.getExecutionProject();
+        
         forkEntryPoints.push( mojoDescriptor );
 
         PluginDescriptor pluginDescriptor = mojoDescriptor.getPluginDescriptor();
@@ -1172,15 +1164,13 @@ public class DefaultLifecycleExecutor
         {
             Lifecycle lifecycle = getLifecycleForPhase( targetPhase );
 
-            executeGoalWithLifecycle( targetPhase, forkEntryPoints, session, lifecycleMappings, project.getExecutionProject(),
-                                      lifecycle );
+            executeGoalWithLifecycle( targetPhase, forkEntryPoints, session, lifecycleMappings, project, lifecycle );
         }
         else
         {
             String goal = mojoDescriptor.getExecuteGoal();
             MojoDescriptor desc = getMojoDescriptor( pluginDescriptor, goal );
-            executeGoals( Collections.singletonList( new MojoExecution( desc ) ), forkEntryPoints, session,
-                          project.getExecutionProject() );
+            executeGoals( Collections.singletonList( new MojoExecution( desc ) ), forkEntryPoints, session, project );
         }
     }
 
@@ -1686,7 +1676,7 @@ public class DefaultLifecycleExecutor
         throws BuildFailureException, LifecycleExecutionException, PluginNotFoundException
     {
         String goal;
-        Plugin plugin;
+        Plugin plugin = null;
 
         PluginDescriptor pluginDescriptor = null;
 
@@ -1711,35 +1701,36 @@ public class DefaultLifecycleExecutor
                 // Steps for retrieving the plugin model instance:
                 // 1. request directly from the plugin collector by prefix
                 pluginDescriptor = pluginManager.getPluginDescriptorForPrefix( prefix );
-
-                // 2. look in the repository via search groups
-                if ( pluginDescriptor == null )
-                {
-                    plugin = pluginManager.getPluginDefinitionForPrefix( prefix, session, project );
-                }
-                else
+                if ( pluginDescriptor != null )
                 {
                     plugin = new Plugin();
-
                     plugin.setGroupId( pluginDescriptor.getGroupId() );
                     plugin.setArtifactId( pluginDescriptor.getArtifactId() );
                     plugin.setVersion( pluginDescriptor.getVersion() );
                 }
 
-                // 3. search plugins in the current POM
+                // 2. search plugins in the current POM
                 if ( plugin == null )
                 {
                     for ( Iterator i = project.getBuildPlugins().iterator(); i.hasNext(); )
                     {
                         Plugin buildPlugin = (Plugin) i.next();
 
-                        PluginDescriptor desc = verifyPlugin( buildPlugin, project, session.getSettings(), session
-                            .getLocalRepository() );
+                        PluginDescriptor desc =
+                            verifyPlugin( buildPlugin, project, session.getSettings(), session.getLocalRepository() );
                         if ( prefix.equals( desc.getGoalPrefix() ) )
                         {
                             plugin = buildPlugin;
+                            pluginDescriptor = desc;
+                            break;
                         }
                     }
+                }
+
+                // 3. look in the repository via search groups
+                if ( plugin == null )
+                {
+                    plugin = pluginManager.getPluginDefinitionForPrefix( prefix, session, project );
                 }
 
                 // 4. default to o.a.m.plugins and maven-<prefix>-plugin
@@ -1932,8 +1923,9 @@ public class DefaultLifecycleExecutor
 
     // -------------------------------------------------------------------------
     // TODO: The methods and fields below are only needed for products like Hudson,
-    //  that provide their own LifecycleExecutor and component configuration, 
-    //  which may not contain up-to-date component requirements.
+    // that provide their own LifecycleExecutor and component configuration that extend
+    // default implementation, and which may become out-of-date as component requirements
+    // are updated within Maven itself.
     public void initialize()
         throws InitializationException
     {
@@ -1971,6 +1963,10 @@ public class DefaultLifecycleExecutor
         buffer.append( "\n\nThis Maven runtime contains a LifecycleExecutor component with an incomplete configuration." );
         buffer.append( "\n\nLifecycleExecutor class: " ).append( getClass().getName() );
         buffer.append( "\nMissing component requirement: " ).append( role );
+        buffer.append( "\n" );
+        buffer.append( "\nNOTE: This seems to be a third-party Maven derivative you are using. If so, please" );
+        buffer.append( "\nnotify the developers for this derivative project of the problem. The Apache Maven team is not" );
+        buffer.append( "\nresponsible for maintaining the integrity of third-party component overrides." );
         buffer.append( "\n\n" );
         
         getLogger().warn( buffer.toString() );

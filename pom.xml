@@ -1,16 +1,34 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
     <groupId>org.apache.maven</groupId>
     <artifactId>maven-parent</artifactId>
-    <version>8</version>
+    <version>11</version>
     <relativePath>../pom/maven/pom.xml</relativePath>
   </parent>
 
   <artifactId>maven</artifactId>
-  <version>2.1.0-RC12-SNAPSHOT</version>
+  <version>2.1.0</version>
   <packaging>pom</packaging>
 
   <name>Maven</name>
@@ -71,7 +89,7 @@
       </otherArchives>
     </mailingList>
 
-        <!-- duplication from parent pom - temporary until they inherit properly -->
+    <!-- duplication from parent pom - temporary until they inherit properly -->
     <mailingList>
       <name>Maven Announcements List</name>
       <post>announce@maven.apache.org</post>
@@ -98,25 +116,12 @@
   </mailingLists>
 
   <scm>
-    <connection>scm:svn:http://svn.apache.org/repos/asf/maven/components/branches/maven-2.0.x</connection>
-    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/maven/components/branches/maven-2.0.x</developerConnection>
-    <url>http://svn.apache.org/viewvc/maven/components/branches/maven-2.0.x</url>
+    <connection>scm:svn:http://svn.apache.org/repos/asf/maven/components/tags/maven-2.1.0-RC1</connection>
+    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/maven/components/tags/maven-2.1.0-RC1</developerConnection>
+    <url>http://svn.apache.org/viewvc/maven/components/tags/maven-2.1.0-RC1</url>
   </scm>
 
   <build>
-    <plugins>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>clirr-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <goals>
-              <goal>check</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-    </plugins>
     <pluginManagement>
       <plugins>
         <plugin>
@@ -177,7 +182,7 @@
         <plugin>
           <groupId>org.codehaus.modello</groupId>
           <artifactId>modello-maven-plugin</artifactId>
-          <version>1.0-alpha-20</version>
+          <version>1.0</version>
           <executions>
             <execution>
               <id>site-docs</id>
@@ -203,19 +208,38 @@
           <version>2.2.1</version>
           <configuration>
             <!-- needed for release: default value "(,${project.version})" for 2.0.10 is 2.0.10-SNAPSHOT -->
-            <comparisonVersion>2.0.9</comparisonVersion>
+            <comparisonVersion>2.1.0-M1</comparisonVersion>
             <excludes>
-              <!-- TODO: These represent method ADDITIONS from 2.0.9, and should be removed after 
-                   2.0.10 is released. -->
-              <exclude>org/apache/maven/lifecycle/LifecycleExecutor*</exclude>
-              <exclude>org/apache/maven/artifact/metadata/AbstractArtifactMetadata*</exclude>
-              <exclude>org/apache/maven/artifact/metadata/ArtifactMetadataSource*</exclude>
-              <exclude>org/apache/maven/project/MavenProjectBuilder*</exclude>
-              <exclude>org/apache/maven/project/ProjectBuilderConfiguration*</exclude>
-              <exclude>org/apache/maven/project/interpolation/ModelInterpolator*</exclude>
-              <exclude>org/apache/maven/project/inheritance/ModelInheritanceAssembler*</exclude>
+              <exclude>org/apache/maven/artifact/Artifact*</exclude>
+              
               <exclude>org/apache/maven/execution/MavenExecutionRequest*</exclude>
-              <exclude>org/apache/maven/plugin/DefaultPluginManager*</exclude>
+              
+              <exclude>org/apache/maven/plugin/PluginManagerException*</exclude>
+
+              <exclude>org/apache/maven/artifact/repository/metadata/Snapshot*</exclude>
+              <exclude>org/apache/maven/artifact/repository/metadata/Versioning*</exclude>
+              <exclude>org/apache/maven/artifact/repository/metadata/Plugin*</exclude>
+              <exclude>org/apache/maven/artifact/repository/metadata/io/xpp3/*</exclude>
+              
+              <exclude>org/apache/maven/model/*</exclude>
+              <exclude>org/apache/maven/model/io/xpp3/*</exclude>
+              <exclude>org/apache/maven/settings/*</exclude>
+              <exclude>org/apache/maven/settings/io/xpp3/*</exclude>
+            
+              <exclude>org/apache/maven/usability/plugin/*</exclude>
+              <exclude>org/apache/maven/usability/plugin/io/xpp3/*</exclude>
+              
+              <exclude>org/apache/maven/profiles/*</exclude>
+              <exclude>org/apache/maven/profiles/io/xpp3/*</exclude>
+              
+              <exclude>org/apache/maven/plugin/registry/*</exclude>
+              <exclude>org/apache/maven/plugin/registry/io/xpp3/*</exclude>
+              
+              <exclude>org/apache/maven/plugin/lifecycle/*</exclude>
+              <exclude>org/apache/maven/plugin/lifecycle/io/xpp3/*</exclude>
+              
+              <exclude>org/apache/maven/toolchain/model/*</exclude>
+              <exclude>org/apache/maven/toolchain/model/io/xpp3/*</exclude>
             </excludes>
           </configuration>
         </plugin>
@@ -246,11 +270,11 @@
   </modules>
 
   <properties>
-    <mavenVersion>2.1.0-RC12-SNAPSHOT</mavenVersion>
-    <wagonVersion>1.0-beta-4</wagonVersion>
+    <mavenVersion>2.1.0</mavenVersion>
+    <wagonVersion>1.0-beta-5</wagonVersion>
   </properties>
 
-    <!--start-->
+  <!--start-->
   <dependencies>
     <dependency>
       <groupId>junit</groupId>
@@ -261,10 +285,10 @@
   </dependencies>
 
   <dependencyManagement>
-        <!--end-->
+    <!--end-->
     <dependencies>
-            <!-- Maven -->
-            <!--start-->
+      <!-- Maven -->
+      <!--start-->
       <dependency>
         <groupId>org.apache.maven</groupId>
         <artifactId>maven-plugin-descriptor</artifactId>
@@ -355,7 +379,7 @@
         <artifactId>maven-toolchain</artifactId>
         <version>${mavenVersion}</version>
       </dependency>
-            <!--end-->
+      <!--end-->
       <dependency>
         <groupId>commons-cli</groupId>
         <artifactId>commons-cli</artifactId>
@@ -364,16 +388,18 @@
       <dependency>
         <groupId>org.apache.maven.doxia</groupId>
         <artifactId>doxia-sink-api</artifactId>
-        <version>1.0-alpha-10</version>
-        <!-- Not ready yet.
-        <version>1.0-beta-1-SNAPSHOT</version>
-        -->
+        <version>1.1</version>
       </dependency>
-            <!-- Plexus -->
+      <dependency>
+        <groupId>org.apache.maven.doxia</groupId>
+        <artifactId>doxia-logging-api</artifactId>
+        <version>1.1</version>
+      </dependency>
+      <!-- Plexus -->
       <dependency>
         <groupId>org.codehaus.plexus</groupId>
         <artifactId>plexus-interpolation</artifactId>
-        <version>1.4</version>
+        <version>1.8.1</version>
       </dependency>
       <dependency>
         <groupId>org.codehaus.plexus</groupId>
@@ -383,7 +409,12 @@
       <dependency>
         <groupId>org.codehaus.plexus</groupId>
         <artifactId>plexus-utils</artifactId>
-        <version>1.5.5</version>
+        <version>1.5.6</version>
+      </dependency>
+      <dependency>
+        <groupId>org.sonatype.plexus</groupId>
+        <artifactId>plexus-sec-dispatcher</artifactId>
+        <version>1.1</version>
       </dependency>
       <dependency>
         <groupId>org.apache.maven.wagon</groupId>
@@ -416,6 +447,11 @@
         <version>${wagonVersion}</version>
       </dependency>
       <dependency>
+        <groupId>backport-util-concurrent</groupId>
+        <artifactId>backport-util-concurrent</artifactId>
+        <version>3.1</version>
+      </dependency>
+      <dependency>
         <groupId>easymock</groupId>
         <artifactId>easymock</artifactId>
         <version>1.2_Java1.3</version>
@@ -427,9 +463,9 @@
         <version>1.1</version>
       </dependency>
     </dependencies>
-        <!--start-->
+    <!--start-->
   </dependencyManagement>
-    <!--end-->
+  <!--end-->
 
   <distributionManagement>
     <site>
@@ -439,6 +475,46 @@
   </distributionManagement>
 
   <profiles>
+    <profile>
+      <id>quality-checks</id>
+      <build>
+        <plugins>
+          <!-- This is here until it is enabled in the parent -->
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>clirr-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>clirr-check</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>check</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>release</id>
+      <build>
+        <plugins>
+          <!-- This is here until it is enabled in the parent -->
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>clirr-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>check</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
     <profile>
       <id>run-its</id>
       <modules>
@@ -460,8 +536,8 @@
 
     <profile>
       <id>reporting-aggregate</id>
-            <!-- To generate aggregate reports -->
-            <!-- To deploy both aggregate reports for top-level project and standalone reports for modules, call
+      <!-- To generate aggregate reports -->
+      <!-- To deploy both aggregate reports for top-level project and standalone reports for modules, call
            mvn site -Preporting
            mvn site:deploy
            mvn site -Preporting-aggregate
@@ -472,7 +548,7 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-project-info-reports-plugin</artifactId>
-            <version>2.0.1</version>
+            <version>2.1</version>
           </plugin>
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
@@ -480,12 +556,13 @@
             <version>2.1</version>
             <configuration>
               <aggregate>true</aggregate>
+              <inputEncoding>${project.build.sourceEncoding}</inputEncoding>
             </configuration>
           </plugin>
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-javadoc-plugin</artifactId>
-            <version>2.4</version>
+            <version>2.5</version>
             <configuration>
               <links>
                 <link>http://java.sun.com/j2se/1.4.2/docs/api</link>

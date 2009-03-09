@@ -58,7 +58,7 @@ import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
  * Use a regular expression search to find and resolve expressions within the POM.
  *
  * @author jdcasey Created on Feb 3, 2005
- * @version $Id: RegexBasedModelInterpolator.java 683740 2008-08-07 22:33:15Z jdcasey $
+ * @version $Id$
  * @todo Consolidate this logic with the PluginParameterExpressionEvaluator, minus deprecations/bans.
  */
 public abstract class AbstractStringBasedModelInterpolator
@@ -235,17 +235,31 @@ public abstract class AbstractStringBasedModelInterpolator
                 {
                     return projectDir.getAbsolutePath();
                 }
-
                 return null;
             }
         },
         PROJECT_PREFIXES, true );
+        ValueSource baseUriValueSource = new PrefixedValueSourceWrapper( new AbstractValueSource( false ){
+            public Object getValue( String expression )
+            {
+                if ( projectDir != null && "baseUri".equals( expression ) )
+                {
+                    return projectDir.getAbsoluteFile().toURI().toString();
+                }
+                return null;
+            }
+        },
+        PROJECT_PREFIXES, false );
         
-        List valueSources = new ArrayList( 8 );
+        List valueSources = new ArrayList( 9 );
         
         // NOTE: Order counts here!
         valueSources.add( basedirValueSource );
+        valueSources.add( baseUriValueSource );
         valueSources.add( new BuildTimestampValueSource( config.getBuildStartTime(), timestampFormat ) );
+        valueSources.add( modelValueSource1 );
+        valueSources.add( new MapBasedValueSource( config.getUserProperties() ) );
+        valueSources.add( new MapBasedValueSource( modelProperties ) );
         valueSources.add( new MapBasedValueSource( config.getExecutionProperties() ) );
         valueSources.add( new AbstractValueSource( false )
         {
@@ -254,17 +268,14 @@ public abstract class AbstractStringBasedModelInterpolator
                 return config.getExecutionProperties().getProperty( "env." + expression );
             }
         } );
-        valueSources.add( modelValueSource1 );
-        valueSources.add( new PrefixedValueSourceWrapper( new MapBasedValueSource( modelProperties ), PROJECT_PREFIXES, true ) );
         valueSources.add( modelValueSource2 );
-        valueSources.add( new MapBasedValueSource( config.getUserProperties() ) );
         
         return valueSources;
     }
     
     protected List createPostProcessors( final Model model, final File projectDir, final ProjectBuilderConfiguration config )
     {
-        return Collections.singletonList( new PathTranslatingPostProcessor( TRANSLATED_PATH_EXPRESSIONS, projectDir, pathTranslator ) );
+        return Collections.singletonList( new PathTranslatingPostProcessor( PROJECT_PREFIXES, TRANSLATED_PATH_EXPRESSIONS, projectDir, pathTranslator ) );
     }
     
     protected String interpolateInternal( String src, List valueSources, List postProcessors, boolean debug )
@@ -367,9 +378,19 @@ public abstract class AbstractStringBasedModelInterpolator
         return result;
     }
     
+    protected RecursionInterceptor getRecursionInterceptor()
+    {
+        return recursionInterceptor;
+    }
+
+    protected void setRecursionInterceptor( RecursionInterceptor recursionInterceptor )
+    {
+        this.recursionInterceptor = recursionInterceptor;
+    }
+
     protected abstract Interpolator createInterpolator();
 
-    public final void initialize()
+    public void initialize()
         throws InitializationException
     {
         interpolator = createInterpolator();
