@@ -45,10 +45,14 @@ public class MojoExecutionExceptionDiagnoser
             message.append( ": " ).append( mee.getSource() ).append( "\n" );
         }
 
-        message.append( mee.getMessage() );
+        String shortMessage = mee.getMessage();
+        if ( shortMessage != null )
+        {
+            message.append( mee.getMessage() );
+        }
 
         String longMessage = mee.getLongMessage();
-        if ( longMessage != null )
+        if ( longMessage != null && !longMessage.equals( shortMessage ) )
         {
             message.append( "\n\n" ).append( longMessage );
         }
