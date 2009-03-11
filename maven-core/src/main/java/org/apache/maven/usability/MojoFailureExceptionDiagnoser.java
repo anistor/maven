@@ -45,10 +45,14 @@ public class MojoFailureExceptionDiagnoser
             message.append( ": " ).append( mfe.getSource() ).append( "\n" );
         }
 
-        message.append( mfe.getMessage() );
+        String shortMessage = mfe.getMessage();
+        if ( shortMessage != null )
+        {
+            message.append( mfe.getMessage() );
+        }
 
         String longMessage = mfe.getLongMessage();
-        if ( longMessage != null )
+        if ( longMessage != null && !longMessage.equals( shortMessage ) )
         {
             message.append( "\n\n" ).append( longMessage );
         }
