@@ -48,11 +48,13 @@ public class MojoFailureExceptionDiagnoser
         String shortMessage = mfe.getMessage();
         if ( shortMessage != null )
         {
-            message.append( mfe.getMessage() );
+            message.append( shortMessage );
         }
 
         String longMessage = mfe.getLongMessage();
-        if ( longMessage != null && !longMessage.equals( shortMessage ) )
+        
+        // the indexOf bit is very strange, but the compiler output for 1.5 source compiled using JDK 1.4 presents this case!
+        if ( longMessage != null && !longMessage.equals( shortMessage ) && shortMessage.indexOf( longMessage ) < 0 )
         {
             message.append( "\n\n" ).append( longMessage );
         }
