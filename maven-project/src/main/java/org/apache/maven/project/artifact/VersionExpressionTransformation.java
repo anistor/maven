@@ -235,7 +235,7 @@ public class VersionExpressionTransformation
         }
     }
 
-    public void transformForResolve( Artifact artifact, List<ArtifactRepository> remoteRepositories,
+    public void transformForResolve( Artifact artifact, List remoteRepositories,
                                      ArtifactRepository localRepository )
         throws ArtifactResolutionException, ArtifactNotFoundException
     {

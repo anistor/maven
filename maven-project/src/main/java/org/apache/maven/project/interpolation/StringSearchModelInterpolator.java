@@ -1,14 +1,5 @@
 package org.apache.maven.project.interpolation;
 
-import org.apache.maven.model.Model;
-import org.apache.maven.project.ProjectBuilderConfiguration;
-import org.apache.maven.project.path.PathTranslator;
-import org.codehaus.plexus.interpolation.InterpolationPostProcessor;
-import org.codehaus.plexus.interpolation.Interpolator;
-import org.codehaus.plexus.interpolation.StringSearchInterpolator;
-import org.codehaus.plexus.interpolation.ValueSource;
-import org.codehaus.plexus.logging.Logger;
-
 import java.io.File;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
@@ -16,17 +7,25 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
 
+import org.apache.maven.model.Model;
+import org.apache.maven.project.ProjectBuilderConfiguration;
+import org.apache.maven.project.path.PathTranslator;
+import org.codehaus.plexus.interpolation.Interpolator;
+import org.codehaus.plexus.interpolation.StringSearchInterpolator;
+import org.codehaus.plexus.logging.Logger;
+
 public class StringSearchModelInterpolator
     extends AbstractStringBasedModelInterpolator
 {
 
-    private static final Map<Class<?>, Field[]> fieldsByClass = new WeakHashMap<Class<?>, Field[]>();
-    private static final Map<Class<?>, Boolean> fieldIsPrimitiveByClass = new WeakHashMap<Class<?>, Boolean>();
+    private static final Map fieldsByClass = new WeakHashMap();
+    private static final Map fieldIsPrimitiveByClass = new WeakHashMap();
 
     public StringSearchModelInterpolator()
     {
@@ -51,8 +50,8 @@ public class StringSearchModelInterpolator
     {
         try
         {
-            List<ValueSource> valueSources = createValueSources( model, projectDir, config );
-            List<InterpolationPostProcessor> postProcessors = createPostProcessors( model, projectDir, config );
+            List valueSources = createValueSources( model, projectDir, config );
+            List postProcessors = createPostProcessors( model, projectDir, config );
             
             InterpolateObjectAction action =
                 new InterpolateObjectAction( obj, valueSources, postProcessors, debugEnabled,
@@ -80,32 +79,32 @@ public class StringSearchModelInterpolator
         return interpolator;
     }
     
-    private static final class InterpolateObjectAction implements PrivilegedAction<ModelInterpolationException>
+    private static final class InterpolateObjectAction implements PrivilegedAction
     {
 
         private final boolean debugEnabled;
-        private final LinkedList<Object> interpolationTargets;
+        private final LinkedList interpolationTargets;
         private final StringSearchModelInterpolator modelInterpolator;
         private final Logger logger;
-        private final List<ValueSource> valueSources;
-        private final List<InterpolationPostProcessor> postProcessors;
+        private final List valueSources;
+        private final List postProcessors;
         
-        public InterpolateObjectAction( Object target, List<ValueSource> valueSources,
-                                        List<InterpolationPostProcessor> postProcessors, boolean debugEnabled,
+        public InterpolateObjectAction( Object target, List valueSources, List postProcessors,
+                                        boolean debugEnabled,
                                         StringSearchModelInterpolator modelInterpolator, Logger logger )
         {
             this.valueSources = valueSources;
             this.postProcessors = postProcessors;
             this.debugEnabled = debugEnabled;
             
-            this.interpolationTargets = new LinkedList<Object>();
+            this.interpolationTargets = new LinkedList();
             interpolationTargets.add( target );
             
             this.modelInterpolator = modelInterpolator;
             this.logger = logger;
         }
 
-        public ModelInterpolationException run()
+        public Object run()
         {
             while( !interpolationTargets.isEmpty() )
             {
@@ -124,8 +123,7 @@ public class StringSearchModelInterpolator
             return null;
         }
 
-        @SuppressWarnings("unchecked")
-        private void traverseObjectWithParents( Class<?> cls, Object target )
+        private void traverseObjectWithParents( Class cls, Object target )
             throws ModelInterpolationException
         {
             if ( cls == null )
@@ -149,7 +147,7 @@ public class StringSearchModelInterpolator
                 
                 for ( int i = 0; i < fields.length; i++ )
                 {
-                    Class<?> type = fields[i].getType();
+                    Class type = fields[i].getType();
                     if ( isQualifiedForInterpolation( fields[i], type ) )
                     {
                         boolean isAccessible = fields[i].isAccessible();
@@ -173,10 +171,10 @@ public class StringSearchModelInterpolator
                                 }
                                 else if ( Collection.class.isAssignableFrom( type ) )
                                 {
-                                    Collection<Object> c = (Collection<Object>) fields[i].get( target );
+                                    Collection c = (Collection) fields[i].get( target );
                                     if ( c != null && !c.isEmpty() )
                                     {
-                                        List<Object> originalValues = new ArrayList<Object>( c );
+                                        List originalValues = new ArrayList( c );
                                         try
                                         {
                                             c.clear();
@@ -190,8 +188,9 @@ public class StringSearchModelInterpolator
                                             continue;
                                         }
                                         
-                                        for ( Object value : originalValues )
+                                        for ( Iterator it = originalValues.iterator(); it.hasNext(); )
                                         {
+                                            Object value = it.next();
                                             if ( value != null )
                                             {
                                                 if( String.class == value.getClass() )
@@ -230,11 +229,13 @@ public class StringSearchModelInterpolator
                                 }
                                 else if ( Map.class.isAssignableFrom( type ) )
                                 {
-                                    Map<Object, Object> m = (Map<Object, Object>) fields[i].get( target );
+                                    Map m = (Map) fields[i].get( target );
                                     if ( m != null && !m.isEmpty() )
                                     {
-                                        for ( Map.Entry<Object, Object> entry : m.entrySet() )
+                                        for ( Iterator it = m.entrySet().iterator(); it.hasNext(); )
                                         {
+                                            Map.Entry entry = (Map.Entry) it.next();
+                                            
                                             Object value = entry.getValue();
                                             
                                             if ( value != null )
@@ -310,12 +311,12 @@ public class StringSearchModelInterpolator
             }
         }
 
-        private boolean isQualifiedForInterpolation( Class<?> cls )
+        private boolean isQualifiedForInterpolation( Class cls )
         {
             return !cls.getPackage().getName().startsWith( "java" );
         }
 
-        private boolean isQualifiedForInterpolation( Field field, Class<?> fieldType )
+        private boolean isQualifiedForInterpolation( Field field, Class fieldType )
         {
             if ( !fieldIsPrimitiveByClass.containsKey( fieldType ) )
             {

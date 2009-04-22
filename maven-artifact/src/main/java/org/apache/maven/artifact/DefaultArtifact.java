@@ -32,6 +32,7 @@ import java.io.File;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -71,7 +72,7 @@ public class DefaultArtifact
 
     private ArtifactHandler artifactHandler;
 
-    private List<String> dependencyTrail;
+    private List dependencyTrail;
 
     private String version;
 
@@ -81,9 +82,9 @@ public class DefaultArtifact
 
     private boolean release;
 
-    private List<ArtifactVersion> availableVersions;
+    private List availableVersions;
 
-    private Map<Object, ArtifactMetadata> metadataMap;
+    private Map metadataMap;
 
     private boolean optional;
 
@@ -250,7 +251,7 @@ public class DefaultArtifact
     {
         if ( metadataMap == null )
         {
-            metadataMap = new HashMap<Object, ArtifactMetadata>();
+            metadataMap = new HashMap();
         }
 
         ArtifactMetadata m = (ArtifactMetadata) metadataMap.get( metadata.getKey() );
@@ -264,14 +265,15 @@ public class DefaultArtifact
         }
     }
 
-    public ArtifactMetadata getMetadata( Class<?> metadataClass )
+    public ArtifactMetadata getMetadata( Class metadataClass )
     {
-        Collection<ArtifactMetadata> metadata = getMetadataList();
+        Collection metadata = getMetadataList();
         
         if ( metadata != null )
         {
-            for ( ArtifactMetadata m : metadata )
+            for ( Iterator it = metadata.iterator(); it.hasNext(); )
             {
+                ArtifactMetadata m = (ArtifactMetadata) it.next();
                 if ( metadataClass.isAssignableFrom( m.getClass() ) )
                 {
                     return m;
@@ -282,19 +284,9 @@ public class DefaultArtifact
         return null;
     }
     
-    public Collection<ArtifactMetadata> getMetadataList()
+    public Collection getMetadataList()
     {
-        Collection<ArtifactMetadata> result;
-        if ( metadataMap == null )
-        {
-            result = Collections.emptyList();
-        }
-        else
-        {
-            result = metadataMap.values();
-        }
-        
-        return result;
+        return metadataMap == null ? Collections.EMPTY_LIST : metadataMap.values();
     }
 
     // ----------------------------------------------------------------------
@@ -422,8 +414,10 @@ public class DefaultArtifact
         }
     }
 
-    public int compareTo( Artifact a )
+    public int compareTo( Object o )
     {
+        Artifact a = (Artifact) o;
+
         int result = groupId.compareTo( a.getGroupId() );
         if ( result == 0 )
         {
@@ -493,12 +487,12 @@ public class DefaultArtifact
         return artifactHandler;
     }
 
-    public List<String> getDependencyTrail()
+    public List getDependencyTrail()
     {
         return dependencyTrail;
     }
 
-    public void setDependencyTrail( List<String> dependencyTrail )
+    public void setDependencyTrail( List dependencyTrail )
     {
         this.dependencyTrail = dependencyTrail;
     }
@@ -600,12 +594,12 @@ public class DefaultArtifact
         return release;
     }
 
-    public List<ArtifactVersion> getAvailableVersions()
+    public List getAvailableVersions()
     {
         return availableVersions;
     }
 
-    public void setAvailableVersions( List<ArtifactVersion> availableVersions )
+    public void setAvailableVersions( List availableVersions )
     {
         this.availableVersions = availableVersions;
     }

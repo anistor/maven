@@ -19,6 +19,18 @@ package org.apache.maven.project.interpolation;
  * under the License.
  */
 
+import java.io.File;
+import java.io.IOException;
+import java.io.StringReader;
+import java.io.StringWriter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+
 import org.apache.maven.model.Model;
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
 import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
@@ -42,17 +54,6 @@ import org.codehaus.plexus.personality.plexus.lifecycle.phase.Initializable;
 import org.codehaus.plexus.personality.plexus.lifecycle.phase.InitializationException;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.StringReader;
-import java.io.StringWriter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-
 /**
  * Use a regular expression search to find and resolve expressions within the POM.
  *
@@ -64,13 +65,13 @@ public abstract class AbstractStringBasedModelInterpolator
     extends AbstractLogEnabled
     implements ModelInterpolator, Initializable
 {
-    private static final List<String> PROJECT_PREFIXES = Arrays.asList( new String[]{ "pom.", "project." } );
+    private static final List PROJECT_PREFIXES = Arrays.asList( new String[]{ "pom.", "project." } );
 
-    private static final List<String> TRANSLATED_PATH_EXPRESSIONS;
+    private static final List TRANSLATED_PATH_EXPRESSIONS;
 
     static
     {
-        List<String> translatedPrefixes = new ArrayList<String>();
+        List translatedPrefixes = new ArrayList();
 
         // MNG-1927, MNG-2124, MNG-3355:
         // If the build section is present and the project directory is non-null, we should make
@@ -108,7 +109,7 @@ public abstract class AbstractStringBasedModelInterpolator
     {
     }
 
-    public Model interpolate( Model model, Map<String, ?> context )
+    public Model interpolate( Model model, Map context )
         throws ModelInterpolationException
     {
         return interpolate( model, context, true );
@@ -126,7 +127,7 @@ public abstract class AbstractStringBasedModelInterpolator
      *
      * @deprecated Use {@link ModelInterpolator#interpolate(Model, File, ProjectBuilderConfiguration, boolean)} instead.
      */
-    public Model interpolate( Model model, Map<String, ?> context, boolean strict )
+    public Model interpolate( Model model, Map context, boolean strict )
         throws ModelInterpolationException
     {
         Properties props = new Properties();
@@ -203,8 +204,8 @@ public abstract class AbstractStringBasedModelInterpolator
     {
         try
         {
-            List<ValueSource> valueSources = createValueSources( model, projectDir, config );
-            List<InterpolationPostProcessor> postProcessors = createPostProcessors( model, projectDir, config );
+            List valueSources = createValueSources( model, projectDir, config );
+            List postProcessors = createPostProcessors( model, projectDir, config );
             
             return interpolateInternal( src, valueSources, postProcessors, debug );
         }
@@ -214,7 +215,7 @@ public abstract class AbstractStringBasedModelInterpolator
         }
     }
     
-    protected List<ValueSource> createValueSources( final Model model, final File projectDir, final ProjectBuilderConfiguration config )
+    protected List createValueSources( final Model model, final File projectDir, final ProjectBuilderConfiguration config )
     {
         String timestampFormat = DEFAULT_BUILD_TIMESTAMP_FORMAT;
 
@@ -250,7 +251,7 @@ public abstract class AbstractStringBasedModelInterpolator
         },
         PROJECT_PREFIXES, false );
         
-        List<ValueSource> valueSources = new ArrayList<ValueSource>( 9 );
+        List valueSources = new ArrayList( 9 );
         
         // NOTE: Order counts here!
         valueSources.add( basedirValueSource );
@@ -272,19 +273,12 @@ public abstract class AbstractStringBasedModelInterpolator
         return valueSources;
     }
     
-    protected List<InterpolationPostProcessor> createPostProcessors( final Model model, final File projectDir,
-                                                                     final ProjectBuilderConfiguration config )
+    protected List createPostProcessors( final Model model, final File projectDir, final ProjectBuilderConfiguration config )
     {
-        return Collections.singletonList( (InterpolationPostProcessor) new PathTranslatingPostProcessor(
-                                                                                                         PROJECT_PREFIXES,
-                                                                                                         TRANSLATED_PATH_EXPRESSIONS,
-                                                                                                         projectDir,
-                                                                                                         pathTranslator ) );
+        return Collections.singletonList( new PathTranslatingPostProcessor( PROJECT_PREFIXES, TRANSLATED_PATH_EXPRESSIONS, projectDir, pathTranslator ) );
     }
     
-    @SuppressWarnings("unchecked")
-    protected String interpolateInternal( String src, List<ValueSource> valueSources,
-                                          List<InterpolationPostProcessor> postProcessors, boolean debug )
+    protected String interpolateInternal( String src, List valueSources, List postProcessors, boolean debug )
         throws ModelInterpolationException
     {
         if ( src.indexOf( "${" ) < 0 )
@@ -298,13 +292,16 @@ public abstract class AbstractStringBasedModelInterpolator
         synchronized( this )
         {
             
-            for ( ValueSource vs : valueSources )
+            for ( Iterator it = valueSources.iterator(); it.hasNext(); )
             {
+                ValueSource vs = (ValueSource) it.next();
                 interpolator.addValueSource( vs );
             }
             
-            for ( InterpolationPostProcessor postProcessor : postProcessors )
+            for ( Iterator it = postProcessors.iterator(); it.hasNext(); )
             {
+                InterpolationPostProcessor postProcessor = (InterpolationPostProcessor) it.next();
+                
                 interpolator.addPostProcessor( postProcessor );
             }
 
@@ -321,14 +318,16 @@ public abstract class AbstractStringBasedModelInterpolator
 
                 if ( debug )
                 {
-                    List<Object> feedback = (List<Object>) interpolator.getFeedback();
+                    List feedback = interpolator.getFeedback();
                     if ( feedback != null && !feedback.isEmpty() )
                     {
                         logger.debug( "Maven encountered the following problems during initial POM interpolation:" );
 
                         Object last = null;
-                        for ( Object next : feedback )
+                        for ( Iterator it = feedback.iterator(); it.hasNext(); )
                         {
+                            Object next = it.next();
+
                             if ( next instanceof Throwable )
                             {
                                 if ( last == null )
@@ -362,13 +361,15 @@ public abstract class AbstractStringBasedModelInterpolator
             }
             finally
             {
-                for ( ValueSource vs : valueSources )
+                for ( Iterator iterator = valueSources.iterator(); iterator.hasNext(); )
                 {
+                    ValueSource vs = (ValueSource) iterator.next();
                     interpolator.removeValuesSource( vs );
                 }
                 
-                for ( InterpolationPostProcessor postProcessor : postProcessors )
+                for ( Iterator iterator = postProcessors.iterator(); iterator.hasNext(); )
                 {
+                    InterpolationPostProcessor postProcessor = (InterpolationPostProcessor) iterator.next();
                     interpolator.removePostProcessor( postProcessor );
                 }
             }

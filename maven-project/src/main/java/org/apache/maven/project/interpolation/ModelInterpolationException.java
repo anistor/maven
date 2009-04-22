@@ -24,7 +24,6 @@ package org.apache.maven.project.interpolation;
  *         <p/>
  *         Created on Feb 2, 2005
  */
-@SuppressWarnings("serial")
 public class ModelInterpolationException
     extends Exception
 {
