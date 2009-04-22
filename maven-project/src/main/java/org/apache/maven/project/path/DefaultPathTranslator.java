@@ -41,8 +41,6 @@ public class DefaultPathTranslator
         "${project.basedir}"
     };
 
-    private static final String FILE_SEPARATOR = File.separator;
-
     public void alignToBaseDirectory( Model model, File basedir )
     {
         if ( basedir == null )
@@ -92,12 +90,13 @@ public class DefaultPathTranslator
             build.setOutputDirectory( alignToBaseDirectory( build.getOutputDirectory(), basedir ) );
 
             build.setTestOutputDirectory( alignToBaseDirectory( build.getTestOutputDirectory(), basedir ) );
+        }
 
-            Reporting reporting = model.getReporting();
-            if ( reporting != null )
-            {
-                reporting.setOutputDirectory( alignToBaseDirectory( reporting.getOutputDirectory(), basedir ) );
-            }
+        Reporting reporting = model.getReporting();
+
+        if ( reporting != null )
+        {
+            reporting.setOutputDirectory( alignToBaseDirectory( reporting.getOutputDirectory(), basedir ) );
         }
     }
 
@@ -118,13 +117,22 @@ public class DefaultPathTranslator
 
         String s = stripBasedirToken( path );
 
-        if ( requiresBaseDirectoryAlignment( s ) )
+        File file = new File( s );
+        if ( file.isAbsolute() )
         {
+            // path was already absolute, just normalize file separator and we're done
+            s = file.getPath();
+        }
+        else if ( file.getPath().startsWith( File.separator ) )
+        {
+            // drive-relative Windows path, don't align with project directory but with drive root
+            s = file.getAbsolutePath();
+        }
+        else
+        {
+            // an ordinary relative path, align with project directory
             s = new File( new File( basedir, s ).toURI().normalize() ).getAbsolutePath();
         }
-        
-        s = s.replace( '/', File.separatorChar );
-        s = s.replace( '\\', File.separatorChar );
 
         return s;
     }
@@ -183,25 +191,6 @@ public class DefaultPathTranslator
         return path;
     }
 
-    private boolean requiresBaseDirectoryAlignment( String s )
-    {
-        if ( s != null )
-        {
-            File f = new File( s );
-
-            if ( s.startsWith( FILE_SEPARATOR ) || f.isAbsolute() )
-            {
-                return false;
-            }
-            else
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     /**
      * {@inheritDoc}
      */
@@ -253,12 +242,13 @@ public class DefaultPathTranslator
             build.setOutputDirectory( unalignFromBaseDirectory( build.getOutputDirectory(), basedir ) );
 
             build.setTestOutputDirectory( unalignFromBaseDirectory( build.getTestOutputDirectory(), basedir ) );
+        }
 
-            Reporting reporting = model.getReporting();
-            if ( reporting != null )
-            {
-                reporting.setOutputDirectory( unalignFromBaseDirectory( reporting.getOutputDirectory(), basedir ) );
-            }
+        Reporting reporting = model.getReporting();
+
+        if ( reporting != null )
+        {
+            reporting.setOutputDirectory( unalignFromBaseDirectory( reporting.getOutputDirectory(), basedir ) );
         }
     }
 

@@ -71,7 +71,7 @@ public class DefaultArtifact
 
     private ArtifactHandler artifactHandler;
 
-    private List dependencyTrail;
+    private List<String> dependencyTrail;
 
     private String version;
 
@@ -81,9 +81,9 @@ public class DefaultArtifact
 
     private boolean release;
 
-    private List availableVersions;
+    private List<ArtifactVersion> availableVersions;
 
-    private Map metadataMap;
+    private Map<Object, ArtifactMetadata> metadataMap;
 
     private boolean optional;
 
@@ -250,7 +250,7 @@ public class DefaultArtifact
     {
         if ( metadataMap == null )
         {
-            metadataMap = new HashMap();
+            metadataMap = new HashMap<Object, ArtifactMetadata>();
         }
 
         ArtifactMetadata m = (ArtifactMetadata) metadataMap.get( metadata.getKey() );
@@ -264,9 +264,37 @@ public class DefaultArtifact
         }
     }
 
-    public Collection getMetadataList()
+    public ArtifactMetadata getMetadata( Class<?> metadataClass )
     {
-        return metadataMap == null ? Collections.EMPTY_LIST : metadataMap.values();
+        Collection<ArtifactMetadata> metadata = getMetadataList();
+        
+        if ( metadata != null )
+        {
+            for ( ArtifactMetadata m : metadata )
+            {
+                if ( metadataClass.isAssignableFrom( m.getClass() ) )
+                {
+                    return m;
+                }
+            }
+        }
+        
+        return null;
+    }
+    
+    public Collection<ArtifactMetadata> getMetadataList()
+    {
+        Collection<ArtifactMetadata> result;
+        if ( metadataMap == null )
+        {
+            result = Collections.emptyList();
+        }
+        else
+        {
+            result = metadataMap.values();
+        }
+        
+        return result;
     }
 
     // ----------------------------------------------------------------------
@@ -394,10 +422,8 @@ public class DefaultArtifact
         }
     }
 
-    public int compareTo( Object o )
+    public int compareTo( Artifact a )
     {
-        Artifact a = (Artifact) o;
-
         int result = groupId.compareTo( a.getGroupId() );
         if ( result == 0 )
         {
@@ -467,12 +493,12 @@ public class DefaultArtifact
         return artifactHandler;
     }
 
-    public List getDependencyTrail()
+    public List<String> getDependencyTrail()
     {
         return dependencyTrail;
     }
 
-    public void setDependencyTrail( List dependencyTrail )
+    public void setDependencyTrail( List<String> dependencyTrail )
     {
         this.dependencyTrail = dependencyTrail;
     }
@@ -574,12 +600,12 @@ public class DefaultArtifact
         return release;
     }
 
-    public List getAvailableVersions()
+    public List<ArtifactVersion> getAvailableVersions()
     {
         return availableVersions;
     }
 
-    public void setAvailableVersions( List availableVersions )
+    public void setAvailableVersions( List<ArtifactVersion> availableVersions )
     {
         this.availableVersions = availableVersions;
     }

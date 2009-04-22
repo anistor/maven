@@ -69,6 +69,7 @@ import org.codehaus.plexus.component.configurator.ComponentConfigurator;
 import org.codehaus.plexus.component.configurator.ConfigurationListener;
 import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluationException;
 import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluator;
+import org.codehaus.plexus.component.discovery.ComponentDiscoveryListener;
 import org.codehaus.plexus.component.repository.exception.ComponentLifecycleException;
 import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
 import org.codehaus.plexus.configuration.PlexusConfiguration;
@@ -80,16 +81,11 @@ import org.codehaus.plexus.personality.plexus.lifecycle.phase.Contextualizable;
 import org.codehaus.plexus.personality.plexus.lifecycle.phase.Initializable;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
-import org.codehaus.plexus.util.xml.Xpp3DomBuilder;
-import org.codehaus.plexus.util.xml.Xpp3DomWriter;
-import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
 import java.io.File;
-import java.io.IOException;
-import java.io.StringReader;
-import java.io.StringWriter;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -208,7 +204,11 @@ public class DefaultPluginManager
 
             artifactResolver.resolve( pluginArtifact, project.getPluginArtifactRepositories(), localRepository );
 
-            PlexusContainer pluginContainer = container.getChildContainer( plugin.getKey() );
+            plugin.setVersion( pluginArtifact.getBaseVersion() );
+
+            String pluginKey = PluginUtils.constructVersionedKey( plugin );
+
+            PlexusContainer pluginContainer = container.getChildContainer( pluginKey );
 
             File pluginFile = pluginArtifact.getFile();
 
@@ -219,7 +219,7 @@ public class DefaultPluginManager
             else if ( pluginFile.lastModified() > pluginContainer.getCreationDate().getTime() )
             {
                 getLogger().info(
-                    "Reloading plugin container for: " + plugin.getKey() + ". The plugin artifact has changed." );
+                    "Reloading plugin container for: " + pluginKey + ". The plugin artifact has changed." );
 
                 pluginContainer.dispose();
 
@@ -298,14 +298,37 @@ public class DefaultPluginManager
 
         try
         {
-            child = container.createChildContainer( plugin.getKey(),
+            MavenPluginValidator validator = new MavenPluginValidator( pluginArtifact );
+
+            String key = PluginUtils.constructVersionedKey( plugin ).intern();
+            child = container.createChildContainer( key,
                                                     Collections.singletonList( pluginArtifact.getFile() ),
                                                     Collections.EMPTY_MAP,
-                                                    Collections.singletonList( pluginCollector ) );
+                                                    Arrays.asList( new ComponentDiscoveryListener[] { validator, pluginCollector } ) );
+
+            // remove listeners for efficiency since they are only needed for the initial stage and
+            // should not be applied to the plugin's dependencies
+            child.removeComponentDiscoveryListener( validator );
+            child.removeComponentDiscoveryListener( pluginCollector );
+
+            if ( validator.hasErrors() )
+            {
+                String msg = "Plugin '" + key + "' has an invalid descriptor:";
+                int count = 1;
+                for ( Iterator i = validator.getErrors().iterator(); i.hasNext(); )
+                {
+                    msg += "\n" + count + ") " + i.next();
+                    count++;
+                }
+                throw new PluginManagerException( msg );
+            }
+
             try
             {
                 child.getContainerRealm().importFrom( "plexus.core", "org.codehaus.plexus.util.xml.Xpp3Dom" );
-                child.getContainerRealm().importFrom( "plexus.core", "org.codehaus.plexus.util.xml.pull" );
+                child.getContainerRealm().importFrom( "plexus.core", "org.codehaus.plexus.util.xml.pull.XmlPullParser" );
+                child.getContainerRealm().importFrom( "plexus.core", "org.codehaus.plexus.util.xml.pull.XmlPullParserException" );
+                child.getContainerRealm().importFrom( "plexus.core", "org.codehaus.plexus.util.xml.pull.XmlSerializer" );
 
                 // MNG-2878
                 child.getContainerRealm().importFrom( "plexus.core", "/default-report.xml" );
@@ -327,7 +350,8 @@ public class DefaultPluginManager
 
         if ( addedPlugin == null )
         {
-            throw new IllegalStateException( "The PluginDescriptor for the plugin " + plugin + " was not found." );
+            throw new IllegalStateException( "The plugin descriptor for the plugin " + plugin + " was not found."
+                + " Please verify that the plugin JAR " + pluginArtifact.getFile() + " is intact." );
         }
 
         addedPlugin.setClassRealm( child.getContainerRealm() );
@@ -336,6 +360,7 @@ public class DefaultPluginManager
         // later when the plugin is first invoked. Retrieving this artifact will in turn allow us to
         // transitively resolve its dependencies, and add them to the plugin container...
         addedPlugin.setArtifacts( Collections.singletonList( pluginArtifact ) );
+        addedPlugin.setPluginArtifact( pluginArtifact );
 
         try
         {
@@ -583,7 +608,7 @@ public class DefaultPluginManager
     private PlexusContainer getPluginContainer( PluginDescriptor pluginDescriptor )
         throws PluginManagerException
     {
-        String pluginKey = pluginDescriptor.getPluginLookupKey();
+        String pluginKey = PluginUtils.constructVersionedKey( pluginDescriptor );
 
         PlexusContainer pluginContainer = container.getChildContainer( pluginKey );
 
@@ -626,8 +651,27 @@ public class DefaultPluginManager
         }
         catch ( ComponentLookupException e )
         {
-            throw new PluginManagerException( "Unable to find the mojo '" + mojoDescriptor.getRoleHint() +
-                "' in the plugin '" + pluginDescriptor.getPluginLookupKey() + "'", e );
+            Throwable cause = e.getCause();
+            while( cause != null && !(cause instanceof NoClassDefFoundError ) )
+            {
+                cause = cause.getCause();
+            }
+            
+            if ( cause != null && ( cause instanceof NoClassDefFoundError ) )
+            {
+                throw new PluginManagerException( "Unable to load the mojo '" + mojoDescriptor.getRoleHint()
+                                                  + "' in the plugin '" + pluginDescriptor.getPluginLookupKey() + "'. A required class is missing: "
+                                                  + cause.getMessage(), e );
+            }
+            
+            throw new PluginManagerException( "Unable to find the mojo '" + mojoDescriptor.getGoal() +
+                "' (or one of its required components) in the plugin '" + pluginDescriptor.getPluginLookupKey() + "'", e );
+        }
+        catch ( NoClassDefFoundError e )
+        {
+            throw new PluginManagerException( "Unable to load the mojo '" + mojoDescriptor.getRoleHint()
+                + "' in the plugin '" + pluginDescriptor.getPluginLookupKey() + "'. A required class is missing: "
+                + e.getMessage(), e );
         }
 
         if ( plugin instanceof ContextEnabled )
@@ -1318,6 +1362,11 @@ public class DefaultPluginManager
                                                     "Unable to retrieve component configurator for plugin configuration",
                                                     e );
         }
+        catch ( NoClassDefFoundError e )
+        {
+            throw new PluginConfigurationException( mojoDescriptor.getPluginDescriptor(),
+                                                    "A required class was missing during mojo configuration: " + e.getMessage(), e );
+        }
         catch ( LinkageError e )
         {
             if ( getLogger().isFatalErrorEnabled() )
@@ -1431,6 +1480,10 @@ public class DefaultPluginManager
         if ( project.getDependencyArtifacts() == null )
         {
             project.setDependencyArtifacts( project.createArtifacts( artifactFactory, null, null ) );
+        }
+        else
+        {
+            project.resolveActiveArtifacts();
         }
 
         Set resolvedArtifacts;

@@ -25,6 +25,7 @@ import org.apache.maven.model.Build;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Extension;
 import org.apache.maven.model.Model;
+import org.apache.maven.model.Plugin;
 import org.codehaus.plexus.util.dag.CycleDetectedException;
 
 import java.util.ArrayList;
@@ -275,6 +276,101 @@ public class ProjectSorterTest
             // expected
             assertTrue( true );
         }
+    }
+
+    public void testPluginDependenciesInfluenceSorting()
+        throws Exception
+    {
+        List projects = new ArrayList();
+
+        MavenProject parentProject = createProject( "groupId", "parent", "1.0" );
+        projects.add( parentProject );
+
+        MavenProject declaringProject = createProject( "groupId", "declarer", "1.0" );
+        declaringProject.setParent( parentProject );
+        projects.add( declaringProject );
+
+        MavenProject pluginLevelDepProject = createProject( "groupId", "plugin-level-dep", "1.0" );
+        pluginLevelDepProject.setParent( parentProject );
+        projects.add( pluginLevelDepProject );
+
+        MavenProject pluginProject = createProject( "groupId", "plugin", "1.0" );
+        pluginProject.setParent( parentProject );
+        projects.add( pluginProject );
+
+        Plugin plugin = new Plugin();
+        plugin.setGroupId( pluginProject.getGroupId() );
+        plugin.setArtifactId( pluginProject.getArtifactId() );
+        plugin.setVersion( pluginProject.getVersion() );
+
+        plugin.addDependency( createDependency( pluginLevelDepProject ) );
+
+        Model model = declaringProject.getModel();
+        Build build = model.getBuild();
+
+        if ( build == null )
+        {
+            build = new Build();
+            model.setBuild( build );
+        }
+
+        build.addPlugin( plugin );
+
+        projects = new ProjectSorter( projects ).getSortedProjects();
+        
+        assertEquals( parentProject, projects.get( 0 ) );
+        
+        // the order of these two is non-deterministic, based on when they're added to the reactor.
+        assertTrue( projects.contains( pluginProject ) );
+        assertTrue( projects.contains( pluginLevelDepProject ) );
+        
+        // the declaring project MUST be listed after the plugin and its plugin-level dep, though.
+        assertEquals( declaringProject, projects.get( 3 ) );
+    }
+
+    public void testPluginDependenciesInfluenceSorting_DeclarationInParent()
+        throws Exception
+    {
+        List projects = new ArrayList();
+
+        MavenProject parentProject = createProject( "groupId", "parent-declarer", "1.0" );
+        projects.add( parentProject );
+
+        MavenProject pluginProject = createProject( "groupId", "plugin", "1.0" );
+        pluginProject.setParent( parentProject );
+        projects.add( pluginProject );
+
+        MavenProject pluginLevelDepProject = createProject( "groupId", "plugin-level-dep", "1.0" );
+        pluginLevelDepProject.setParent( parentProject );
+        projects.add( pluginLevelDepProject );
+
+        Plugin plugin = new Plugin();
+        plugin.setGroupId( pluginProject.getGroupId() );
+        plugin.setArtifactId( pluginProject.getArtifactId() );
+        plugin.setVersion( pluginProject.getVersion() );
+
+        plugin.addDependency( createDependency( pluginLevelDepProject ) );
+
+        Model model = parentProject.getModel();
+        Build build = model.getBuild();
+
+        if ( build == null )
+        {
+            build = new Build();
+            model.setBuild( build );
+        }
+
+        build.addPlugin( plugin );
+
+        projects = new ProjectSorter( projects ).getSortedProjects();
+        
+        System.out.println( projects );
+
+        assertEquals( parentProject, projects.get( 0 ) );
+        
+        // the order of these two is non-deterministic, based on when they're added to the reactor.
+        assertTrue( projects.contains( pluginProject ) );
+        assertTrue( projects.contains( pluginLevelDepProject ) );
     }
 
     private Dependency createDependency( MavenProject project )

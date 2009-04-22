@@ -168,7 +168,7 @@ public class DefaultLifecycleExecutor
             buffer.append( "Please see\n" );
             buffer.append( "http://maven.apache.org/guides/introduction/introduction-to-the-lifecycle.html\n" );
             buffer.append( "for a complete description of available lifecycle phases.\n\n" );
-            buffer.append( "Use \"mvn -?\" to show general usage information about Maven's command line.\n\n" );
+            buffer.append( "Use \"mvn --help\" to show general usage information about Maven's command line.\n\n" );
 
             throw new BuildFailureException( buffer.toString() );
         }
@@ -184,6 +184,7 @@ public class DefaultLifecycleExecutor
     private void findExtensions( MavenSession session )
         throws LifecycleExecutionException
     {
+        // TODO: MNG-4081. What about extensions within the current reactor??
         for ( Iterator i = session.getSortedProjects().iterator(); i.hasNext(); )
         {
             MavenProject project = (MavenProject) i.next();
@@ -193,6 +194,7 @@ public class DefaultLifecycleExecutor
                 Extension extension = (Extension) j.next();
                 try
                 {
+                    getLogger().debug( "Adding extension: " + extension );
                     extensionManager.addExtension( extension, project, session.getLocalRepository() );
                 }
                 catch ( PlexusContainerException e )
@@ -838,14 +840,16 @@ public class DefaultLifecycleExecutor
                 String report = (String) i.next();
 
                 StringTokenizer tok = new StringTokenizer( report, ":" );
-                if ( tok.countTokens() != 2 )
+                int count = tok.countTokens();
+                if ( count != 2 && count != 3 )
                 {
-                    getLogger().warn( "Invalid default report ignored: '" + report + "' (must be groupId:artifactId)" );
+                    getLogger().warn( "Invalid default report ignored: '" + report + "' (must be groupId:artifactId[:version])" );
                 }
                 else
                 {
                     String groupId = tok.nextToken();
                     String artifactId = tok.nextToken();
+                    String version = tok.hasMoreTokens() ? tok.nextToken() : null;
 
                     boolean found = false;
                     for ( Iterator j = reportPlugins.iterator(); j.hasNext() && !found; )
@@ -863,6 +867,7 @@ public class DefaultLifecycleExecutor
                         ReportPlugin reportPlugin = new ReportPlugin();
                         reportPlugin.setGroupId( groupId );
                         reportPlugin.setArtifactId( artifactId );
+                        reportPlugin.setVersion( version );
                         reportPlugins.add( reportPlugin );
                     }
                 }
@@ -1507,6 +1512,8 @@ public class DefaultLifecycleExecutor
         PluginDescriptor pluginDescriptor;
         try
         {
+            // TODO: MNG-4081...need to flush this plugin once we look at it, to avoid using an external
+            // version of a plugin when a newer version will be created in the current reactor...
             pluginDescriptor = pluginManager.verifyPlugin( plugin, project, settings, localRepository );
         }
         catch ( PluginManagerException e )
@@ -1672,7 +1679,7 @@ public class DefaultLifecycleExecutor
         throws BuildFailureException, LifecycleExecutionException, PluginNotFoundException
     {
         String goal;
-        Plugin plugin;
+        Plugin plugin = null;
 
         PluginDescriptor pluginDescriptor = null;
 
@@ -1697,35 +1704,36 @@ public class DefaultLifecycleExecutor
                 // Steps for retrieving the plugin model instance:
                 // 1. request directly from the plugin collector by prefix
                 pluginDescriptor = pluginManager.getPluginDescriptorForPrefix( prefix );
-
-                // 2. look in the repository via search groups
-                if ( pluginDescriptor == null )
-                {
-                    plugin = pluginManager.getPluginDefinitionForPrefix( prefix, session, project );
-                }
-                else
+                if ( pluginDescriptor != null )
                 {
                     plugin = new Plugin();
-
                     plugin.setGroupId( pluginDescriptor.getGroupId() );
                     plugin.setArtifactId( pluginDescriptor.getArtifactId() );
                     plugin.setVersion( pluginDescriptor.getVersion() );
                 }
 
-                // 3. search plugins in the current POM
+                // 2. search plugins in the current POM
                 if ( plugin == null )
                 {
                     for ( Iterator i = project.getBuildPlugins().iterator(); i.hasNext(); )
                     {
                         Plugin buildPlugin = (Plugin) i.next();
 
-                        PluginDescriptor desc = verifyPlugin( buildPlugin, project, session.getSettings(), session
-                            .getLocalRepository() );
+                        PluginDescriptor desc =
+                            verifyPlugin( buildPlugin, project, session.getSettings(), session.getLocalRepository() );
                         if ( prefix.equals( desc.getGoalPrefix() ) )
                         {
                             plugin = buildPlugin;
+                            pluginDescriptor = desc;
+                            break;
                         }
                     }
+                }
+
+                // 3. look in the repository via search groups
+                if ( plugin == null )
+                {
+                    plugin = pluginManager.getPluginDefinitionForPrefix( prefix, session, project );
                 }
 
                 // 4. default to o.a.m.plugins and maven-<prefix>-plugin

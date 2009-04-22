@@ -43,7 +43,10 @@
   |   definition of these types
   |
 -->
-<model xsd.namespace="http://maven.apache.org/POM/4.0.0" xsd.target-namespace="http://maven.apache.org/POM/4.0.0">
+<model xmlns="http://modello.codehaus.org/MODELLO/1.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://modello.codehaus.org/MODELLO/1.0.0 http://modello.codehaus.org/xsd/modello-1.0.0.xsd"
+  xml.namespace="http://maven.apache.org/POM/${version}"
+  xml.schemaLocation="http://maven.apache.org/xsd/maven-${version}.xsd">
   <id>maven</id>
   <name>Maven</name>
   <description>
@@ -51,8 +54,8 @@
     <p>This is a reference for the Maven project descriptor used in Maven.</p>
     <p>An XSD is available at:</p>
     <ul>
-      <li><a href="http://maven.apache.org/maven-v3_0_0.xsd">http://maven.apache.org/maven-v3_0_0.xsd</a> for Maven 1.1.</li>
-      <li><a href="http://maven.apache.org/maven-v4_0_0.xsd">http://maven.apache.org/maven-v4_0_0.xsd</a> for Maven 2.0.</li>
+      <li><a href="http://maven.apache.org/xsd/maven-v3_0_0.xsd">http://maven.apache.org/xsd/maven-v3_0_0.xsd</a> for Maven 1.1.</li>
+      <li><a href="http://maven.apache.org/xsd/maven-4.0.0.xsd">http://maven.apache.org/xsd/maven-4.0.0.xsd</a> for Maven 2.0.</li>
     </ul>
     ]]>
   </description>
@@ -103,7 +106,7 @@
         <!-- Parent Model                                                           -->
         <!-- ====================================================================== -->
 
-        <field>
+        <field xdoc.separator="blank">
           <name>extend</name>
           <version>3.0.0</version>
           <description>
@@ -117,7 +120,7 @@
           </description>
           <type>String</type>
         </field>
-        <field>
+        <field xdoc.separator="blank">
           <name>parent</name>
           <version>4.0.0</version>
           <description>The location of the parent project, if one exists. Values from the parent
@@ -132,7 +135,7 @@
         <!-- groupId/artifactId/Version/Packaging                                   -->
         <!-- ====================================================================== -->
 
-        <field>
+        <field xdoc.separator="blank">
           <name>groupId</name>
           <version>3.0.0+</version>
           <required>true</required>
@@ -212,7 +215,7 @@
         <!-- Elements which describe a project                                      -->
         <!-- ====================================================================== -->
 
-        <field>
+        <field xdoc.separator="blank">
           <name>name</name>
           <version>3.0.0+</version>
           <required>true</required>
@@ -312,7 +315,7 @@
             <multiplicity>*</multiplicity>
           </association>
         </field>
-        <field>
+        <field xdoc.separator="blank">
           <name>mailingLists</name>
           <version>3.0.0+</version>
           <description>Contains information about a project's mailing lists.</description>
@@ -321,7 +324,7 @@
             <multiplicity>*</multiplicity>
           </association>
         </field>
-        <field>
+        <field xdoc.separator="blank">
           <name>developers</name>
           <version>3.0.0+</version>
           <description>Describes the committers of a project.</description>
@@ -344,13 +347,13 @@
         <!-- Issue Tracking                                                         -->
         <!-- ====================================================================== -->
 
-        <field>
+        <field xdoc.separator="blank">
           <name>issueTrackingUrl</name>
           <version>3.0.0</version>
           <description>The URL of the project's issue tracking system.</description>
           <type>String</type>
         </field>
-        <field>
+        <field xdoc.separator="blank">
           <name>issueManagement</name>
           <version>4.0.0</version>
           <description>The project's issue management system information.</description>
@@ -363,7 +366,7 @@
         <!-- SCM                                                                    -->
         <!-- ====================================================================== -->
 
-        <field>
+        <field xdoc.separator="blank">
           <name>branches</name>
           <version>3.0.0</version>
           <description>
@@ -493,7 +496,7 @@
         <!-- Build prerequisites                                                    -->
         <!-- ====================================================================== -->
 
-        <field>
+        <field xdoc.separator="blank">
           <name>prerequisites</name>
           <version>4.0.0</version>
           <description>Describes the prerequisites in the build environment for this project.</description>
@@ -506,7 +509,7 @@
         <!-- Build                                                                  -->
         <!-- ====================================================================== -->
 
-        <field>
+        <field xdoc.separator="blank">
           <name>build</name>
           <version>3.0.0+</version>
           <required>true</required>
@@ -520,7 +523,7 @@
         <!-- Profiles                                                               -->
         <!-- ====================================================================== -->
 
-        <field>
+        <field xdoc.separator="blank">
           <name>profiles</name>
           <version>4.0.0</version>
           <description>A listing of project-local build profiles which will modify the build process
@@ -603,7 +606,7 @@
             <type>DistributionManagement</type>
           </association>
         </field>
-        <field>
+        <field xdoc.separator="blank">
           <name>modules</name>
           <version>4.0.0</version>
           <description>The modules (sometimes called subprojects) to build as a part of this
@@ -613,7 +616,7 @@
             <multiplicity>*</multiplicity>
           </association>
         </field>
-        <field>
+        <field xdoc.separator="blank">
           <name>repositories</name>
           <version>4.0.0</version>
           <description>The lists of the remote repositories for discovering dependencies and
@@ -633,7 +636,7 @@
             <multiplicity>*</multiplicity>
           </association>
         </field>
-        <field>
+        <field xdoc.separator="blank">
           <name>dependencies</name>
           <version>3.0.0+</version>
           <description>
@@ -652,7 +655,7 @@
             <multiplicity>*</multiplicity>
           </association>
         </field>
-        <field>
+        <field xdoc.separator="blank">
           <name>reports</name>
           <version>4.0.0</version>
           <description>
@@ -677,7 +680,7 @@
             <type>Reporting</type>
           </association>
         </field>
-        <field>
+        <field xdoc.separator="blank">
           <name>dependencyManagement</name>
           <version>4.0.0</version>
           <required>false</required>
@@ -690,7 +693,7 @@
             <type>DependencyManagement</type>
           </association>
         </field>
-        <field>
+        <field xdoc.separator="blank">
           <name>properties</name>
           <version>4.0.0</version>
           <description>
@@ -761,7 +764,7 @@
     {
         if ( pluginMap == null )
         {
-            pluginMap = new java.util.HashMap();
+            pluginMap = new java.util.LinkedHashMap();
             if ( plugins != null )
             {
                 for ( java.util.Iterator it = plugins.iterator(); it.hasNext(); )
@@ -2126,7 +2129,7 @@
           <description>
             <![CDATA[
             FOR INTERNAL USE ONLY. This is a unique identifier assigned to each
-            resource to allow Maven to merge changes to this resource that take 
+            resource to allow Maven to merge changes to this resource that take
             place during the execution of a plugin. This field must be managed
             by the generated parser and formatter classes in order to allow it
             to survive model interpolation.
@@ -2141,7 +2144,7 @@
           <code>
             <![CDATA[
     private static int mergeIdCounter = 0;
-    
+
     public void initMergeId()
     {
         if ( getMergeId() == null )
@@ -2149,7 +2152,7 @@
             setMergeId( "resource-" + (mergeIdCounter++) );
         }
     }
-    
+
     /**
      * @see java.lang.Object#toString()
      */
@@ -2640,7 +2643,7 @@
     {
         if ( executionMap == null )
         {
-            executionMap = new java.util.HashMap();
+            executionMap = new java.util.LinkedHashMap();
             if ( getExecutions() != null )
             {
                 for ( java.util.Iterator i = getExecutions().iterator(); i.hasNext(); )
@@ -2661,7 +2664,7 @@
     }
 
     private String key;
-    
+
     /**
      * @return the key of the plugin, ie <code>groupId:artifactId</code>
      */
@@ -2693,7 +2696,7 @@
         {
             return true;
         }
-        
+
         if ( other instanceof Plugin )
         {
             Plugin otherPlugin = (Plugin) other;
@@ -2803,13 +2806,12 @@
       <version>4.0.0</version>
       <description>Section for management of reports and their configuration.</description>
       <fields>
-        <field>
-          <name>excludeDefaults</name>
+        <field xml.tagName="excludeDefaults">
+          <name>excludeDefaultsValue</name>
           <version>4.0.0</version>
-          <type>boolean</type>
+          <type>Boolean</type>
           <description>If true, then the default reports are not included in the site generation.
             This includes the reports in the "Project Info" menu.</description>
-          <defaultValue>false</defaultValue>
         </field>
         <field>
           <name>outputDirectory</name>
@@ -2857,7 +2859,7 @@
     {
         if ( reportPluginMap == null )
         {
-            reportPluginMap = new java.util.HashMap();
+            reportPluginMap = new java.util.LinkedHashMap();
             if ( getPlugins() != null )
             {
                 for ( java.util.Iterator it = getPlugins().iterator(); it.hasNext(); )
@@ -2869,6 +2871,21 @@
         }
 
         return reportPluginMap;
+    }
+
+    public boolean isExcludeDefaults()
+    {
+        return excludeDefaultsValue != null ? excludeDefaultsValue.booleanValue() : false;
+    }
+
+    public void setExcludeDefaults( boolean excludeDefaults )
+    {
+        excludeDefaultsValue = excludeDefaults ? Boolean.TRUE : Boolean.FALSE;
+    }
+
+    public void setExcludeDefaultsValue( String excludeDefaults )
+    {
+        excludeDefaultsValue = excludeDefaults != null ? Boolean.valueOf( excludeDefaults ) : null;
     }
             ]]>
           </code>
@@ -3167,7 +3184,7 @@
     {
         if ( reportSetMap == null )
         {
-            reportSetMap = new java.util.HashMap();
+            reportSetMap = new java.util.LinkedHashMap();
             if ( getReportSets() != null )
             {
                 for ( java.util.Iterator i = getReportSets().iterator(); i.hasNext(); )
@@ -3209,6 +3226,37 @@
     public boolean isInheritanceApplied()
     {
         return inheritanceApplied;
+    }
+
+    /**
+     * @see java.lang.Object#equals(java.lang.Object)
+     */
+    public boolean equals( Object other )
+    {
+        if ( other instanceof ReportPlugin )
+        {
+            ReportPlugin otherPlugin = (ReportPlugin) other;
+
+            return getKey().equals( otherPlugin.getKey() );
+        }
+
+        return false;
+    }
+
+    /**
+     * @see java.lang.Object#hashCode()
+     */
+    public int hashCode()
+    {
+        return getKey().hashCode();
+    }
+
+    /**
+     * @see java.lang.Object#toString()
+     */
+    public String toString()
+    {
+        return "ReportPlugin [" + getKey() + "]";
     }
             ]]>
           </code>
@@ -3351,6 +3399,17 @@
           <code>
             <![CDATA[
     /**
+     * Gets the key of the extension. The key is used to merge extensions inherited from a parent with the extensions
+     * of the current project.
+     *
+     * @return The key of the extension, i.e. <code>groupId:artifactId</code>.
+     */
+    public String getKey()
+    {
+        return new StringBuffer( 128 ).append( getGroupId() ).append( ':' ).append( getArtifactId() ).toString();
+    }
+
+    /**
      * @see java.lang.Object#equals(java.lang.Object)
      */
     public boolean equals( Object o )
@@ -3388,9 +3447,9 @@
     public int hashCode()
     {
         int result = 17;
-        result = 37 * result + getArtifactId() != null ? getArtifactId().hashCode() : 0;
-        result = 37 * result + getGroupId() != null ? getGroupId().hashCode() : 0;
-        result = 37 * result + getVersion() != null ? getVersion().hashCode() : 0;
+        result = 37 * result + ( getArtifactId() != null ? getArtifactId().hashCode() : 0 );
+        result = 37 * result + ( getGroupId() != null ? getGroupId().hashCode() : 0 );
+        result = 37 * result + ( getVersion() != null ? getVersion().hashCode() : 0 );
         return result;
     }
             ]]>

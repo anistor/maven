@@ -64,6 +64,7 @@ public class MavenArtifactFilterManager
         Set artifacts = new HashSet();
 
         artifacts.add( "classworlds" );
+        artifacts.add( "jsch" );
         artifacts.add( "commons-cli" );
         artifacts.add( "doxia-sink-api" );
         artifacts.add( "doxia-logging-api" );
@@ -86,6 +87,10 @@ public class MavenArtifactFilterManager
         artifacts.add( "plexus-interactivity-api" );
         artifacts.add( "maven-toolchain" );
         artifacts.add( "wagon-provider-api" );
+
+        // drop the component-api - even though we don't use it directly it is included in out container-default
+        artifacts.add( "plexus-component-api" );
+        
         return artifacts;
     }
 }

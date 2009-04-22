@@ -39,7 +39,7 @@ import java.util.regex.Pattern;
  * @todo get rid of the multiple states we can have (project, parent, etc artifacts, file == null, snapshot, etc) - construct subclasses and use accordingly?
  */
 public interface Artifact
-    extends Comparable
+    extends Comparable<Artifact>
 {
     String LATEST_VERSION = "LATEST";
 
@@ -104,8 +104,10 @@ public interface Artifact
     String getDependencyConflictId();
 
     void addMetadata( ArtifactMetadata metadata );
+    
+    ArtifactMetadata getMetadata( Class<?> metadataClass );
 
-    Collection getMetadataList();
+    Collection<ArtifactMetadata> getMetadataList();
 
     void setRepository( ArtifactRepository remoteRepository );
 
@@ -126,12 +128,12 @@ public interface Artifact
     /**
      * @return {@link List} &lt; {@link String} > with artifact ids
      */
-    List getDependencyTrail();
+    List<String> getDependencyTrail();
 
     /**
      * @param dependencyTrail {@link List} &lt; {@link String} > with artifact ids
      */
-    void setDependencyTrail( List dependencyTrail );
+    void setDependencyTrail( List<String> dependencyTrail );
 
     void setScope( String scope );
 
@@ -162,9 +164,9 @@ public interface Artifact
 
     void setRelease( boolean release );
 
-    List getAvailableVersions();
+    List<ArtifactVersion> getAvailableVersions();
 
-    void setAvailableVersions( List versions );
+    void setAvailableVersions( List<ArtifactVersion> versions );
 
     boolean isOptional();
     

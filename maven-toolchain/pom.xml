@@ -16,15 +16,20 @@ software distributed under the License is distributed on an
 KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
---><project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
   <parent>
     <groupId>org.apache.maven</groupId>
     <artifactId>maven</artifactId>
-    <version>2.1.0-M2-SNAPSHOT</version>
+    <version>2.1.1-SNAPSHOT</version>
   </parent>
-  <modelVersion>4.0.0</modelVersion>
+
   <artifactId>maven-toolchain</artifactId>
+
   <name>Maven Toolchains</name>
+
   <dependencies>
     <dependency>
       <groupId>junit</groupId>
@@ -41,6 +46,7 @@ under the License.
       <artifactId>maven-artifact</artifactId>
     </dependency>
   </dependencies>
+
   <build>
     <plugins>
       <plugin>
@@ -58,7 +64,9 @@ under the License.
         <configuration>
           <version>1.0.0</version>
           <packageWithVersion>false</packageWithVersion>
-          <model>src/main/mdo/toolchains.xml</model>
+          <models>
+            <model>src/main/mdo/toolchains.xml</model>
+          </models>
         </configuration>
       </plugin>
       <plugin>
@@ -66,7 +74,7 @@ under the License.
         <groupId>org.apache.maven.plugins</groupId>
         <executions>
           <execution>
-            <id>shading</id>                
+            <id>shading</id>
             <phase>package</phase>
             <goals>
               <goal>shade</goal>

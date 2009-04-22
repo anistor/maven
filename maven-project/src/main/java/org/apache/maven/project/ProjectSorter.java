@@ -145,6 +145,30 @@ public class ProjectSorter
                     {
                         addEdgeWithParentCheck( projectMap, pluginId, project, id );
                     }
+
+                    if ( !pluginId.equals( id ) ) {
+                        for ( Iterator k = plugin.getDependencies().iterator(); k.hasNext(); )
+                        {
+                          Dependency dependency = (Dependency) k.next();
+
+                          String dependencyId = ArtifactUtils
+                              .versionlessKey( dependency.getGroupId(), dependency.getArtifactId() );
+
+                          if ( dag.getVertex( dependencyId ) != null )
+                          {
+                              project.addProjectReference( (MavenProject) projectMap.get( dependencyId ) );
+
+                              addEdgeWithParentCheck( projectMap, dependencyId, project, id );
+                              
+                              // TODO: Shouldn't we add an edge between the plugin and its dependency?
+                              // Note that doing this may result in cycles...run 
+                              // ProjectSorterTest.testPluginDependenciesInfluenceSorting_DeclarationInParent() 
+                              // for more information, if you change this:
+                              
+                              // dag.addEdge( pluginId, dependencyId );
+                          }
+                       }
+                    }
                 }
             }
 

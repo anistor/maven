@@ -27,6 +27,7 @@ import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -64,6 +65,7 @@ import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
 import org.apache.maven.project.artifact.ActiveProjectArtifact;
 import org.apache.maven.project.artifact.InvalidDependencyVersionException;
 import org.apache.maven.project.artifact.MavenMetadataSource;
+import org.codehaus.plexus.logging.Logger;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 
 /**
@@ -151,6 +153,10 @@ public class MavenProject
 
     private File basedir;
     
+    private Logger logger;
+    
+    private ProjectBuilderConfiguration projectBuilderConfiguration;
+    
     public MavenProject()
     {
         Model model = new Model();
@@ -165,6 +171,12 @@ public class MavenProject
     public MavenProject( Model model )
     {
         this.setModel( model );
+    }
+
+    public MavenProject( Model model, Logger logger )
+    {
+        this.setModel( model );
+        this.setLogger( logger );
     }
 
     /**
@@ -1722,6 +1734,36 @@ public class MavenProject
     {
         return snapshotArtifactRepository;
     }
+    
+    public void resolveActiveArtifacts()
+    {
+        Set depArtifacts = getDependencyArtifacts();
+        if ( depArtifacts == null )
+        {
+            return;
+        }
+        
+        Set updated = new LinkedHashSet( depArtifacts.size() );
+        int updatedCount = 0;
+        
+        for ( Iterator it = depArtifacts.iterator(); it.hasNext(); )
+        {
+            Artifact depArtifact = (Artifact) it.next();
+            Artifact replaced = replaceWithActiveArtifact( depArtifact );
+            
+            if ( depArtifact != replaced )
+            {
+                updatedCount++;
+            }
+            
+            updated.add( replaced );
+        }
+        
+        if ( updatedCount > 0 )
+        {
+            setDependencyArtifacts( updated );
+        }
+    }
 
     public Artifact replaceWithActiveArtifact( Artifact pluginArtifact )
     {
@@ -1729,94 +1771,141 @@ public class MavenProject
         {
             String refId = getProjectReferenceId( pluginArtifact.getGroupId(), pluginArtifact.getArtifactId(), pluginArtifact.getVersion() );
             MavenProject ref = (MavenProject) getProjectReferences().get( refId );
-            if ( ref != null && ref.getArtifact() != null )
+            if ( ref != null )
             {
-                // TODO: if not matching, we should get the correct artifact from that project (attached)
-                if ( ref.getArtifact().getDependencyConflictId().equals( pluginArtifact.getDependencyConflictId() ) )
+                if ( ref.getArtifact() != null
+                    && ref.getArtifact().getDependencyConflictId().equals( pluginArtifact.getDependencyConflictId() ) )
                 {
                     // if the project artifact doesn't exist, don't use it. We haven't built that far.
                     if ( ref.getArtifact().getFile() != null && ref.getArtifact().getFile().exists() )
                     {
                         // FIXME: Why aren't we using project.getArtifact() for the second parameter here??
-                        pluginArtifact = new ActiveProjectArtifact( ref, pluginArtifact );
-                        return pluginArtifact;
+                        Artifact resultArtifact = new ActiveProjectArtifact( ref, pluginArtifact );
+                        return resultArtifact;
                     }
                     else
                     {
-/* TODO...
-                        logger.warn( "Artifact found in the reactor has not been built when it's use was " +
-                            "attempted - resolving from the repository instead" );
-*/
+                        logMissingSiblingProjectArtifact( pluginArtifact );
                     }
                 }
 
-                Iterator itr = ref.getAttachedArtifacts().iterator();
-                while(itr.hasNext()) {
-                    Artifact attached = (Artifact) itr.next();
-                    if( attached.getDependencyConflictId().equals(pluginArtifact.getDependencyConflictId()) ) {
-                        /* TODO: if I use the original, I get an exception below:
-                            java.lang.UnsupportedOperationException: Cannot change the download information for an attached artifact. It is derived from the main artifact.
-                            at org.apache.maven.project.artifact.AttachedArtifact.setDownloadUrl(AttachedArtifact.java:89)
-                            at org.apache.maven.project.artifact.MavenMetadataSource.retrieve(MavenMetadataSource.java:205)
-                            at org.apache.maven.artifact.resolver.DefaultArtifactCollector.recurse(DefaultArtifactCollector.java:275)
-                            at org.apache.maven.artifact.resolver.DefaultArtifactCollector.collect(DefaultArtifactCollector.java:67)
-                            at org.apache.maven.artifact.resolver.DefaultArtifactResolver.resolveTransitively(DefaultArtifactResolver.java:223)
-                            at org.apache.maven.artifact.resolver.DefaultArtifactResolver.resolveTransitively(DefaultArtifactResolver.java:211)
-                            at org.apache.maven.artifact.resolver.DefaultArtifactResolver.resolveTransitively(DefaultArtifactResolver.java:182)
-                            at org.apache.maven.plugin.DefaultPluginManager.resolveTransitiveDependencies(DefaultPluginManager.java:1117)
-                            at org.apache.maven.plugin.DefaultPluginManager.executeMojo(DefaultPluginManager.java:366)
-                            at org.apache.maven.lifecycle.DefaultLifecycleExecutor.executeGoals(DefaultLifecycleExecutor.java:534)
-                            at org.apache.maven.lifecycle.DefaultLifecycleExecutor.executeGoalWithLifecycle(DefaultLifecycleExecutor.java:475)
-                            at org.apache.maven.lifecycle.DefaultLifecycleExecutor.executeGoal(DefaultLifecycleExecutor.java:454)
-                            at org.apache.maven.lifecycle.DefaultLifecycleExecutor.executeGoalAndHandleFailures(DefaultLifecycleExecutor.java:306)
-                            at org.apache.maven.lifecycle.DefaultLifecycleExecutor.executeTaskSegments(DefaultLifecycleExecutor.java:273)
-                            at org.apache.maven.lifecycle.DefaultLifecycleExecutor.execute(DefaultLifecycleExecutor.java:140)
-                            at org.apache.maven.DefaultMaven.doExecute(DefaultMaven.java:322)
-                            at org.apache.maven.DefaultMaven.execute(DefaultMaven.java:115)
-                            at org.apache.maven.cli.MavenCli.main(MavenCli.java:256)
-                        */
-                        Artifact resultArtifact=ArtifactUtils.copyArtifact(attached);
-                        resultArtifact.setScope(pluginArtifact.getScope());
+                Artifact attached = findMatchingArtifact( ref.getAttachedArtifacts(), pluginArtifact );
+                if ( attached != null )
+                {
+                    if ( attached.getFile() != null && attached.getFile().exists() )
+                    {
+                        Artifact resultArtifact = ArtifactUtils.copyArtifact( attached );
+                        resultArtifact.setScope( pluginArtifact.getScope() );
                         return resultArtifact;
+                    }
+                    else
+                    {
+                        logMissingSiblingProjectArtifact( pluginArtifact );
                     }
                 }
             }
         }
         return pluginArtifact;
     }
-    
-    private void addArtifactPath(Artifact a, List list) throws DependencyResolutionRequiredException
+
+    /**
+     * Tries to resolve the specified artifact from the given collection of attached project artifacts.
+     * 
+     * @param artifacts The attached artifacts, may be <code>null</code>.
+     * @param requestedArtifact The artifact to resolve, must not be <code>null</code>.
+     * @return The matching artifact or <code>null</code> if not found.
+     */
+    private Artifact findMatchingArtifact( List artifacts, Artifact requestedArtifact )
     {
-        String refId = getProjectReferenceId( a.getGroupId(), a.getArtifactId(), a.getVersion() );
-        MavenProject project = (MavenProject) projectReferences.get( refId );
-        
-        boolean projectDirFound = false;
-        if ( project != null )
+        if ( artifacts != null && !artifacts.isEmpty() )
         {
-            if (a.getType().equals("test-jar"))
+            // first try matching by dependency conflict id
+            String requestedId = requestedArtifact.getDependencyConflictId();
+            for ( Iterator it = artifacts.iterator(); it.hasNext(); )
             {
-                File testOutputDir = new File( project.getBuild().getTestOutputDirectory() );
-                if ( testOutputDir.exists() )
+                Artifact artifact = (Artifact) it.next();
+                if ( requestedId.equals( artifact.getDependencyConflictId() ) )
                 {
-                    list.add( testOutputDir.getAbsolutePath() );
-                    projectDirFound = true;
+                    return artifact;
                 }
             }
-            else
+
+            // next try matching by repository conflict id
+            requestedId = getRepositoryConflictId( requestedArtifact );
+            for ( Iterator it = artifacts.iterator(); it.hasNext(); )
             {
-                list.add( project.getBuild().getOutputDirectory() );
-                projectDirFound = true;
+                Artifact artifact = (Artifact) it.next();
+                if ( requestedId.equals( getRepositoryConflictId( artifact ) ) )
+                {
+                    return artifact;
+                }
             }
         }
-        if ( ! projectDirFound )
+
+        return null;
+    }
+
+    /**
+     * Gets the repository conflict id of the specified artifact. Unlike the dependency conflict id, the repository
+     * conflict id uses the artifact file extension instead of the artifact type. Hence, the repository conflict id more
+     * closely reflects the identity of artifacts as perceived by a repository.
+     * 
+     * @param artifact The artifact, must not be <code>null</code>.
+     * @return The repository conflict id, never <code>null</code>.
+     */
+    private String getRepositoryConflictId( Artifact artifact )
+    {
+        StringBuffer buffer = new StringBuffer( 128 );
+        buffer.append( artifact.getGroupId() );
+        buffer.append( ':' ).append( artifact.getArtifactId() );
+        if ( artifact.getArtifactHandler() != null )
         {
-            File file = a.getFile();
-            if ( file == null )
-            {
-                throw new DependencyResolutionRequiredException( a );
-            }
-            list.add( file.getPath() );
+            buffer.append( ':' ).append( artifact.getArtifactHandler().getExtension() );
         }
+        else
+        {
+            buffer.append( ':' ).append( artifact.getType() );
+        }
+        if ( artifact.hasClassifier() )
+        {
+            buffer.append( ':' ).append( artifact.getClassifier() );
+        }
+        return buffer.toString();
+    }
+
+    private void logMissingSiblingProjectArtifact( Artifact artifact )
+    {
+        if ( logger == null || !logger.isDebugEnabled() )
+        {
+            return;
+        }
+        
+        if ( logger.isDebugEnabled() )
+        {
+            StringBuffer message = new StringBuffer();
+            message.append( "WARNING: A dependency of the current project (or of one the plugins used in its build) was found in the reactor, " );
+            message.append( "\nbut had not been built at the time it was requested. It will be resolved from the repository instead." );
+            message.append( "\n\nCurrent Project: " ).append( getName() );
+            message.append( "\nRequested Dependency: " ).append( artifact.getId() );
+            message.append( "\n\nNOTE: You may need to run this build to the 'compile' lifecycle phase, or farther, in order to build the dependency artifact." );
+            message.append( "\n" );
+            
+            logger.debug( message.toString() );
+        }
+        else
+        {
+            logger.warn( "Requested project artifact: " + artifact.getId() + " is not available at this time. Resolving externally." );
+        }
+    }
+
+    private void addArtifactPath(Artifact a, List list) throws DependencyResolutionRequiredException
+    {
+        File file = a.getFile();
+        if ( file == null )
+        {
+            throw new DependencyResolutionRequiredException( a );
+        }
+        list.add( file.getPath() );
     }
     
     /**
@@ -2043,6 +2132,28 @@ public class MavenProject
     public void preserveBasedir()
     {
         this.preservedBasedir = getBasedir();
+    }
+
+    public void setLogger( Logger logger )
+    {
+        this.logger = logger;
+    }
+
+    /**
+     * Retrieve the {@link ProjectBuilderConfiguration} instance used to construct this MavenProject instance.
+     */
+    public ProjectBuilderConfiguration getProjectBuilderConfiguration()
+    {
+        return projectBuilderConfiguration;
+    }
+
+    /**
+     * Set the {@link ProjectBuilderConfiguration} instance used to construct this MavenProject instance.
+     * @param projectBuilderConfiguration
+     */
+    public void setProjectBuilderConfiguration( ProjectBuilderConfiguration projectBuilderConfiguration )
+    {
+        this.projectBuilderConfiguration = projectBuilderConfiguration;
     }
 
 }
