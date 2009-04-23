@@ -59,7 +59,7 @@ import org.codehaus.plexus.util.StringUtils;
 /**
  * @author Jason van Zyl
  */
-@Component(role = RepositorySystem.class)
+@Component( role = RepositorySystem.class, hint = "default" )
 public class LegacyRepositorySystem
     implements RepositorySystem
 {
@@ -373,8 +373,15 @@ public class LegacyRepositorySystem
     }
 
     public ArtifactResolutionResult resolve( ArtifactResolutionRequest request )
-    {                        
-        return artifactResolver.resolve( request );
+    {
+
+if(request.getRemoteRepostories() != null && request.getRemoteRepostories().size() > 10 )
+{
+    System.out.println("legacy: request with "+request.getRemoteRepostories().size()+" remote repositories" );
+}
+        ArtifactResolutionResult res = artifactResolver.resolve( request );
+
+        return res;
     }
 
     public void setOnline( boolean online )
@@ -398,6 +405,8 @@ public class LegacyRepositorySystem
         proxyInfo.setPassword( password );
 
         proxies.put( protocol, proxyInfo );
+
+        wagonManager.addProxy( protocol, host, port, username, password, nonProxyHosts );
     }
 
     public void addAuthenticationInfo( String repositoryId, String username, String password, String privateKey,
@@ -448,5 +457,10 @@ public class LegacyRepositorySystem
     public List<ArtifactRepository> getMirrors( List<ArtifactRepository> repositories )
     {
         return mirrorBuilder.getMirrors( repositories );
+    }
+
+    public MetadataResolutionResult resolveMetadata( MetadataResolutionRequest request )
+    {
+        return null;
     }
 }

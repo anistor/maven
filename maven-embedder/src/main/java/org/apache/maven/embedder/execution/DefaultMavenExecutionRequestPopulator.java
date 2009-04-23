@@ -17,7 +17,6 @@ package org.apache.maven.embedder.execution;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -50,6 +49,7 @@ import org.apache.maven.settings.Proxy;
 import org.apache.maven.settings.Server;
 import org.apache.maven.settings.Settings;
 import org.apache.maven.settings.SettingsUtils;
+import org.apache.maven.toolchain.ToolchainsBuilder;
 import org.codehaus.plexus.PlexusContainer;
 import org.codehaus.plexus.component.annotations.Component;
 import org.codehaus.plexus.component.annotations.Requirement;
@@ -80,6 +80,9 @@ public class DefaultMavenExecutionRequestPopulator
     @Requirement
     private RepositorySystem repositorySystem;
 
+    @Requirement
+    private ToolchainsBuilder toolchainsBuilder;
+
     // 2009-03-05 Oleg: this component is defined sub-classed in this package
     @Requirement(hint = "maven")
     private SecDispatcher securityDispatcher;
@@ -98,6 +101,8 @@ public class DefaultMavenExecutionRequestPopulator
         settings( request, configuration );
 
         localRepository( request, configuration );
+
+        toolchains( request, configuration );
 
         artifactTransferMechanism( request, configuration );
 
@@ -202,7 +207,7 @@ public class DefaultMavenExecutionRequestPopulator
             // We need to convert profile repositories to artifact repositories
             try
             {
-                for ( Profile profile : profileManager.getActiveProfiles( new Model() ) )
+                for ( Profile profile : profileManager.getActiveProfiles() )
                 {
                     for ( Repository r : profile.getRepositories() )
                     {
@@ -215,6 +220,17 @@ public class DefaultMavenExecutionRequestPopulator
                             throw new MavenEmbedderException( "Cannot create remote repository " + r.getId(), e );
                         }
                     }
+                    for ( Repository r : profile.getPluginRepositories() )
+                    {
+                        try
+                        {
+                            request.addRemoteRepository( repositorySystem.buildArtifactRepository( r ) );
+                        }
+                        catch ( InvalidRepositoryException e )
+                        {
+                            throw new MavenEmbedderException( "Cannot create remote repository " + r.getId(), e );
+                        }
+                    }                    
                 }
             }
             catch ( ProfileActivationException e )
@@ -521,9 +537,15 @@ public class DefaultMavenExecutionRequestPopulator
         activationContext.setExplicitlyActiveProfileIds( request.getActiveProfiles() );
         activationContext.setExplicitlyInactiveProfileIds( request.getInactiveProfiles() );
 
-        ProfileManager globalProfileManager = new DefaultProfileManager( container, activationContext );
+        ProfileManager globalProfileManager = new DefaultProfileManager( activationContext );
 
         request.setProfileManager( globalProfileManager );
         request.setProfileActivationContext( activationContext );
     }
+
+    private void toolchains( MavenExecutionRequest request, Configuration configuration )
+    {
+        toolchainsBuilder.setUserToolchainsFile( request.getUserToolchainsFile() );
+    }
+
 }

@@ -15,7 +15,6 @@ package org.apache.maven.plugin;
  * the License.
  */
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
@@ -37,6 +36,7 @@ import org.apache.maven.artifact.ArtifactUtils;
 import org.apache.maven.artifact.factory.ArtifactFactory;
 import org.apache.maven.artifact.metadata.ResolutionGroup;
 import org.apache.maven.artifact.repository.ArtifactRepository;
+import org.apache.maven.artifact.repository.metadata.ArtifactRepositoryMetadata;
 import org.apache.maven.artifact.repository.metadata.GroupRepositoryMetadata;
 import org.apache.maven.artifact.repository.metadata.Metadata;
 import org.apache.maven.artifact.repository.metadata.RepositoryMetadata;
@@ -60,6 +60,10 @@ import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.model.ReportPlugin;
+import org.apache.maven.model.interpolator.DefaultInterpolator;
+import org.apache.maven.model.interpolator.Interpolator;
+import org.apache.maven.model.interpolator.InterpolatorProperty;
+import org.apache.maven.model.interpolator.PomInterpolatorTag;
 import org.apache.maven.monitor.event.EventDispatcher;
 import org.apache.maven.monitor.event.MavenEvents;
 import org.apache.maven.monitor.logging.DefaultLog;
@@ -72,9 +76,6 @@ import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.MavenProjectBuilder;
 import org.apache.maven.project.ProjectBuildingException;
 import org.apache.maven.project.artifact.InvalidDependencyVersionException;
-import org.apache.maven.project.builder.PomInterpolatorTag;
-import org.apache.maven.project.builder.PomTransformer;
-import org.apache.maven.project.builder.ProjectUri;
 import org.apache.maven.project.path.PathTranslator;
 import org.apache.maven.realm.MavenRealmManager;
 import org.apache.maven.realm.RealmManagementException;
@@ -82,10 +83,6 @@ import org.apache.maven.realm.RealmScanningUtils;
 import org.apache.maven.reporting.MavenReport;
 import org.apache.maven.repository.RepositorySystem;
 import org.apache.maven.repository.VersionNotFoundException;
-import org.apache.maven.shared.model.InterpolatorProperty;
-import org.apache.maven.shared.model.ModelMarshaller;
-import org.apache.maven.shared.model.ModelProperty;
-import org.apache.maven.shared.model.ModelTransformerContext;
 import org.codehaus.plexus.PlexusContainer;
 import org.codehaus.plexus.classworlds.realm.ClassRealm;
 import org.codehaus.plexus.component.annotations.Component;
@@ -154,6 +151,9 @@ public class DefaultPluginManager
     @Requirement
     protected RepositoryMetadataManager repositoryMetadataManager;    
     
+    @Requirement
+    protected Interpolator interpolator;        
+    
     private Map pluginDefinitionsByPrefix = new HashMap();
     
     public DefaultPluginManager()
@@ -181,7 +181,7 @@ public class DefaultPluginManager
         // TODO: this should be possibly outside
         // All version-resolution logic has been moved to DefaultPluginVersionManager.
         logger.debug( "Resolving plugin: " + plugin.getKey() + " with version: " + pluginVersion );
-        if ( ( pluginVersion == null ) || Artifact.LATEST_VERSION.equals( pluginVersion ) || Artifact.RELEASE_VERSION.equals( pluginVersion ) )
+        if ( pluginVersion == null )
         {
             logger.debug( "Resolving version for plugin: " + plugin.getKey() );
             pluginVersion = resolvePluginVersion( plugin.getGroupId(), plugin.getArtifactId(), project, session );
@@ -210,6 +210,8 @@ public class DefaultPluginManager
             if ( !RESERVED_GROUP_IDS.contains( plugin.getGroupId() ) )
             {
                 Artifact pluginArtifact = resolvePluginArtifact( plugin, project, session );
+
+                plugin.setVersion( pluginArtifact.getBaseVersion() );
 
                 addPlugin( plugin, pluginArtifact, project, session );
             }
@@ -376,7 +378,6 @@ public class DefaultPluginManager
         try
         {
             Artifact pluginPomArtifact = repositorySystem.createProjectArtifact( pluginArtifact.getGroupId(), pluginArtifact.getArtifactId(), pluginArtifact.getVersion() );
-            
             // This does not populate the artifacts of the dependenct projects
             MavenProject pluginProject = mavenProjectBuilder.buildFromRepository( pluginPomArtifact, project.getRemoteArtifactRepositories(), localRepository );
             
@@ -424,10 +425,8 @@ public class DefaultPluginManager
 
         Set<Artifact> resolved = new LinkedHashSet<Artifact>();
 
-        for ( Iterator<Artifact> it = result.getArtifacts().iterator(); it.hasNext(); )
+        for ( Artifact artifact : result.getArtifacts() )
         {
-            Artifact artifact = it.next();
-
             if ( !artifact.equals( pluginArtifact ) )
             {
                 artifact = project.replaceWithActiveArtifact( artifact );
@@ -513,7 +512,7 @@ public class DefaultPluginManager
                                                                                               PomInterpolatorTag.EXECUTION_PROPERTIES.name() ) );
                 interpolatorProperties
                     .addAll( InterpolatorProperty.toInterpolatorProperties( session.getProjectBuilderConfiguration().getUserProperties(), PomInterpolatorTag.USER_PROPERTIES.name() ) );
-                String interpolatedDom = interpolateXmlString( String.valueOf( dom ), interpolatorProperties );
+                String interpolatedDom = interpolator.interpolateXmlString( String.valueOf( dom ), interpolatorProperties );
                 dom = Xpp3DomBuilder.build( new StringReader( interpolatedDom ) );
             }
             catch ( XmlPullParserException e )
@@ -1528,30 +1527,6 @@ public class DefaultPluginManager
         }
     }
 
-    private static String interpolateXmlString( String xml, List<InterpolatorProperty> interpolatorProperties )
-        throws IOException
-    {
-        List<ModelProperty> modelProperties = ModelMarshaller.marshallXmlToModelProperties( new ByteArrayInputStream( xml.getBytes() ), ProjectUri.baseUri, PomTransformer.URIS );
-
-        Map<String, String> aliases = new HashMap<String, String>();
-        aliases.put( "project.", "pom." );
-
-        List<InterpolatorProperty> ips = new ArrayList<InterpolatorProperty>( interpolatorProperties );
-        ips.addAll( ModelTransformerContext.createInterpolatorProperties( modelProperties, ProjectUri.baseUri, aliases, PomInterpolatorTag.PROJECT_PROPERTIES.name(), false, false ) );
-
-        for ( ModelProperty mp : modelProperties )
-        {
-            if ( mp.getUri().startsWith( ProjectUri.properties ) && mp.getValue() != null )
-            {
-                String uri = mp.getUri();
-                ips.add( new InterpolatorProperty( "${" + uri.substring( uri.lastIndexOf( "/" ) + 1, uri.length() ) + "}", mp.getValue() ) );
-            }
-        }
-
-        ModelTransformerContext.interpolateModelProperties( modelProperties, ips );
-        return ModelMarshaller.unmarshalModelPropertiesToXml( modelProperties, ProjectUri.baseUri );
-    }
-
     // Plugin Prefix Loader
 
     /**
@@ -1805,7 +1780,30 @@ public class DefaultPluginManager
 
         String version = null;
 
+        RepositoryMetadata metadata = new ArtifactRepositoryMetadata( artifact );
+        try
+        {
+            repositoryMetadataManager.resolve( metadata, project.getRemoteArtifactRepositories(), localRepository );
+        }
+        catch ( RepositoryMetadataResolutionException e )
+        {
+            throw new PluginVersionResolutionException( groupId, artifactId, "Failed to resolve plugin version "
+                + metaVersionId + ": " + e.getMessage() );
+        }
+
         String artifactVersion = artifact.getVersion();
+
+        if ( metadata.getMetadata() != null && metadata.getMetadata().getVersioning() != null )
+        {
+            if ( Artifact.RELEASE_VERSION.equals( metaVersionId ) )
+            {
+                artifactVersion = metadata.getMetadata().getVersioning().getRelease();
+            }
+            else if ( Artifact.LATEST_VERSION.equals( metaVersionId ) )
+            {
+                artifactVersion = metadata.getMetadata().getVersioning().getLatest();
+            }
+        }
 
         // make sure this artifact was transformed to a real version, and actually resolved to a file in the repo...
         if ( !metaVersionId.equals( artifactVersion ) && ( artifact.getFile() != null ) )
@@ -1821,7 +1819,6 @@ public class DefaultPluginManager
                 try
                 {
                     artifact = repositorySystem.createProjectArtifact( groupId, artifactId, artifactVersion );
-
                     pluginProject = mavenProjectBuilder.buildFromRepository( artifact, project.getRemoteArtifactRepositories(), localRepository );
                 }
                 catch ( ProjectBuildingException e )
@@ -1849,10 +1846,10 @@ public class DefaultPluginManager
         throws PluginManagerException, InvalidPluginException, PluginVersionResolutionException, ArtifactResolutionException, ArtifactNotFoundException
     {
         logger.debug( "Resolving plugin artifact " + plugin.getKey() + " from " + project.getRemoteArtifactRepositories() );
-
+ 
         ArtifactRepository localRepository = session.getLocalRepository();
 
-        MavenProject pluginProject = buildPluginProject( plugin, localRepository, project.getRemoteArtifactRepositories() );
+        MavenProject pluginProject = buildPluginProject( plugin, localRepository, session );
 
         Artifact pluginArtifact = repositorySystem.createPluginArtifact( plugin );
 
@@ -1871,13 +1868,13 @@ public class DefaultPluginManager
         return pluginArtifact;
     }
 
-    public MavenProject buildPluginProject( Plugin plugin, ArtifactRepository localRepository, List<ArtifactRepository> remoteRepositories )
+    public MavenProject buildPluginProject( Plugin plugin, ArtifactRepository localRepository, MavenSession session )
         throws InvalidPluginException
     {
         Artifact artifact = repositorySystem.createProjectArtifact( plugin.getGroupId(), plugin.getArtifactId(), plugin.getVersion() );
         try
         {
-            MavenProject p = mavenProjectBuilder.buildFromRepository( artifact, remoteRepositories, localRepository );
+            MavenProject p = mavenProjectBuilder.buildFromRepository(artifact, session.getProjectBuilderConfiguration());
 
             return p;
         }

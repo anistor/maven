@@ -19,7 +19,20 @@ under the License.
 
 package org.apache.maven.repository.mercury;
 
+import java.io.IOException;
+import java.util.Collection;
+import java.util.Set;
+
+import org.apache.maven.artifact.Artifact;
+import org.apache.maven.artifact.resolver.ArtifactResolutionRequest;
+import org.apache.maven.artifact.resolver.ArtifactResolutionResult;
+import org.apache.maven.mercury.artifact.ArtifactMetadata;
 import org.apache.maven.repository.AbstractMavenRepositorySystemTest;
+import org.apache.maven.repository.MavenArtifactMetadata;
+import org.apache.maven.repository.MetadataGraph;
+import org.apache.maven.repository.MetadataGraphNode;
+import org.apache.maven.repository.MetadataResolutionRequest;
+import org.apache.maven.repository.MetadataResolutionResult;
 import org.apache.maven.repository.RepositorySystem;
 
 /**
@@ -38,5 +51,45 @@ public class MercuryRepositorySystemTest
         super.setUp();
         
         _mrs = getContainer().lookup( RepositorySystem.class, "mercury" );
+    }
+    
+    
+    public void testResolveTree()
+    throws IOException
+    {
+        MavenArtifactMetadata mad = MercuryAdaptor.toMavenArtifactMetadata( new ArtifactMetadata( "asm:asm-xml:3.0" ) );
+        
+        MetadataResolutionRequest request = new MetadataResolutionRequest()
+            .setLocalRepository( _localRepo )
+            .setRemoteRepostories( _remoteRepos )
+            .setArtifactMetadata( mad )
+            .setAsResolvedTree( true )
+            .setScope( "compile" )
+        ;
+        
+        MetadataResolutionResult res = _mrs.resolveMetadata( request );
+        
+        assertNotNull( res );
+        
+        MetadataGraph resGraph = res.getResolvedTree();
+        
+        assertNotNull( resGraph );
+        
+        Collection<MetadataGraphNode> nodes = resGraph.getNodes();
+        
+        assertNotNull( nodes );
+        
+        assertEquals( 4, nodes.size() );
+        
+        assertTrue( nodes.contains( new MetadataGraphNode( MercuryAdaptor.toMavenArtifactMetadata( new ArtifactMetadata( "asm:asm-xml:3.0" ) ) ) ) );
+        
+        assertTrue( nodes.contains( new MetadataGraphNode( MercuryAdaptor.toMavenArtifactMetadata( new ArtifactMetadata( "asm:asm-util:3.0" ) ) ) ) );
+        
+        assertTrue( nodes.contains( new MetadataGraphNode( MercuryAdaptor.toMavenArtifactMetadata( new ArtifactMetadata( "asm:asm-tree:3.0" ) ) ) ) );
+        
+        assertTrue( nodes.contains( new MetadataGraphNode( MercuryAdaptor.toMavenArtifactMetadata( new ArtifactMetadata( "asm:asm:3.0" ) ) ) ) );
+        
+        assertFalse( nodes.contains( new MetadataGraphNode( MercuryAdaptor.toMavenArtifactMetadata( new ArtifactMetadata( "asm:asm-parent:3.0" ) ) ) ) );
+        
     }
 }
