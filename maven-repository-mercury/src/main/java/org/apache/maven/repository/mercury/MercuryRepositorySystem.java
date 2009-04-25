@@ -19,17 +19,24 @@ under the License.
 
 package org.apache.maven.repository.mercury;
 
+import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.factory.ArtifactFactory;
-import org.apache.maven.artifact.resolver.ArtifactNotFoundException;
+import org.apache.maven.artifact.repository.ArtifactRepository;
+import org.apache.maven.artifact.repository.ReactorArtifactRepository;
 import org.apache.maven.artifact.resolver.ArtifactResolutionException;
 import org.apache.maven.artifact.resolver.ArtifactResolutionRequest;
 import org.apache.maven.artifact.resolver.ArtifactResolutionResult;
+import org.apache.maven.artifact.resolver.filter.ArtifactFilter;
+import org.apache.maven.mercury.artifact.ArtifactExclusionList;
 import org.apache.maven.mercury.artifact.ArtifactMetadata;
 import org.apache.maven.mercury.artifact.ArtifactQueryList;
 import org.apache.maven.mercury.artifact.ArtifactScopeEnum;
@@ -39,6 +46,7 @@ import org.apache.maven.mercury.plexus.PlexusMercury;
 import org.apache.maven.mercury.repository.api.Repository;
 import org.apache.maven.mercury.repository.api.RepositoryException;
 import org.apache.maven.mercury.util.Util;
+import org.apache.maven.model.Dependency;
 import org.apache.maven.repository.LegacyRepositorySystem;
 import org.apache.maven.repository.MetadataGraph;
 import org.apache.maven.repository.MetadataResolutionRequest;
@@ -48,18 +56,22 @@ import org.codehaus.plexus.component.annotations.Component;
 import org.codehaus.plexus.component.annotations.Requirement;
 import org.codehaus.plexus.lang.DefaultLanguage;
 import org.codehaus.plexus.lang.Language;
+import org.codehaus.plexus.logging.Logger;
 
 /**
  * @author Oleg Gusakov
  * @version $Id$
  */
-@Component( role = RepositorySystem.class, hint = "mercury" )
+// PLEASE NOTE: don't change the following string (spaces matter) as it is used by repo system flip flag
+@Component( role = RepositorySystem.class, hint = "default" )
 public class MercuryRepositorySystem
     extends LegacyRepositorySystem
     implements RepositorySystem
 {
     private static final Language LANG = new DefaultLanguage( MercuryRepositorySystem.class );
-
+    
+    private Map<String, Set<Artifact> > _resolutions = Collections.synchronizedMap( new HashMap<String, Set<Artifact>>(128) );
+    
     @Requirement( hint = "maven" )
     DependencyProcessor _dependencyProcessor;
 
@@ -69,32 +81,47 @@ public class MercuryRepositorySystem
     @Requirement
     ArtifactFactory _artifactFactory;
 
+    @Requirement(role=ArtifactRepository.class,hint="reactor")
+    private ReactorArtifactRepository _reactorRepository;
+
+    @Requirement
+    private Logger _logger;
+    
+    private boolean _reactorInitialized = false;
+    
     @Override
     public ArtifactResolutionResult resolve( ArtifactResolutionRequest request )
     {
         if ( request == null )
             throw new IllegalArgumentException( LANG.getMessage( "null.request" ) );
 
-System.out.println("mercury: request for "+request.getArtifact()
-+"("+request.getArtifactDependencies()+") repos="+request.getRemoteRepostories().size()
-+" repos, map=" + request.getManagedVersionMap() 
-);
-
         if ( request.getArtifact() == null )
             throw new IllegalArgumentException( LANG.getMessage( "null.request.artifact" ) );
         
-        Map<String, ArtifactMetadata> versionMap = MercuryAdaptor.toMercuryVersionMap( (Map<String,Artifact>)request.getManagedVersionMap() );
-
         ArtifactResolutionResult result = new ArtifactResolutionResult();
+        
+        String requestKey = null;
+        
+        if( !_reactorInitialized )
+        {
+            MercuryAdaptor.initializeReactor( _reactorRepository, _dependencyProcessor );
+            
+            _reactorInitialized = true;
+        }
 
         List<Repository> repos =
             MercuryAdaptor.toMercuryRepos(   request.getLocalRepository()
                                            , request.getRemoteRepostories()
                                            , _dependencyProcessor
                                          );
+        if( repos == null )
+            return super.resolve( request );
+        
+        ArtifactFilter filter = request.getFilter();
 
         try
         {
+            
 long start = System.currentTimeMillis();
 
             org.apache.maven.artifact.Artifact rootArtifact = request.getArtifact();
@@ -107,18 +134,65 @@ long start = System.currentTimeMillis();
             
             ArtifactScopeEnum scope = MercuryAdaptor.extractScope( rootArtifact, isPlugin, request.getFilter() );
             
+if( _logger.isDebugEnabled() )
+{
+_logger.debug( "\n\n======> mercury: request for "+request.getArtifact()
+   +", scope="+scope
+   +", deps="+ (artifacts == null ? 0 : artifacts.size() )
+   +", resolveRoot="+request.isResolveRoot()
+//+", repos="+request.getRemoteRepostories().size()
+//+", map=" + request.getManagedVersionMap() 
+);
+    if( artifacts != null )
+    {
+        showList( artifacts, "   --------> " );
+    //if( request.getManagedVersionMap() != null && request.getManagedVersionMap().size() > 0 )
+    //    logger.debug( "   ########>  VersionMap\n"+request.getManagedVersionMap()+"\n" );
+    } 
+}
+
+            Map<String, ArtifactMetadata> versionMap = MercuryAdaptor.toMercuryVersionMap( request );
+            
+
             if( isPlugin  )
+            {
+                // check resolution cache first - plugins are cached here
+                requestKey = calcKey( request );
+                
+                if( requestKey != null )
+                {
+                    Set<Artifact> al = _resolutions.get( requestKey );
+                    
+                    if( al != null )
+                    {
+                        for( Artifact a : al )
+                        {
+                            if( isGood( filter, a ) )
+                            {
+                                result.addArtifact( a );
+                                result.addRequestedArtifact( a );
+                            }
+                        }
+                        
+                        return result;
+                    }
+                }
+                
+                // not cached - let's proceed
                 rootArtifact = createArtifact( rootArtifact.getGroupId()
                                                     , rootArtifact.getArtifactId()
                                                     , rootArtifact.getVersion()
                                                     , rootArtifact.getScope()
                                                     , "jar"
                                                   );
+            }
 
             ArtifactMetadata rootMd = MercuryAdaptor.toMercuryMetadata( rootArtifact );
 
-            org.apache.maven.artifact.Artifact root = null;
+            // cannot just replace the type. Besides - Maven expects the same object out
+            org.apache.maven.artifact.Artifact root = isPlugin ? mavenPluginArtifact : rootArtifact;
 
+            // firstly - deal with the root
             // copied from artifact resolver 
             if ( request.isResolveRoot() && rootArtifact.getFile() == null && Util.isEmpty( artifacts ) )
             {
@@ -137,16 +211,14 @@ long start = System.currentTimeMillis();
                         return result;
                     }
 
-                    root = isPlugin ? mavenPluginArtifact : rootArtifact;
-                    
                     org.apache.maven.mercury.artifact.Artifact a = mercuryArtifactList.get( 0 );
                     
                     root.setFile( a.getFile() );
                     root.setResolved( true );
                     root.setResolvedVersion( a.getVersion() );
                     
-                    result.addArtifact( rootArtifact );
-                    result.addRequestedArtifact( rootArtifact );
+                    result.addArtifact( root );
+                    result.addRequestedArtifact( root );
                 }
                 catch ( Exception e )
                 {
@@ -155,40 +227,156 @@ long start = System.currentTimeMillis();
                 }
             }
 
+            // no dependencies - bye
             if ( Util.isEmpty( artifacts ) )
             {
+if( _logger.isDebugEnabled() )
+    _logger.debug("mercury: resolved("+(System.currentTimeMillis() - start)+") "+root+", scope="+scope
++", artifacs="+(result.getArtifacts() == null ? 0 :result.getArtifacts().size())
++", file "+root.getFile()
++"\n<===========\n" );
                 return result;
             } 
-            
+
+            // resolved metadata in Mercury format
             List<ArtifactMetadata> mercuryMetadataList = null;
+            
+            // no sense to resolve reactor artifacts - just pass them back as is
+            // their dependencies should already be on the list anyway
+            List<Artifact> resolvedList = new ArrayList<Artifact>( artifacts.size() + 1 );
+            
+            // exclude resolved from resolution
+            List<ArtifactMetadata> globalExclusions = new ArrayList<ArtifactMetadata>( artifacts.size() + 1 );
+            
+            // query for mercury
+            List<ArtifactMetadata> query = new ArrayList<ArtifactMetadata>( artifacts.size() + 1 );
 
-            if ( Util.isEmpty( artifacts ) )
-                mercuryMetadataList = _mercury.resolve( repos, scope,  rootMd );
-            else
+            
+            if( request.isResolveRoot() && rootArtifact.getFile() == null  )
             {
-                List<ArtifactMetadata> query = new ArrayList<ArtifactMetadata>( artifacts.size() + 1 );
-                
-                query.add( rootMd );
-                
-                for( Artifact a : artifacts )
+                if( root.isResolved() )
+                {
+                    resolvedList.add( root );
+                    globalExclusions.add( rootMd );
+                } 
+                else
+                    query.add( rootMd );
+            }
+            
+            // TODO - are activeProjectDependencies here rightly ??
+            // add dependencies of actives to the original request list
+            List<Artifact> activeDependencies = new ArrayList<Artifact>();
+            
+            for( Artifact a : artifacts )
+            {
+//                if( a.isResolved() && DependencyHolder.class.isAssignableFrom( a.getClass() ) )
+//                {
+//                    DependencyHolder apa = (DependencyHolder) a;
+//                    List<Dependency> deps = apa.getDependencyList();
+//                    if( deps != null )
+//                        for( Dependency d : deps )
+//                            activeDependencies.add( MercuryAdaptor.toMavenArtifact( _artifactFactory, d ) );
+//                }
+            }
+            
+            //
+            // daddy Jason does not do that, 
+            // but they are very important - cannot build correct classpath
+            // without them. The correct way to add them is:
+            //                    - grab the active's POM
+            //                    - create a local map repository for each POM
+            //                    - add a POM to the metadata list (be re resolved from map repo)
+            //                    - remove POMs from final result
+            //                    - add original active's instead
+            //
+            // TODO replace this HACK 
+            //due to the lack of time - hacking up a solution: add all them to the dependency list,
+            //  but this approach looses the depth and causes problems:
+            //         if active depends on junit 4.4 and root depends on 3.8.1 - 4.4 wins, while it should not
+            //  trying to mitigate it by adding only non-existent GAs
+          if( activeDependencies.size() > 0 )
+          {
+              for( Artifact a : activeDependencies )
+                  if( gaDoesNotExist(a,artifacts) )
+                  {
+                      if( isGood( filter, a ) )
+                      {
+                          artifacts.add( a );
+    
+                          if( _logger.isDebugEnabled() )
+                              _logger.debug( "        ------ active's dep --> "+a );
+                      }
+                  }
+              
+          }
+            
+          
+          // decide - what goes to query vs. already resolved
+            for( Artifact a : artifacts )
+            {
+                if( a.isResolved() )
+                {
+                    resolvedList.add( a );
+                    // don't resolve again
+                    globalExclusions.add( MercuryAdaptor.toMercuryMetadata( a ) );
+                }
+                else
                     query.add( MercuryAdaptor.toMercuryMetadata( a ) );
-
-                mercuryMetadataList = _mercury.resolve( repos, scope, new ArtifactQueryList(query), null, null, versionMap );
             }
 
+            if( query.size() > 0 ) // metadata resolution first
+                mercuryMetadataList = _mercury.resolve( repos, scope, new ArtifactQueryList(query)
+                                                      , null, new ArtifactExclusionList(globalExclusions), versionMap
+                                                      );
+if( _logger.isDebugEnabled() )
+{
+    showMdList( mercuryMetadataList, "     <.. md by mercury ...... " );
+}
+            
+            // no metadata resolved and nothing pre-resolved
+            if( Util.isEmpty( mercuryMetadataList ) && Util.isEmpty( resolvedList ) ) 
+            {
+                result.addMissingArtifact( rootArtifact );
+                
+                long diff = System.currentTimeMillis() - start;
+                
+if( _logger.isDebugEnabled() )
+    _logger.debug("mercury: missing artifact("+diff+") "+rootArtifact+"("+scope+")"+"\n<===========\n" );
+
+                return result;
+            }
+            
+            // read binaries
             List<org.apache.maven.mercury.artifact.Artifact> mercuryArtifactList =
                 _mercury.read( repos, mercuryMetadataList );
-
-long diff = System.currentTimeMillis() - start;
+            
+            if( _logger.isDebugEnabled() )
+            {
+                showAList( mercuryArtifactList, "     <__ bin. by mercury ____ " );
+            }
+            
+            // ActiveProjectArtifacts - add the to the result before the rest
+            for( Artifact a : resolvedList )
+            {
+                result.addArtifact( a );
+                result.addRequestedArtifact( a );
+                if( _logger.isDebugEnabled() )
+                {
+                    _logger.debug( "     <-- pre-resolved -- "+a );
+                }
+            }
             
             if ( !Util.isEmpty( mercuryArtifactList ) )
             {
                 for ( org.apache.maven.mercury.artifact.Artifact a : mercuryArtifactList )
                 {
                     if( a.getGroupId().equals( rootMd.getGroupId() ) && a.getArtifactId().equals( rootMd.getArtifactId() ) )
-                    { // root artifact processing
+                    { // root artifact processing - if resolved with everybody
+                        if( !request.isResolveRoot() )
+                            continue;
+
                         root = isPlugin ? mavenPluginArtifact : rootArtifact;
-                        
+
                         root.setFile( a.getFile() );
                         root.setResolved( true );
                         root.setResolvedVersion( a.getVersion() );
@@ -196,23 +384,43 @@ long diff = System.currentTimeMillis() - start;
                         result.addArtifact( root );
                         result.addRequestedArtifact( root );
                     }
-                    else
+                    else // regular resolved artifact
                     {
                         Artifact ma = MercuryAdaptor.toMavenArtifact( _artifactFactory, a );
                         
-                        result.addArtifact( ma );
-                        result.addRequestedArtifact( ma );
+                        if( isGood( filter, ma ) )
+                        {
+                            result.addArtifact( ma );
+                            result.addRequestedArtifact( ma );
+                        }
                     }
                 }
 
-System.out.println("mercury: resolved("+diff+") "+root+"("+scope+") as file "+root.getFile() );
-//for( Artifact a: result.getArtifacts() )
-//System.out.println("mercury dependency: "+a+" as file "+a.getFile() );
+                long diff = System.currentTimeMillis() - start;
+
+                Set<Artifact> resSet = result.getArtifacts();
+
+if( _logger.isDebugEnabled() )
+{
+    _logger.debug("mercury: resolved("+diff+") "+root+", scope="+scope
++", artifacs="+( resSet == null ? 0 : resSet.size() )
++", file "+root.getFile() 
+               );
+    showList( resSet, "       <--------- " );
+    _logger.debug("\n<==========================================\n");
+}
+
+            if( requestKey != null )
+                _resolutions.put( requestKey, resSet );
+
             }
             else
             {
                 result.addMissingArtifact( rootArtifact );
-System.out.println("mercury: missing artifact("+diff+") "+rootArtifact+"("+scope+")" );
+                
+                long diff = System.currentTimeMillis() - start;
+if( _logger.isDebugEnabled() )
+    _logger.debug("mercury: missing artifact("+diff+") "+rootArtifact+"("+scope+")"+"\n<===========\n" );
             }
             
         }
@@ -225,36 +433,132 @@ System.out.println("mercury: missing artifact("+diff+") "+rootArtifact+"("+scope
         return result;
     }
     
-    
 
-//    public List<ArtifactVersion> retrieveAvailableVersions( Artifact artifact, ArtifactRepository localRepository,
-//                                                            List<ArtifactRepository> remoteRepositories )
-//        throws ArtifactMetadataRetrievalException
-//    {
-//
-//        List<Repository> repos =
-//            MercuryAdaptor.toMercuryRepos( localRepository, remoteRepositories, _dependencyProcessor );
-//        
-//        try
-//        {
-//            List<ArtifactBasicMetadata> vl = _mercury.readVersions( repos, MercuryAdaptor.toMercuryBasicMetadata( artifact ) );
-//            
-//            if( Util.isEmpty( vl ) )
-//                return null;
-//            
-//            List<ArtifactVersion> res = new ArrayList<ArtifactVersion>( vl.size() );
-//            
-//            for( ArtifactBasicMetadata bmd : vl )
-//                res.add( new DefaultArtifactVersion(bmd.getVersion()) );
-//            
-//            return res;
-//        }
-//        catch ( RepositoryException e )
-//        {
-//            throw new ArtifactMetadataRetrievalException(e);
-//        }
-//    }
-    
+    /**
+     * @param a
+     * @param artifacts
+     * @return
+     */
+    private boolean gaDoesNotExist( Artifact me, Set<Artifact> artifacts )
+    {
+        String myType = me.getType() == null ? "jar" : me.getType();
+        
+        for( Artifact a : artifacts )
+        {
+            String aType = a.getType() == null ? "jar" : a.getType();
+            
+            if( a.getGroupId().equals( me.getGroupId() )
+                && a.getArtifactId().equals( me.getArtifactId() )
+                && myType.equals( aType )
+              )
+            {
+                if( me.hasClassifier() )
+                {
+                    if( a.hasClassifier() && a.getClassifier().equals( me.getClassifier() ) )
+                        return false;
+                }
+                else
+                    return false;
+            }
+        }
+        
+        return true;
+    }
+
+
+    /**
+     * @param mercuryArtifactList
+     * @param string
+     */
+    private void showAList( List<org.apache.maven.mercury.artifact.Artifact> artifacts, String prefix )
+    {
+        if( Util.isEmpty( artifacts ) )
+            return;
+        
+        TreeSet<String> ts = new TreeSet<String>();
+        
+        for( org.apache.maven.mercury.artifact.Artifact a : artifacts )
+            ts.add( ""+a );
+        
+        for( String a : ts )
+            _logger.debug( prefix + a );
+    }
+
+
+    /**
+     * @param mercuryMetadataList
+     * @param string
+     */
+    private void showMdList( List<ArtifactMetadata> artifacts, String prefix )
+    {
+        if( Util.isEmpty( artifacts ) )
+            return;
+        
+        TreeSet<String> ts = new TreeSet<String>();
+        
+        for( ArtifactMetadata a : artifacts )
+            ts.add( ""+a );
+        
+        for( String a : ts )
+            _logger.debug( prefix + a );
+    }
+
+
+    private void showList( Set<Artifact> artifacts, String prefix )
+    {
+        if( Util.isEmpty( artifacts ) )
+            return;
+        
+        TreeSet<String> ts = new TreeSet<String>();
+        
+        for( Artifact a : artifacts )
+            ts.add( a + (a.isOptional() ? ", [optional]":"")+(a.isResolved()?", [resolved]":"")+ ( a.getFile() == null ? "" :", file="+a.getFile()) );
+        
+        for( String a : ts )
+            _logger.debug( prefix + a );
+    }
+
+    /**
+     * @param request
+     * @return
+     */
+    private static String calcKey( ArtifactResolutionRequest request )
+    {
+        TreeSet<String> ts = new TreeSet<String>();
+        
+        ts.add( request.getArtifact().toString() );
+        
+        Set<Artifact> artifacts = request.getArtifactDependencies();
+
+        if( artifacts != null )
+            for( Artifact a : artifacts )
+                ts.add( ""+a );
+        
+        try
+        {
+            MessageDigest md = MessageDigest.getInstance( "SHA-1" );
+            
+            for( String s : ts )
+                md.update( s.getBytes() );
+            
+            byte [] digest = md.digest();
+            
+            StringBuilder sb = new StringBuilder( 64 );
+            
+            for( byte b : digest )
+                sb.append( "."+b );
+            
+            return sb.toString();
+        }
+        catch ( Exception e )
+        {
+            e.printStackTrace();
+        }
+        
+        return null;
+    }
+
+
 
     public MetadataResolutionResult resolveMetadata( MetadataResolutionRequest request )
     {
@@ -290,6 +594,14 @@ System.out.println("mercury: missing artifact("+diff+") "+rootArtifact+"("+scope
         }
         
         return res;
+    }
+    
+    private static boolean isGood( ArtifactFilter filter, Artifact a )
+    {
+        if( filter != null )
+            return filter.include( a );
+        
+        return true;
     }
 
 }

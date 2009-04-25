@@ -27,7 +27,6 @@ import java.util.Map;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.metadata.ArtifactMetadata;
 import org.apache.maven.artifact.repository.layout.ArtifactRepositoryLayout;
-import org.apache.maven.wagon.repository.Repository;
 import org.codehaus.plexus.component.annotations.Component;
 import org.codehaus.plexus.component.annotations.Requirement;
 
@@ -41,7 +40,7 @@ import org.codehaus.plexus.component.annotations.Requirement;
 
 @Component( role=ArtifactRepository.class,hint="reactor")
 public class ReactorArtifactRepository
-extends Repository
+//extends Repository
 implements ArtifactRepository
 {
     private static final ArtifactRepositoryPolicy SNAPSHOTS_POLICY = new ArtifactRepositoryPolicy(true, ArtifactRepositoryPolicy.UPDATE_POLICY_NEVER, ArtifactRepositoryPolicy.CHECKSUM_POLICY_IGNORE); 
@@ -50,22 +49,113 @@ implements ArtifactRepository
     
     private static final String ID = "reactorRepository";
     
-    private static String URL = "file:///tmp";
+    private static final String PROTOCOL = "file";
     
+    private String url;
+    
+    private String baseDir;
+
     @Requirement(role=ArtifactRepositoryLayout.class, hint="default")
     private static ArtifactRepositoryLayout layout;
     
-    private Map<String, File> storage = new HashMap<String, File>(16);
+    private Map<String, String> storage = new HashMap<String, String>(32);
     
-    /**
-     * @throws IOException 
-     * 
-     */
-    public ReactorArtifactRepository()
+    public static String calculateKey( Artifact artifact )
     {
-        super( ID, URL );
+        return artifact.getGroupId()+":"+artifact.getArtifactId()+":"+artifact.getVersion()+":"+artifact.getType();
+    }
+    
+    private static String calculateBinaryName( Artifact artifact )
+    {
+        String type = artifact.getType();
+        
+        String classifier = artifact.getClassifier();
+        
+        if( "test-jar".equals( type ) )
+        {
+            type = "jar";
+            classifier = "tests";
+        }
+        else if( "maven-plugin".equals( type ) )
+        {
+            type = "jar";
+            classifier = null;
+        }
+        
+        boolean hasClassifier = classifier != null && classifier.length() > 0;
+        
+        return artifact.getArtifactId()+"-"+artifact.getVersion()
+               + (hasClassifier ? "-"+classifier : "" )
+               + "." + type
+       ;
     }
 
+    /**
+     * initialize this repository with the top level project. No need to add it as an Artifact because
+     * it will be added from a sorted artifact list
+     * 
+     * @param artifact
+     * @param baseDir
+     * @param outputPath
+     */
+    public void setReactorRoot( Artifact artifact, File baseDir, String outputPath )
+    {
+        try
+        {
+            this.baseDir = baseDir.getCanonicalPath();
+
+            this.url = baseDir.toURL().toString();
+        }
+        catch ( IOException e )
+        {
+            throw new IllegalArgumentException( "top level project's directory \""+baseDir+"\" error: "+e.getMessage() );
+        }
+    }
+
+    public void addArtifact( Artifact artifact, String outputPath )
+    {
+        String key = calculateKey( artifact );
+        
+        String relTarget = calculateRelativePath( baseDir, outputPath );
+        
+        storage.put( key, relTarget );
+    }
+
+    /**
+     * calculate the diff of basedir
+     * 
+     * @param baseDir parent folder
+     * @param outputPath full path of the child
+     * @return
+     */
+    private String calculateRelativePath( String baseDir, String outputPath )
+    {
+        int len = baseDir.length();
+
+        return outputPath.substring( len+1 );
+    }
+
+    public String pathOf( Artifact artifact )
+    {
+        String key = calculateKey( artifact );
+        
+        String relTarget = storage.get( key );
+        
+        if( relTarget == null )
+            return null;
+        
+        String targetBinaryName = calculateBinaryName( artifact );
+        
+        String path = relTarget+"/"+targetBinaryName;
+        
+        File binary = new File( baseDir, path );
+        
+        if( binary.exists() )
+            return path;
+        
+        return null;
+    }
+    
     public String getKey()
     {
         return getId();
@@ -96,66 +186,65 @@ implements ArtifactRepository
         return true;
     }
 
-    /* (non-Javadoc)
-     * @see org.apache.maven.artifact.repository.ArtifactRepository#pathOf(org.apache.maven.artifact.Artifact)
-     */
-    public String pathOf( Artifact artifact )
-    {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    /* (non-Javadoc)
-     * @see org.apache.maven.artifact.repository.ArtifactRepository#pathOfLocalRepositoryMetadata(org.apache.maven.artifact.metadata.ArtifactMetadata, org.apache.maven.artifact.repository.ArtifactRepository)
-     */
     public String pathOfLocalRepositoryMetadata( ArtifactMetadata metadata, ArtifactRepository repository )
     {
         // TODO Auto-generated method stub
         return null;
     }
 
-    /* (non-Javadoc)
-     * @see org.apache.maven.artifact.repository.ArtifactRepository#pathOfRemoteRepositoryMetadata(org.apache.maven.artifact.metadata.ArtifactMetadata)
-     */
     public String pathOfRemoteRepositoryMetadata( ArtifactMetadata artifactMetadata )
     {
         // TODO Auto-generated method stub
         return null;
     }
 
-    /* (non-Javadoc)
-     * @see org.apache.maven.artifact.repository.ArtifactRepository#setBlacklisted(boolean)
-     */
     public void setBlacklisted( boolean blackListed )
     {
-        // TODO Auto-generated method stub
-        
+        // noop
     }
 
-    /* (non-Javadoc)
-     * @see org.apache.maven.artifact.repository.ArtifactRepository#setLayout(org.apache.maven.artifact.repository.layout.ArtifactRepositoryLayout)
-     */
     public void setLayout( ArtifactRepositoryLayout layout )
     {
-        // TODO Auto-generated method stub
-        
+        // noop
     }
 
-    /* (non-Javadoc)
-     * @see org.apache.maven.artifact.repository.ArtifactRepository#setReleaseUpdatePolicy(org.apache.maven.artifact.repository.ArtifactRepositoryPolicy)
-     */
     public void setReleaseUpdatePolicy( ArtifactRepositoryPolicy policy )
     {
-        // TODO Auto-generated method stub
-        
+        // noop
     }
 
-    /* (non-Javadoc)
-     * @see org.apache.maven.artifact.repository.ArtifactRepository#setSnapshotUpdatePolicy(org.apache.maven.artifact.repository.ArtifactRepositoryPolicy)
-     */
     public void setSnapshotUpdatePolicy( ArtifactRepositoryPolicy policy )
     {
-        // TODO Auto-generated method stub
-        
+        // noop
+    }
+
+    public String getBasedir()
+    {
+        return baseDir;
+    }
+
+    public String getId()
+    {
+        return ID;
+    }
+
+    public String getProtocol()
+    {
+        return PROTOCOL;
+    }
+
+    public String getUrl()
+    {
+        return url;
+    }
+
+    public void setId( String id )
+    {
+        // noop
+    }
+
+    public void setUrl( String url )
+    {
+        // noop
     }
 }

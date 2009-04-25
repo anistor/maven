@@ -27,12 +27,7 @@
 
     <dependency>
       <groupId>org.apache.maven.mercury</groupId>
-      <artifactId>mercury-artifact</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.maven.mercury</groupId>
-      <artifactId>mercury-external</artifactId>
+      <artifactId>mercury-core</artifactId>
     </dependency>
 
     <dependency>
@@ -46,39 +41,10 @@
     </dependency>
 
     <!-- test dependencies  -->
-    <dependency>
-      <groupId>org.apache.maven.mercury</groupId>
-      <artifactId>mercury-util</artifactId>
-      <scope>test</scope>
-    </dependency>
 
     <dependency>
       <groupId>org.apache.maven.mercury</groupId>
-      <artifactId>mercury-repo-local-m2</artifactId>
-      <scope>test</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.maven.mercury</groupId>
-      <artifactId>mercury-repo-remote-m2</artifactId>
-      <scope>test</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.maven.mercury</groupId>
-      <artifactId>mercury-md-sat</artifactId>
-      <scope>test</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.maven.mercury</groupId>
-      <artifactId>mercury-transport-http</artifactId>
-      <scope>test</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.maven.mercury</groupId>
-      <artifactId>mercury-transport-http</artifactId>
+      <artifactId>mercury-core</artifactId>
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>

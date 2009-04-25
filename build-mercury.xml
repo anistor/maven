@@ -152,7 +152,10 @@ END SNIPPET: ant-bootstrap -->
     <property name="tsFormat" value="HH:mm:ss"/>
     <tstamp><format property="start.time" pattern="${tsFormat}"/></tstamp>
 
-    <!-- classpaths with default names: mercury.classpath, mercury.classpath.test, mercury.classpath.runtime -->
+    <!-- 
+      ==  classpaths with default names: mercury.classpath, mercury.classpath.test, mercury.classpath.runtime
+      ==   only compile one is created because of explicit scope  
+      -->
     <mercury:resolve-dependencies scope="compile">
       <mercury:dependency source="maven:${basedir}/dependencies.xml"/>
       <mercury:dependency id="org.codehaus.plexus:plexus-component-metadata:${pom.properties.plexusVersion}"/>
@@ -161,6 +164,39 @@ END SNIPPET: ant-bootstrap -->
         <mercury:exclusion id="org.sonatype.mercury:mercury-mp3-cli"/>
         <mercury:exclusion id="org.sonatype.mercury:mercury-mp3-delta"/>
         <mercury:exclusion id="org.sonatype.mercury:mercury-mp3-api"/>
+      	
+      	<mercury:exclusion id="org.apache.maven.mercury:mercury-repo-remote-m2"/>
+      	<mercury:exclusion id="org.apache.maven.mercury:mercury-repo-api"/>
+      	<mercury:exclusion id="org.apache.maven.mercury:mercury-external"/>
+      	<mercury:exclusion id="org.apache.maven.mercury:mercury-transport-http"/>
+      	<mercury:exclusion id="org.apache.maven.mercury:mercury-transport-api"/>
+      	<mercury:exclusion id="org.apache.maven.mercury:mercury-repo-local-m2"/>
+      	<mercury:exclusion id="org.apache.maven.mercury:mercury-repo-virtual"/>
+      	<mercury:exclusion id="org.apache.maven.mercury:mercury-repo-cache-fs"/>
+      	<mercury:exclusion id="org.apache.maven.mercury:mercury-md-sat"/>
+      	<mercury:exclusion id="org.apache.maven.mercury:mercury-md-shared"/>
+      	<mercury:exclusion id="org.apache.maven.mercury:mercury-artifact"/>
+      	<mercury:exclusion id="org.apache.maven.mercury:mercury-util"/>
+      	<mercury:exclusion id="org.apache.maven.mercury:mercury-crypto-basic"/>
+      	<mercury:exclusion id="org.apache.maven.mercury:mercury-crypto-api"/>
+      	<mercury:exclusion id="org.apache.maven.mercury:mercury-event"/>
+      	<mercury:exclusion id="org.apache.maven.mercury:mercury-logging"/>
+        
+        <mercury:exclusion id="classworlds:classworlds"/>
+        
+        <mercury:exclusion id="org.codehaus.plexus:plexus-component-api"/>
+<!--      	
+      	<mercury:exclusion id="org.apache.maven:maven-artifact-manager"/>
+      	<mercury:exclusion id="org.apache.maven:maven-artifact"/>
+      	<mercury:exclusion id="org.apache.maven:maven-model"/>
+      	<mercury:exclusion id="org.apache.maven:maven-plugin-api"/>
+      	<mercury:exclusion id="org.apache.maven:maven-plugin-registry"/>
+      	<mercury:exclusion id="org.apache.maven:maven-profile"/>
+      	<mercury:exclusion id="org.apache.maven:maven-project"/>
+      	<mercury:exclusion id="org.apache.maven:maven-repository-metadata"/>
+      	<mercury:exclusion id="org.apache.maven:maven-settings"/>
+-->      	
+      	
       </mercury:exclusions>
 
     </mercury:resolve-dependencies>
@@ -280,7 +316,14 @@ END SNIPPET: ant-bootstrap -->
 
     <mkdir dir="bootstrap/target/classes"/>
 
-    <javac destdir="bootstrap/target/classes" encoding="UTF-8" source="1.5" target="1.5" debug="true">
+    <javac destdir="bootstrap/target/classes" encoding="UTF-8" source="1.5" target="1.5" debug="true"
+    >
+<!--
+listfiles="true"
+includeAntRuntime="false"
+verbose="true"
+
+-->
       <src refid="sources"/>
       <classpath refid="mercury.classpath"/>
     </javac>
@@ -306,12 +349,12 @@ END SNIPPET: ant-bootstrap -->
       <jvmarg value="-Dsurefire.useFile=${surefire.useFile}"/>
 <!--
 <debug-the-bootstrap>
-
+-->
     	<jvmarg value="-Xdebug"/>
     	<jvmarg value="-Xnoagent"/>
     	<jvmarg value="-Djava.compiler=NONE"/>
     	<jvmarg value="-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=8000"/>
-
+<!--
 </debug-the-bootstrap>
 -->
     </java>

@@ -10,6 +10,8 @@ import java.io.File;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+
+import junit.framework.Assert;
  
 import org.apache.maven.mercury.artifact.ArtifactMetadata;
 import org.apache.maven.mercury.artifact.ArtifactScopeEnum;
@@ -221,6 +223,44 @@ public class MavenDependencyProcessorTest
             // http://repo2.maven.org/maven2/org/codehaus/plexus/plexus-container-default/1.0-alpha-9/plexus-container-default-1.0-alpha-9.pom
             if( "junit".equals( md.getArtifactId() ) )
                 assertEquals( ArtifactScopeEnum.compile, md.getArtifactScope() );
+        }
+    }
+    
+
+    @Test
+    public void testInterpolation()
+    throws Exception
+    {
+        RepositoryReader rr = _remoteRepo.getReader();
+ 
+        String gav = "org.apache.maven.wagon:wagon-http-lightweight:1.0-beta-2";
+ 
+        ArtifactMetadata bmd = new ArtifactMetadata( gav );
+        ArrayList<ArtifactMetadata> query = new ArrayList<ArtifactMetadata>(1);
+        query.add( bmd );
+ 
+        MetadataResults res = rr.readDependencies( query );
+ 
+        assertNotNull( res );
+ 
+        assertFalse( res.hasExceptions() );
+ 
+        assertTrue( res.hasResults() );
+ 
+        List<ArtifactMetadata> deps = res.getResult( bmd );
+ 
+        assertNotNull( deps );
+ 
+        assertFalse( deps.isEmpty() );
+        
+        System.out.println("found "+gav+" dependencies: "+deps);
+        
+        for( ArtifactMetadata md : deps )
+        {
+            System.out.println( "    "+md.toScopedString() );
+            
+            if( md.toString().indexOf( "${" ) != -1 )
+                Assert.fail( "not interpolated value: "+md.toString() );
         }
     }
     

@@ -35,6 +35,8 @@ import java.util.Map.Entry;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.factory.ArtifactFactory;
 import org.apache.maven.artifact.repository.ArtifactRepository;
+import org.apache.maven.artifact.repository.ReactorArtifactRepository;
+import org.apache.maven.artifact.resolver.ArtifactResolutionRequest;
 import org.apache.maven.artifact.resolver.filter.ArtifactFilter;
 import org.apache.maven.artifact.resolver.filter.ExcludesArtifactFilter;
 import org.apache.maven.artifact.resolver.filter.IncludesArtifactFilter;
@@ -45,9 +47,13 @@ import org.apache.maven.mercury.artifact.MetadataTreeNode;
 import org.apache.maven.mercury.builder.api.DependencyProcessor;
 import org.apache.maven.mercury.repository.api.Repository;
 import org.apache.maven.mercury.repository.local.m2.LocalRepositoryM2;
+import org.apache.maven.mercury.repository.local.map.DefaultStorage;
+import org.apache.maven.mercury.repository.local.map.LocalRepositoryMap;
+import org.apache.maven.mercury.repository.local.map.StorageException;
 import org.apache.maven.mercury.repository.remote.m2.RemoteRepositoryM2;
 import org.apache.maven.mercury.transport.api.Server;
 import org.apache.maven.mercury.util.Util;
+import org.apache.maven.model.Dependency;
 import org.apache.maven.repository.MavenArtifactMetadata;
 import org.apache.maven.repository.MetadataGraph;
 import org.apache.maven.repository.MetadataGraphNode;
@@ -61,6 +67,26 @@ public class MercuryAdaptor
     
     private static Map<String, Repository> _repos = Collections.synchronizedMap(  new HashMap<String, Repository>() );
     
+    private static LocalRepositoryMap _reactorRepository;
+
+    /**
+     * @param repository
+     * @throws StorageException 
+     */
+    public static void initializeReactor( ReactorArtifactRepository repository, DependencyProcessor dependencyProcessor )
+    {
+       try
+    {
+        _reactorRepository = new LocalRepositoryMap( dependencyProcessor, new DefaultStorage() );
+        
+//        repository.
+    }
+    catch ( StorageException e )
+    {
+        throw new IllegalArgumentException( e );
+    }
+        
+    }
     public static List<Repository> toMercuryRepos( ArtifactRepository localRepository,
                                                    List<?> remoteRepositories,
                                                    DependencyProcessor dependencyProcessor
@@ -68,6 +94,21 @@ public class MercuryAdaptor
     {
         if ( localRepository == null && Util.isEmpty( remoteRepositories ) )
             return null;
+        
+        if( "legacy".equals( localRepository.getLayout().getId() ) )
+            return null;
+        
+        if( !Util.isEmpty( remoteRepositories ) )
+            for( Object ro : remoteRepositories )
+            {
+                if( ArtifactRepository.class.isAssignableFrom( ro.getClass() ) )
+                {
+                    ArtifactRepository ar = (ArtifactRepository) ro;
+                    
+                    if( "legacy".equals( ar.getLayout().getId() ) )
+                        return null;
+                }
+            }
         
         int nRepos =
             ( localRepository == null ? 0 : 1 ) + ( Util.isEmpty( remoteRepositories ) ? 0 : remoteRepositories.size() );
@@ -89,6 +130,8 @@ public class MercuryAdaptor
                     File localRepoDir =  new File( rootURI );
                     
                     lr = new LocalRepositoryM2( localRepository.getId(), localRepoDir, dependencyProcessor );
+                    
+//                    lr.setSnapshotAlwaysWins( true );
                     
                     _repos.put( url, lr );
                 }
@@ -176,6 +219,7 @@ public class MercuryAdaptor
         md.setVersion( a.getVersion() );
         md.setType( a.getType() );
         md.setScope( a.getScope() );
+        md.setOptional( a.isOptional() );
         
         if( "test-jar".equals( a.getType() ) )
         {
@@ -205,7 +249,7 @@ public class MercuryAdaptor
         
         String type = isTestJar ? "jar" : a.getType();
         
-        String classifier = isTestJar ? "tests" : a.getType();
+        String classifier = isTestJar ? "tests" : a.getClassifier();
         
         Artifact ma = classifier == null 
                         ? af.createArtifact( a.getGroupId(), a.getArtifactId(), a.getVersion(), a.getScope(), type )
@@ -221,27 +265,58 @@ public class MercuryAdaptor
 
         return ma;
     }
+
+    public static Artifact toMavenArtifact( ArtifactFactory af, Artifact a )
+    {
+        // MavenProject likes this one - replaces it with an actual test jar is available
+        // bad idea - embedder tests don't like it
+//        boolean isTestJar = "jar".equals( a.getType() ) && "tests".equals( a.getClassifier() );
+//        
+//        String type = isTestJar ? "test-jar" : a.getType();
+        
+        Artifact ma = af.createArtifactWithClassifier( a.getGroupId(), a.getArtifactId(), a.getVersion(), a.getType(), a.getClassifier() );
+        ma.setScope( a.getScope() );
+        
+        ma.setFile( a.getFile() );
+        
+        ma.setResolved( a.getFile() != null );
+        
+        ma.setResolvedVersion( a.getVersion() );
+
+        return ma;
+    }
     
     public static Artifact toMavenArtifact( ArtifactFactory af, org.apache.maven.mercury.artifact.ArtifactMetadata a )
+    {
+        // MavenProject likes this one - replaces it with an actual test jar is available
+        // bad idea - embedder tests don't like it
+//        boolean isTestJar = "jar".equals( a.getType() ) && "tests".equals( a.getClassifier() );
+//        
+//        String type = isTestJar ? "test-jar" : a.getType();
+        
+        Artifact ma = af.createArtifactWithClassifier( a.getGroupId(), a.getArtifactId(), a.getVersion(), a.getType(), a.getClassifier() );
+        ma.setScope( a.getScope() );
+
+        return ma;
+    }
+
+    /**
+     * @param factory
+     * @param d
+     * @return
+     */
+    public static Artifact toMavenArtifact( ArtifactFactory af, Dependency a )
     {
         boolean isTestJar = "test-jar".equals( a.getType() );
         
         String type = isTestJar ? "jar" : a.getType();
         
-        String classifier = isTestJar ? "tests" : a.getType();
+        String classifier = isTestJar ? "tests" : a.getClassifier();
         
-        Artifact ma = classifier == null 
-                                ? af.createArtifact( a.getGroupId(), a.getArtifactId(), a.getVersion(), a.getScope(), type )
-                                : af.createArtifactWithClassifier( a.getGroupId(), a.getArtifactId(), a.getVersion(), type, classifier )
-                                ;
+        Artifact ma = af.createArtifactWithClassifier( a.getGroupId(), a.getArtifactId(), a.getVersion(), type, classifier );
         ma.setScope( a.getScope() );
 
         return ma;
-    }
-    
-    public static Artifact toMavenArtifact( ArtifactFactory af, String name )
-    {
-        return toMavenArtifact( af, new ArtifactMetadata(name) );
     }
     
     public static ArtifactMetadata toMercuryArtifactMetadata( MavenArtifactMetadata md )
@@ -341,19 +416,16 @@ public class MercuryAdaptor
      */
     public static ArtifactScopeEnum extractScope( Artifact reqArtifact, boolean isPlugin, ArtifactFilter filter )
     {
-        String scopeStr = reqArtifact.getScope(); //org.apache.maven.mercury.artifact.Artifact.SCOPE_COMPILE;
+        String scopeStr = reqArtifact.getScope() == null 
+                          ? org.apache.maven.mercury.artifact.Artifact.SCOPE_COMPILE
+                          : reqArtifact.getScope()
+        ;
         
         if( filter != null )
         {
             if( ScopeArtifactFilter.class.isAssignableFrom( filter.getClass() ) )
                 scopeStr = ((ScopeArtifactFilter)filter).getScope(); 
         }
-        
-//        if( "org.apache.maven.plugins:maven-remote-resources-plugin".equals( 
-//                                                      reqArtifact.getGroupId()+":"+reqArtifact.getArtifactId() 
-//                                                                           )
-//        ) scopeStr = null;
-        
 //        else if( isPlugin )
 //            scopeStr = org.apache.maven.mercury.artifact.Artifact.SCOPE_RUNTIME;
         
@@ -375,17 +447,39 @@ public class MercuryAdaptor
 
         return null;
     }
-    
-    public static Map<String,ArtifactMetadata> toMercuryVersionMap(Map<String,Artifact> map  )
+    static Map<String,ArtifactMetadata> _hackMap = new HashMap<String, ArtifactMetadata>();
+    static int _hackMapSize = 0;
+    static 
     {
-        if( Util.isEmpty( map ) )
+        ArtifactMetadata md;
+        
+        md = new ArtifactMetadata( "cglib-nodep:cglib-nodep:2.1_3" );
+        md.setOptional( true );
+        _hackMap.put( md.toManagementString(), md );
+
+        md = new ArtifactMetadata( "javax:j2ee:1.4" );
+        md.setOptional( true );
+        _hackMap.put( md.toManagementString(), md );
+
+        _hackMapSize = _hackMap.size();
+    }
+
+    public static Map<String,ArtifactMetadata> toMercuryVersionMap(ArtifactResolutionRequest request  )
+    {
+        Map<String,Artifact> vmap = (Map<String,Artifact>)request.getManagedVersionMap();
+        
+        if( Util.isEmpty( vmap ) )
             return null;
         
-        Map<String,ArtifactMetadata> res = new HashMap<String, ArtifactMetadata>( map.size() );
+        Map<String,ArtifactMetadata> res = new HashMap<String, ArtifactMetadata>( vmap.size()+_hackMapSize );
         
-        for( Entry<String, Artifact> e : map.entrySet() )
+//        res.putAll( _hackMap );
+        
+        for( Entry<String, Artifact> e : vmap.entrySet() )
         {
-            res.put( e.getKey(), toMercuryMetadata( e.getValue() ) );
+            ArtifactMetadata md = toMercuryMetadata( e.getValue() );
+            
+            res.put( e.getKey(), md );
         }
         
         return res;

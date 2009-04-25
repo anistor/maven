@@ -75,16 +75,18 @@
       <artifactId>wagon-file</artifactId>
     </dependency>
     <!--Mercury MP3-->
+<!-- TODO release and re-enable 
     <dependency>
       <groupId>org.sonatype.mercury</groupId>
       <artifactId>mercury-mp3-cli</artifactId>
     </dependency>
+ -->
     <dependency>
       <!--
       FIXME: org.sonatype.mercury:mercury-mp3:1.0-alpha-1:pom depends on a snapshot version of mercury-event.
       -->
       <groupId>org.apache.maven.mercury</groupId>
-      <artifactId>mercury-event</artifactId>
+      <artifactId>mercury-core</artifactId>
       <version>${mercuryVersion}</version>
     </dependency>
   </dependencies>

@@ -135,6 +135,7 @@ under the License.
     <module>maven-toolchain</module>
     <module>maven-compat</module>
     <module>maven-repository</module>
+    <module>maven-repository-mercury</module>
   </modules>
 
   <scm>
@@ -174,7 +175,7 @@ under the License.
     <plexusWebdavVersion>1.0</plexusWebdavVersion>
     <wagonVersion>1.0-beta-5</wagonVersion>
     <modelBuilderVersion>1.8</modelBuilderVersion>
-    <mercuryVersion>1.0-alpha-7-SNAPSHOT</mercuryVersion>
+    <mercuryVersion>1.0-alpha-8-SNAPSHOT</mercuryVersion>
     <mercuryMp3Version>1.0-alpha-1</mercuryMp3Version>
     <securityDispatcherVersion>1.2</securityDispatcherVersion>
     <woodstoxVersion>3.2.6</woodstoxVersion>
@@ -380,12 +381,7 @@ under the License.
       <!--  Mercury -->
       <dependency>
         <groupId>org.apache.maven.mercury</groupId>
-        <artifactId>mercury-artifact</artifactId>
-        <version>${mercuryVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.maven.mercury</groupId>
-        <artifactId>mercury-external</artifactId>
+        <artifactId>mercury-core</artifactId>
         <version>${mercuryVersion}</version>
       </dependency>
       <dependency>
@@ -393,16 +389,13 @@ under the License.
         <artifactId>mercury-plexus</artifactId>
         <version>${mercuryVersion}</version>
       </dependency>
-      <dependency>
-        <groupId>org.apache.maven.mercury</groupId>
-        <artifactId>mercury-repo-virtual</artifactId>
-        <version>${mercuryVersion}</version>
-      </dependency>
+<!-- 
       <dependency>
         <groupId>org.sonatype.mercury</groupId>
         <artifactId>mercury-mp3-cli</artifactId>
         <version>${mercuryMp3Version}</version>
       </dependency>
+ -->
       <dependency>
         <groupId>org.sonatype.plexus</groupId>
         <artifactId>plexus-sec-dispatcher</artifactId>
@@ -413,37 +406,7 @@ under the License.
       <!--  Mercury test dependencies -->
       <dependency>
         <groupId>org.apache.maven.mercury</groupId>
-        <artifactId>mercury-repo-local-m2</artifactId>
-        <version>${mercuryVersion}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.maven.mercury</groupId>
-        <artifactId>mercury-repo-remote-m2</artifactId>
-        <version>${mercuryVersion}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.maven.mercury</groupId>
-        <artifactId>mercury-md-sat</artifactId>
-        <version>${mercuryVersion}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.maven.mercury</groupId>
-        <artifactId>mercury-util</artifactId>
-        <version>${mercuryVersion}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.maven.mercury</groupId>
-        <artifactId>mercury-transport-http</artifactId>
-        <version>${mercuryVersion}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.maven.mercury</groupId>
-        <artifactId>mercury-transport-http</artifactId>
+        <artifactId>mercury-core</artifactId>
         <version>${mercuryVersion}</version>
         <type>test-jar</type>
         <scope>test</scope>
@@ -453,6 +416,7 @@ under the License.
         <artifactId>plexus-plugin-manager</artifactId>
         <version>${plexusPluginManagerVersion}</version>
       </dependency>
+      
       <!--bootstrap-start-comment-->
       <dependency>
         <groupId>easymock</groupId>
