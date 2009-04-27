@@ -64,6 +64,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Properties;
 import java.util.Set;
 
@@ -75,7 +76,7 @@ public class VersionExpressionTransformationTest
 
     private VersionExpressionTransformation transformation;
 
-    private Set<File> toDelete = new HashSet<File>();
+    private Set toDelete = new HashSet();
 
     public void setUp()
         throws Exception
@@ -95,8 +96,9 @@ public class VersionExpressionTransformationTest
 
         if ( toDelete != null && !toDelete.isEmpty() )
         {
-            for ( File f : toDelete )
+            for ( Iterator it = toDelete.iterator(); it.hasNext(); )
             {
+                File f = (File) it.next();
                 try
                 {
                     FileUtils.forceDelete( f );
