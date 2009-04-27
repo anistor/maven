@@ -62,7 +62,8 @@ implements ArtifactRepository
     
     public static String calculateKey( Artifact artifact )
     {
-        return artifact.getGroupId()+":"+artifact.getArtifactId()+":"+artifact.getVersion()+":"+artifact.getType();
+        // GAV only
+        return artifact.getGroupId()+":"+artifact.getArtifactId()+":"+artifact.getVersion();
     }
     
     private static String calculateBinaryName( Artifact artifact )
