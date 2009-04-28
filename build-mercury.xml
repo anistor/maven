@@ -143,8 +143,8 @@ END SNIPPET: ant-bootstrap -->
     <property name="verbose" value="false"/>
     <!-- Pull the dependencies that Maven needs to build -->
     <copy file="pom.xml" tofile="dependencies.xml"/>
-    <replace file="${basedir}/dependencies.xml" token="&lt;!--bootstrap-start-comment--&gt;" value="&lt;!--"/>
-    <replace file="${basedir}/dependencies.xml" token="&lt;!--bootstrap-end-comment--&gt;" value="--&gt;"/>
+    <replace file="${basedir}/dependencies.xml" token="&lt;!--start--&gt;" value="&lt;!--"/>
+    <replace file="${basedir}/dependencies.xml" token="&lt;!--end--&gt;" value="--&gt;"/>
 
     <mercury:local-repository location="${maven.repo.local}"/>
     <mercury:remote-repository id="central" location="${maven.repo.central}" updatePolicy="${maven.repo.update.policy}"/>
@@ -349,12 +349,12 @@ verbose="true"
       <jvmarg value="-Dsurefire.useFile=${surefire.useFile}"/>
 <!--
 <debug-the-bootstrap>
--->
+
     	<jvmarg value="-Xdebug"/>
     	<jvmarg value="-Xnoagent"/>
     	<jvmarg value="-Djava.compiler=NONE"/>
     	<jvmarg value="-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=8000"/>
-<!--
+
 </debug-the-bootstrap>
 -->
     </java>

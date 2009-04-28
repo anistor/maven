@@ -30,24 +30,13 @@ under the License.
   <name>Mercury Repository implementation</name>
   <description>Mercury implementation for the Maven Repository System</description>
 
-  <properties>
-    <mercury.version>1.0-alpha-7-SNAPSHOT</mercury.version>
-  </properties>
-
   <dependencies>
 
     <dependency>
       <groupId>org.apache.maven</groupId>
       <artifactId>maven-repository</artifactId>
-      <version>${project.version}</version>
     </dependency>
-<!-- 
-    <dependency>
-      <groupId>org.apache.maven</groupId>
-      <artifactId>maven-repository-legacy</artifactId>
-      <version>${project.version}</version>
-    </dependency>
- -->
+    
     <dependency>
       <groupId>org.apache.maven</groupId>
       <artifactId>maven-mercury</artifactId>
@@ -65,82 +54,22 @@ under the License.
 
     <dependency>
       <groupId>org.apache.maven.mercury</groupId>
-      <artifactId>mercury-external</artifactId>
-      <version>${mercury.version}</version>
-      <scope>compile</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.maven.mercury</groupId>
-      <artifactId>mercury-util</artifactId>
-      <version>${mercury.version}</version>
-      <scope>compile</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.maven.mercury</groupId>
-      <artifactId>mercury-md-sat</artifactId>
-      <version>${mercury.version}</version>
-      <scope>compile</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.maven.mercury</groupId>
-      <artifactId>mercury-repo-api</artifactId>
-      <version>${mercury.version}</version>
-      <scope>compile</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.maven.mercury</groupId>
-      <artifactId>mercury-repo-local-m2</artifactId>
-      <version>${mercury.version}</version>
-      <scope>compile</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.maven.mercury</groupId>
-      <artifactId>mercury-repo-remote-m2</artifactId>
-      <version>${mercury.version}</version>
-      <scope>compile</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.maven.mercury</groupId>
-      <artifactId>mercury-repo-virtual</artifactId>
-      <version>${mercury.version}</version>
-      <scope>compile</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.maven.mercury</groupId>
-      <artifactId>mercury-artifact</artifactId>
-      <version>${mercury.version}</version>
-      <scope>compile</scope>
+      <artifactId>mercury-core</artifactId>
     </dependency>
 
     <dependency>
       <groupId>org.apache.maven.mercury</groupId>
       <artifactId>mercury-plexus</artifactId>
-      <version>${mercury.version}</version>
-      <scope>compile</scope>
     </dependency>
 
+<!--     
     <dependency>
       <groupId>org.apache.maven.mercury</groupId>
-      <artifactId>mercury-transport-http</artifactId>
-      <version>${mercury.version}</version>
-      <scope>compile</scope>
-    </dependency>
-    
-    <dependency>
-      <groupId>org.apache.maven</groupId>
-      <artifactId>maven-repository</artifactId>
-      <version>${project.version}</version>
+      <artifactId>mercury-core</artifactId>
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
-    
+ -->
     <dependency>
       <groupId>org.apache.maven</groupId>
       <artifactId>maven-compat</artifactId>

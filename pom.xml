@@ -248,6 +248,7 @@ under the License.
     <module>maven-toolchain</module>
     <module>maven-compat</module>
     <module>maven-repository</module>
+    <module>maven-repository-mercury</module>
   </modules>
   <!--start-->
   <dependencies>
@@ -464,7 +465,7 @@ under the License.
       </dependency>
 
 
-      <!--  Mercury test dependencies -->
+      <!--  Mercury test dependencies 
       <dependency>
         <groupId>org.apache.maven.mercury</groupId>
         <artifactId>mercury-core</artifactId>
@@ -472,8 +473,8 @@ under the License.
         <type>test-jar</type>
         <scope>test</scope>
       </dependency>
+-->
       <dependency>
-      
         <groupId>org.sonatype.plexus</groupId>
         <artifactId>plexus-plugin-manager</artifactId>
         <version>${plexusPluginManagerVersion}</version>
