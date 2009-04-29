@@ -235,6 +235,7 @@ under the License.
     </pluginManagement>
   </build>
   <modules>
+<!-- 
     <module>maven-core</module>
     <module>apache-maven</module>
     <module>maven-lifecycle</module>
@@ -244,11 +245,12 @@ under the License.
     <module>maven-reporting-api</module>
     <module>maven-project-builder</module>
     <module>maven-mercury</module>
-    <module>maven-embedder</module>
     <module>maven-toolchain</module>
     <module>maven-compat</module>
     <module>maven-repository</module>
+ -->
     <module>maven-repository-mercury</module>
+    <module>maven-embedder</module>
   </modules>
   <!--start-->
   <dependencies>

@@ -67,6 +67,9 @@ public class MercuryRepositorySystem
     extends LegacyRepositorySystem
     implements RepositorySystem
 {
+    
+    public static boolean traceMe = false;
+    
     private static final Language LANG = new DefaultLanguage( MercuryRepositorySystem.class );
     
     private Map<String, Set<Artifact> > _resolutions = Collections.synchronizedMap( new HashMap<String, Set<Artifact>>(128) );
@@ -86,8 +89,6 @@ public class MercuryRepositorySystem
     @Requirement
     private Logger _logger;
     
-    private boolean _reactorInitialized = false;
-    
     @Override
     public ArtifactResolutionResult resolve( ArtifactResolutionRequest request )
     {
@@ -100,16 +101,10 @@ public class MercuryRepositorySystem
         ArtifactResolutionResult result = new ArtifactResolutionResult();
         
         String requestKey = null;
-        
-        if( !_reactorInitialized )
-        {
-            MercuryAdaptor.initializeReactor( _reactorRepository, _dependencyProcessor );
-            
-            _reactorInitialized = true;
-        }
 
         List<Repository> repos =
-            MercuryAdaptor.toMercuryRepos(   request.getLocalRepository()
+            MercuryAdaptor.toMercuryRepos(   _reactorRepository
+                                           , request.getLocalRepository()
                                            , request.getRemoteRepostories()
                                            , _dependencyProcessor
                                          );
@@ -117,6 +112,8 @@ public class MercuryRepositorySystem
             return super.resolve( request );
         
         ArtifactFilter filter = request.getFilter();
+
+_logger.setThreshold( Logger.LEVEL_DEBUG );
 
         try
         {
@@ -131,7 +128,7 @@ long start = System.currentTimeMillis();
             
             boolean isPlugin = "maven-plugin".equals( rootArtifact.getType() ); 
             
-            ArtifactScopeEnum scope = MercuryAdaptor.extractScope( rootArtifact, isPlugin, request.getFilter() );
+            ArtifactScopeEnum scope = MercuryAdaptor.extractScope( rootArtifact, filter );
             
 if( _logger.isDebugEnabled() )
 {
@@ -151,7 +148,6 @@ _logger.debug( "\n\n======> mercury: request for "+request.getArtifact()
 }
 
             Map<String, ArtifactMetadata> versionMap = MercuryAdaptor.toMercuryVersionMap( request );
-            
 
             if( isPlugin  )
             {
@@ -190,9 +186,17 @@ _logger.debug( "\n\n======> mercury: request for "+request.getArtifact()
 
             // cannot just replace the type. Besides - Maven expects the same object out
             org.apache.maven.artifact.Artifact root = isPlugin ? mavenPluginArtifact : rootArtifact;
+//            
+//if( "org.apache.maven".equals( root.getGroupId() )
+//    && "maven-model".equals( root.getArtifactId() )
+//    && "pom".equals( root.getType() )
+//    && "1.0".equals( root.getVersion() )
+//)
+//{
+//    System.out.println("Bingo!");
+//}
 
-            // firstly - deal with the root
-            // copied from artifact resolver 
+            // first - deal with the root. Code copied from DefaultArtifactResolver 
             if ( request.isResolveRoot() && rootArtifact.getFile() == null && Util.isEmpty( artifacts ) )
             {
                 try
@@ -249,77 +253,41 @@ if( _logger.isDebugEnabled() )
             
             // query for mercury
             List<ArtifactMetadata> query = new ArrayList<ArtifactMetadata>( artifacts.size() + 1 );
-
             
-            if( request.isResolveRoot() && rootArtifact.getFile() == null  )
+            if( request.isResolveRoot() && root.getFile() == null )
             {
-                if( root.isResolved() )
-                {
-                    resolvedList.add( root );
-                    globalExclusions.add( rootMd );
-                } 
-                else
+//                if( root.isResolved() )
+//                {
+//                    resolvedList.add( root );
+//                    globalExclusions.add( rootMd );
+//if( _logger.isDebugEnabled() )
+//{
+//    _logger.debug( "added root "+root+" to resolved list" );
+//}
+//                } 
+//                else
                     query.add( rootMd );
             }
-            
-            // TODO - are activeProjectDependencies here rightly ??
-            // add dependencies of actives to the original request list
-            List<Artifact> activeDependencies = new ArrayList<Artifact>();
-            
-            for( Artifact a : artifacts )
-            {
-//                if( a.isResolved() && DependencyHolder.class.isAssignableFrom( a.getClass() ) )
-//                {
-//                    DependencyHolder apa = (DependencyHolder) a;
-//                    List<Dependency> deps = apa.getDependencyList();
-//                    if( deps != null )
-//                        for( Dependency d : deps )
-//                            activeDependencies.add( MercuryAdaptor.toMavenArtifact( _artifactFactory, d ) );
-//                }
-            }
-            
-            //
-            // daddy Jason does not do that, 
-            // but they are very important - cannot build correct classpath
-            // without them. The correct way to add them is:
-            //                    - grab the active's POM
-            //                    - create a local map repository for each POM
-            //                    - add a POM to the metadata list (be re resolved from map repo)
-            //                    - remove POMs from final result
-            //                    - add original active's instead
-            //
-            // TODO replace this HACK 
-            //due to the lack of time - hacking up a solution: add all them to the dependency list,
-            //  but this approach looses the depth and causes problems:
-            //         if active depends on junit 4.4 and root depends on 3.8.1 - 4.4 wins, while it should not
-            //  trying to mitigate it by adding only non-existent GAs
-          if( activeDependencies.size() > 0 )
-          {
-              for( Artifact a : activeDependencies )
-                  if( gaDoesNotExist(a,artifacts) )
-                  {
-                      if( isGood( filter, a ) )
-                      {
-                          artifacts.add( a );
-    
-                          if( _logger.isDebugEnabled() )
-                              _logger.debug( "        ------ active's dep --> "+a );
-                      }
-                  }
-              
-          }
-            
-          
+//            else
+//            {
+//                resolvedList.add( root );
+//                globalExclusions.add( rootMd );
+//if( _logger.isDebugEnabled() )
+//{
+//    _logger.debug( "Don't resolve root: added root "+root+" to resolved list" );
+//}
+//            }
+
           // decide - what goes to query vs. already resolved
             for( Artifact a : artifacts )
             {
-                if( a.isResolved() )
-                {
-                    resolvedList.add( a );
-                    // don't resolve again
-                    globalExclusions.add( MercuryAdaptor.toMercuryMetadata( a ) );
-                }
-                else
+//                if( a.isResolved() )
+//                {
+//                    resolvedList.add( a );
+//                    // don't resolve again
+//                    globalExclusions.add( MercuryAdaptor.toMercuryMetadata( a ) );
+//                }
+//                else
                     query.add( MercuryAdaptor.toMercuryMetadata( a ) );
             }
 
@@ -332,15 +300,15 @@ if( _logger.isDebugEnabled() )
     showMdList( mercuryMetadataList, "     <.. md by mercury ...... " );
 }
             
-            // no metadata resolved and nothing pre-resolved
+            // no metadata resolved in the scope and nothing pre-resolved
             if( Util.isEmpty( mercuryMetadataList ) && Util.isEmpty( resolvedList ) ) 
             {
-                result.addMissingArtifact( rootArtifact );
+//                result.addMissingArtifact( rootArtifact );
                 
                 long diff = System.currentTimeMillis() - start;
                 
 if( _logger.isDebugEnabled() )
-    _logger.debug("mercury: missing artifact("+diff+") "+rootArtifact+"("+scope+")"+"\n<===========\n" );
+    _logger.debug("mercury: artifact("+diff+" ms) "+rootArtifact+"("+scope+")"+"\n<===========\n" );
 
                 return result;
             }
@@ -354,7 +322,7 @@ if( _logger.isDebugEnabled() )
                 showAList( mercuryArtifactList, "     <__ bin. by mercury ____ " );
             }
             
-            // ActiveProjectArtifacts - add the to the result before the rest
+            // Resolved - add the to the result before the rest
             for( Artifact a : resolvedList )
             {
                 result.addArtifact( a );
@@ -409,13 +377,13 @@ if( _logger.isDebugEnabled() )
     _logger.debug("\n<==========================================\n");
 }
 
-            if( requestKey != null )
-                _resolutions.put( requestKey, resSet );
-
+                if( requestKey != null )
+                    _resolutions.put( requestKey, resSet );
             }
-            else
+            
+            if( Util.isEmpty( result.getArtifacts() ) )
             {
-                result.addMissingArtifact( rootArtifact );
+//                result.addMissingArtifact( rootArtifact );
                 
                 long diff = System.currentTimeMillis() - start;
 if( _logger.isDebugEnabled() )
@@ -568,7 +536,9 @@ if( _logger.isDebugEnabled() )
             throw new IllegalArgumentException( LANG.getMessage( "null.request.artifact" ) );
 
         List<Repository> repos =
-            MercuryAdaptor.toMercuryRepos( request.getLocalRepository()
+            MercuryAdaptor.toMercuryRepos( 
+                                             _reactorRepository
+                                           , request.getLocalRepository()
                                            , request.getRemoteRepostories()
                                            , _dependencyProcessor
                                          );

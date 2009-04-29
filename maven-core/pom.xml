@@ -117,6 +117,20 @@
       <artifactId>maven-mercury</artifactId>
       <version>${project.version}</version>
     </dependency>
+
+      <dependency>
+        <groupId>org.apache.maven</groupId>
+        <artifactId>maven-repository-mercury</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+
+    <dependency>
+      <groupId>org.apache.maven.mercury</groupId>
+      <artifactId>mercury-plexus</artifactId>
+      <version>${mercuryVersion}</version>
+      <scope>test</scope>
+    </dependency>
+      
     <dependency>
       <groupId>org.sonatype.spice</groupId>
       <artifactId>model-builder</artifactId>
@@ -129,6 +143,8 @@
     	<groupId>commons-jxpath</groupId>
     	<artifactId>commons-jxpath</artifactId>
     </dependency>
+    
+    
   </dependencies>
   <build>
     <plugins>

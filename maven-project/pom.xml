@@ -81,6 +81,20 @@ under the License.
     	<artifactId>commons-jxpath</artifactId>
     </dependency>
 
+      <dependency>
+        <groupId>org.apache.maven</groupId>
+        <artifactId>maven-repository-mercury</artifactId>
+        <version>${project.version}</version>
+        <scope>test</scope>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.maven</groupId>
+        <artifactId>maven-mercury</artifactId>
+        <version>${project.version}</version>
+        <scope>test</scope>
+      </dependency>
+
     <dependency>
       <groupId>org.sonatype.plexus</groupId>                                                                                
       <artifactId>plexus-jetty6</artifactId>                                                                                
@@ -96,6 +110,13 @@ under the License.
     <dependency>
       <groupId>org.apache.maven.mercury</groupId>
       <artifactId>mercury-core</artifactId>
+      <version>${mercuryVersion}</version>
+      <scope>test</scope>
+    </dependency>
+    
+    <dependency>
+      <groupId>org.apache.maven.mercury</groupId>
+      <artifactId>mercury-plexus</artifactId>
       <version>${mercuryVersion}</version>
       <scope>test</scope>
     </dependency>

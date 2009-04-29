@@ -347,14 +347,15 @@ verbose="true"
 
       <jvmarg value="-Dmaven.repo.local=${maven.repo.local}"/>
       <jvmarg value="-Dsurefire.useFile=${surefire.useFile}"/>
+      <jvmarg value="-Xmx168m"/>
 <!--
 <debug-the-bootstrap>
-
+-->
     	<jvmarg value="-Xdebug"/>
     	<jvmarg value="-Xnoagent"/>
     	<jvmarg value="-Djava.compiler=NONE"/>
     	<jvmarg value="-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=8000"/>
-
+<!--
 </debug-the-bootstrap>
 -->
     </java>

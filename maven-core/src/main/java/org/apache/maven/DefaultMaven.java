@@ -28,6 +28,9 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 
+import org.apache.maven.artifact.Artifact;
+import org.apache.maven.artifact.repository.ArtifactRepository;
+import org.apache.maven.artifact.repository.ReactorArtifactRepository;
 import org.apache.maven.artifact.versioning.DefaultArtifactVersion;
 import org.apache.maven.execution.DefaultMavenExecutionResult;
 import org.apache.maven.execution.DuplicateProjectException;
@@ -76,6 +79,9 @@ public class DefaultMaven
 
     @Requirement
     protected RuntimeInformation runtimeInformation;
+    
+    @Requirement(role=ArtifactRepository.class,hint="reactor")
+    private ReactorArtifactRepository reactorRepository;
 
     @Requirement
     private Logger logger;
@@ -139,6 +145,10 @@ public class DefaultMaven
         if ( reactorManager.hasMultipleProjects() )
         {
             logger.info( "Reactor build order: " );
+            
+            List<MavenProject> sortedProjects = reactorManager.getSortedProjects();
+            
+            initializeReactorRepository( reactorManager.getTopLevelProject(), sortedProjects );
 
             for ( Iterator i = reactorManager.getSortedProjects().iterator(); i.hasNext(); )
             {
@@ -227,6 +237,21 @@ public class DefaultMaven
         }
 
         return reactorManager;
+    }
+    
+    private void initializeReactorRepository( MavenProject topLevelProject, List<MavenProject> projects )
+    {
+        reactorRepository.setReactorRoot( topLevelProject.getArtifact()
+                                          , topLevelProject.getBasedir()
+                                          , topLevelProject.getBuild().getDirectory()
+                                        );
+        
+        for( MavenProject project : projects )
+        {
+            Artifact projectArtifact = project.getArtifact();
+
+            reactorRepository.addArtifact( projectArtifact, project.getBuild().getDirectory() );
+        }
     }
 
     protected List getProjects( MavenExecutionRequest request )

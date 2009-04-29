@@ -38,7 +38,7 @@ import org.codehaus.plexus.component.annotations.Requirement;
  *
  */
 
-@Component( role=ArtifactRepository.class,hint="reactor")
+@Component( role=ArtifactRepository.class,hint="reactor",instantiationStrategy="singleton")
 public class ReactorArtifactRepository
 //extends Repository
 implements ArtifactRepository
@@ -59,6 +59,8 @@ implements ArtifactRepository
     private static ArtifactRepositoryLayout layout;
     
     private Map<String, String> storage = new HashMap<String, String>(32);
+    
+    private boolean initialized = false;
     
     public static String calculateKey( Artifact artifact )
     {
@@ -106,6 +108,8 @@ implements ArtifactRepository
             this.baseDir = baseDir.getCanonicalPath();
 
             this.url = baseDir.toURL().toString();
+            
+            this.initialized = true;
         }
         catch ( IOException e )
         {
@@ -155,6 +159,16 @@ implements ArtifactRepository
             return path;
         
         return null;
+    }
+    
+    public boolean isEmpty()
+    {
+        return storage.isEmpty();
+    }
+    
+    public boolean isInitialized()
+    {
+        return initialized;
     }
     
     public String getKey()
@@ -222,6 +236,11 @@ implements ArtifactRepository
     public String getBasedir()
     {
         return baseDir;
+    }
+    
+    public Map<String, String> getStorage()
+    {
+        return storage;
     }
 
     public String getId()
