@@ -52,11 +52,13 @@ import org.apache.maven.mercury.repository.local.map.LocalRepositoryMap;
 import org.apache.maven.mercury.repository.local.map.ReactorStorage;
 import org.apache.maven.mercury.repository.local.map.StorageException;
 import org.apache.maven.mercury.repository.remote.m2.RemoteRepositoryM2;
+import org.apache.maven.mercury.transport.api.Credentials;
 import org.apache.maven.mercury.transport.api.Server;
 import org.apache.maven.mercury.util.Util;
 import org.apache.maven.repository.MavenArtifactMetadata;
 import org.apache.maven.repository.MetadataGraph;
 import org.apache.maven.repository.MetadataGraphNode;
+import org.apache.maven.repository.RepositorySystem;
 
 /**
  * @author Oleg Gusakov
@@ -99,7 +101,7 @@ class MercuryAdaptor
         _reactorRepository = null;
     }
 
-    public static List<Repository> toMercuryRepos( ReactorArtifactRepository reactorRepository,
+    public static List<Repository> toMercuryRepos( Map<String, Credentials> credentials, ReactorArtifactRepository reactorRepository,
                                                    ArtifactRepository localRepository, List<?> remoteRepositories,
                                                    DependencyProcessor dependencyProcessor )
     {
@@ -165,6 +167,9 @@ class MercuryAdaptor
             {
                 String url;
                 String id;
+                
+                String name = null;
+                String pass = null;
 
                 if ( ArtifactRepository.class.isAssignableFrom( o.getClass() ) )
                 {
@@ -177,7 +182,6 @@ class MercuryAdaptor
                     org.apache.maven.model.Repository ar = (org.apache.maven.model.Repository) o;
                     url = ar.getUrl();
                     id = ar.getId();
-                    
                 }
                 else
                     throw new IllegalArgumentException( "found illegal class in the remote repository list - "
@@ -204,8 +208,14 @@ class MercuryAdaptor
                 {
                     Server server;
                     try
-                    {
-                        server = new Server( id, new URL( url ) );
+                    {                       
+                        Credentials cred = credentials.get( id );
+                        
+                        if( cred != null )
+                            server = new Server( id, new URL( url ), false, false, cred );
+                        else
+                            server = new Server( id, new URL( url ) );
+                        
                     }
                     catch ( MalformedURLException e )
                     {

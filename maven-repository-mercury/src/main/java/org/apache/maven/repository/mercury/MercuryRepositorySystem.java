@@ -19,6 +19,8 @@ under the License.
 
 package org.apache.maven.repository.mercury;
 
+import java.io.File;
+import java.io.IOException;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -45,6 +47,8 @@ import org.apache.maven.mercury.builder.api.DependencyProcessor;
 import org.apache.maven.mercury.plexus.PlexusMercury;
 import org.apache.maven.mercury.repository.api.Repository;
 import org.apache.maven.mercury.repository.api.RepositoryException;
+import org.apache.maven.mercury.transport.api.Credentials;
+import org.apache.maven.mercury.util.FileUtil;
 import org.apache.maven.mercury.util.Util;
 import org.apache.maven.repository.LegacyRepositorySystem;
 import org.apache.maven.repository.MetadataGraph;
@@ -91,6 +95,37 @@ public class MercuryRepositorySystem
     @Requirement
     private Logger _logger;
     
+    private Map<String, Credentials> _credentials = new HashMap<String, Credentials>(8);
+    
+    @Override
+    public void addAuthenticationInfo(   String repositoryId
+                                       , String username, String password
+                                       , String privateKey, String passphrase
+                                     )
+    {
+        super.addAuthenticationInfo( repositoryId, username, password, privateKey, passphrase );
+        
+        Credentials credentials = null;
+        
+        if( Util.isEmpty( privateKey ) )
+            credentials = new Credentials( username, password );
+        else
+        {
+            byte[] cert;
+            try
+            {
+                cert = FileUtil.readRawData( new File(privateKey) );
+            }
+            catch ( IOException e )
+            {
+                throw new IllegalArgumentException( e );
+            }
+            credentials = new Credentials( cert, username, passphrase );
+        }
+        
+        _credentials.put( repositoryId, credentials );
+    }
+    
     @Override
     public ArtifactResolutionResult resolve( ArtifactResolutionRequest request )
     {
@@ -105,7 +140,8 @@ public class MercuryRepositorySystem
         String requestKey = null;
 
         List<Repository> repos =
-            MercuryAdaptor.toMercuryRepos(   _reactorRepository
+            MercuryAdaptor.toMercuryRepos(  _credentials 
+                                           , _reactorRepository
                                            , request.getLocalRepository()
                                            , request.getRemoteRepostories()
                                            , _dependencyProcessor
@@ -531,8 +567,8 @@ if( _logger.isDebugEnabled() )
             throw new IllegalArgumentException( LANG.getMessage( "null.request.artifact" ) );
 
         List<Repository> repos =
-            MercuryAdaptor.toMercuryRepos( 
-                                             _reactorRepository
+            MercuryAdaptor.toMercuryRepos( _credentials
+                                           , _reactorRepository
                                            , request.getLocalRepository()
                                            , request.getRemoteRepostories()
                                            , _dependencyProcessor
