@@ -74,6 +74,8 @@ public class MercuryRepositorySystem
     
     private Map<String, Set<Artifact> > _resolutions = Collections.synchronizedMap( new HashMap<String, Set<Artifact>>(128) );
     
+    public static final ArtifactExclusionList DOXIA_EXCLUSION = new ArtifactExclusionList( new ArtifactMetadata("doxia:doxia-sink-api") );
+    
     @Requirement( hint = "maven" )
     DependencyProcessor _dependencyProcessor;
 
@@ -126,7 +128,9 @@ long start = System.currentTimeMillis();
             
             Set<Artifact> artifacts = request.getArtifactDependencies();
             
-            boolean isPlugin = "maven-plugin".equals( rootArtifact.getType() ); 
+            boolean isPlugin = "maven-plugin".equals( rootArtifact.getType() );
+            
+            boolean isDoxiaHack = false;
             
             ArtifactScopeEnum scope = MercuryAdaptor.extractScope( rootArtifact, filter );
             
@@ -186,15 +190,6 @@ _logger.debug( "\n\n======> mercury: request for "+request.getArtifact()
 
             // cannot just replace the type. Besides - Maven expects the same object out
             org.apache.maven.artifact.Artifact root = isPlugin ? mavenPluginArtifact : rootArtifact;
-//            
-//if( "org.apache.maven".equals( root.getGroupId() )
-//    && "maven-model".equals( root.getArtifactId() )
-//    && "pom".equals( root.getType() )
-//    && "1.0".equals( root.getVersion() )
-//)
-//{
-//    System.out.println("Bingo!");
-//}
 
             // first - deal with the root. Code copied from DefaultArtifactResolver 
             if ( request.isResolveRoot() && rootArtifact.getFile() == null && Util.isEmpty( artifacts ) )
@@ -255,46 +250,39 @@ if( _logger.isDebugEnabled() )
             List<ArtifactMetadata> query = new ArrayList<ArtifactMetadata>( artifacts.size() + 1 );
             
             if( request.isResolveRoot() && root.getFile() == null )
-            {
-//                if( root.isResolved() )
-//                {
-//                    resolvedList.add( root );
-//                    globalExclusions.add( rootMd );
-//if( _logger.isDebugEnabled() )
-//{
-//    _logger.debug( "added root "+root+" to resolved list" );
-//}
-//                } 
-//                else
                     query.add( rootMd );
-            }
-//            else
-//            {
-//                resolvedList.add( root );
-//                globalExclusions.add( rootMd );
-//if( _logger.isDebugEnabled() )
-//{
-//    _logger.debug( "Don't resolve root: added root "+root+" to resolved list" );
-//}
-//            }
 
-          // decide - what goes to query vs. already resolved
             for( Artifact a : artifacts )
             {
-//                if( a.isResolved() )
-//                {
-//                    resolvedList.add( a );
-//                    // don't resolve again
-//                    globalExclusions.add( MercuryAdaptor.toMercuryMetadata( a ) );
-//                }
-//                else
                     query.add( MercuryAdaptor.toMercuryMetadata( a ) );
             }
 
+            
+             // hack: doxia:doxia-sink-api created an unresolvable conflict in the tree             
+             if( "org.apache.maven.plugins".equals( root.getGroupId() )
+                 && "maven-remote-resources-plugin".equals( root.getArtifactId() )
+                 && "1.0".equals( root.getVersion() )
+             )
+             {
+                 isDoxiaHack = true;
+             }
+         
             if( query.size() > 0 ) // metadata resolution first
+            {
+                if( isDoxiaHack )
+                {
+                    if( Util.isEmpty( globalExclusions ) )
+                        globalExclusions = DOXIA_EXCLUSION.getMetadataList();
+                    else
+                        globalExclusions.addAll( DOXIA_EXCLUSION.getMetadataList() );
+                }
                 mercuryMetadataList = _mercury.resolve( repos, scope, new ArtifactQueryList(query)
-                                                      , null, new ArtifactExclusionList(globalExclusions), versionMap
+                                                      , null
+                                                      , new ArtifactExclusionList(globalExclusions)
+                                                      , versionMap
                                                       );
+            }
+
 if( _logger.isDebugEnabled() )
 {
     showMdList( mercuryMetadataList, "     <.. md by mercury ...... " );

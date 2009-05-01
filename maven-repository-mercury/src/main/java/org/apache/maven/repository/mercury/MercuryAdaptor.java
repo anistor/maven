@@ -177,10 +177,26 @@ class MercuryAdaptor
                     org.apache.maven.model.Repository ar = (org.apache.maven.model.Repository) o;
                     url = ar.getUrl();
                     id = ar.getId();
+                    
                 }
                 else
                     throw new IllegalArgumentException( "found illegal class in the remote repository list - "
                         + o.getClass().getName() );
+
+                if( url.startsWith( "file" ) )
+                {
+                    try
+                    {
+                        LocalRepositoryM2 lr = new LocalRepositoryM2( id, new File( new URI(url) ), dependencyProcessor );
+                        repos.put( url, lr );
+                    }
+                    catch ( URISyntaxException e1 )
+                    {
+                       throw new IllegalArgumentException("cannot create repository for URL "+url+", error: "+e1.getMessage() );
+                    }
+                    // don't cache it
+                    continue;
+                }
 
                 RemoteRepositoryM2 rr = (RemoteRepositoryM2) _repos.get( url );
 
@@ -237,7 +253,7 @@ class MercuryAdaptor
         
         md.setGroupId( a.getGroupId() );
         md.setArtifactId( a.getArtifactId() );
-        md.setVersion( a.getVersion() );
+        md.setVersion( a.getVersion() == null ? a.getVersionRange().toString() : a.getVersion() );
         md.setType( h == null ? a.getType() : h.getExtension() );
         md.setScope( a.getScope() );
         md.setOptional( a.isOptional() );
@@ -446,7 +462,7 @@ class MercuryAdaptor
     public static ArtifactScopeEnum extractScope( Artifact reqArtifact, ArtifactFilter filter )
     {
         String scopeStr =
-            reqArtifact.getScope() == null ?  org.apache.maven.mercury.artifact.Artifact.SCOPE_COMPILE
+            reqArtifact.getScope() == null ? null // org.apache.maven.mercury.artifact.Artifact.SCOPE_COMPILE
                             : reqArtifact.getScope();
         
         System.out.println("Scope 1: "+scopeStr);
