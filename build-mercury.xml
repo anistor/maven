@@ -185,17 +185,6 @@ END SNIPPET: ant-bootstrap -->
         <mercury:exclusion id="classworlds:classworlds"/>
         
         <mercury:exclusion id="org.codehaus.plexus:plexus-component-api"/>
-<!--      	
-      	<mercury:exclusion id="org.apache.maven:maven-artifact-manager"/>
-      	<mercury:exclusion id="org.apache.maven:maven-artifact"/>
-      	<mercury:exclusion id="org.apache.maven:maven-model"/>
-      	<mercury:exclusion id="org.apache.maven:maven-plugin-api"/>
-      	<mercury:exclusion id="org.apache.maven:maven-plugin-registry"/>
-      	<mercury:exclusion id="org.apache.maven:maven-profile"/>
-      	<mercury:exclusion id="org.apache.maven:maven-project"/>
-      	<mercury:exclusion id="org.apache.maven:maven-repository-metadata"/>
-      	<mercury:exclusion id="org.apache.maven:maven-settings"/>
--->      	
       	
       </mercury:exclusions>
 
@@ -350,12 +339,12 @@ verbose="true"
       <jvmarg value="-Xmx168m"/>
 <!--
 <debug-the-bootstrap>
--->
+
     	<jvmarg value="-Xdebug"/>
     	<jvmarg value="-Xnoagent"/>
     	<jvmarg value="-Djava.compiler=NONE"/>
     	<jvmarg value="-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=8000"/>
-<!--
+
 </debug-the-bootstrap>
 -->
     </java>
