@@ -179,7 +179,7 @@ public class VersionExpressionTransformation
         return;
     }
 
-    protected File transformVersions( File pomFile, Artifact artifact, ArtifactRepository localRepository )
+    File transformVersions( File pomFile, Artifact artifact, ArtifactRepository localRepository )
         throws IOException, ModelInterpolationException
     {
         ProjectBuilderConfiguration pbConfig;
@@ -238,6 +238,21 @@ public class VersionExpressionTransformation
 
             outputFile = pomFile;
         }
+        catch ( NoClassDefFoundError ncdfe )
+        {
+            if ( ncdfe.getMessage().indexOf( "javax/xml/xpath" ) > -1 )
+            {
+                getLogger().warn( "Cannot load XPath classes from JDK. Your JDK version may be < 1.5." +
+                        "\n\nNOTE: This prevents the interpolation of version expressions in your POMs " +
+                        "during the install/deploy steps of the build!\n\n" );
+                
+                outputFile = pomFile;
+            }
+            else
+            {
+                throw ncdfe;
+            }
+        }
         finally
         {
             IOUtil.close( reader );
@@ -246,7 +261,7 @@ public class VersionExpressionTransformation
         return outputFile;
     }
 
-    protected void interpolateVersions( File pomFile, File outputFile, Model model, File projectDir,
+    void interpolateVersions( File pomFile, File outputFile, Model model, File projectDir,
                                         ProjectBuilderConfiguration config )
         throws ModelInterpolationException
     {
@@ -256,26 +271,7 @@ public class VersionExpressionTransformation
         // use of the XPP3 Model reader/writers, which have a tendency to lose XML comments and such.
         // SOOO, we're using a two-stage string interpolation here. The first stage selects all XML 'version'
         // elements, and subjects their values to interpolation in the second stage.
-        XPathVersionExpressionInterpolator interpolator;
-        try
-        {
-            interpolator = new XPathVersionExpressionInterpolator( getLogger() );
-        }
-        catch ( NoClassDefFoundError ncdfe )
-        {
-            if ( ncdfe.getMessage().indexOf( "javax/xml/xpath" ) > -1 )
-            {
-                getLogger().warn( "Cannot load XPath classes from JDK. Your JDK version may be < 1.5." +
-                		"\n\nNOTE: This prevents the interpolation of version expressions in your POMs " +
-                		"during the install/deploy steps of the build!\n\n" );
-                
-                return;
-            }
-            else
-            {
-                throw ncdfe;
-            }
-        }
+        XPathVersionExpressionInterpolator interpolator = new XPathVersionExpressionInterpolator( getLogger() );
 
         // The second-stage interpolator is the 'normal' one used in all Model interpolation throughout
         // maven-project.
