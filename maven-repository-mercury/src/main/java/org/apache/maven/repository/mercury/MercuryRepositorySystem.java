@@ -190,7 +190,7 @@ _logger.debug( "\n\n======> mercury: request for "+request.getArtifact()
     if( !Util.isEmpty( repos ) )
     {
         for( Repository r : repos )
-            _logger.debug( "repository "+r.getId()+":"+r.getServer().getURL() );
+            _logger.debug( "repository "+r.getId()+":"+ (r.getServer() == null ? "local" : r.getServer().getURL() ) );
     }
 }
 
