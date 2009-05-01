@@ -65,6 +65,7 @@ under the License.
     <modelBuilderVersion>1.8</modelBuilderVersion>
     <mercuryVersion>1.0-alpha-8-SNAPSHOT</mercuryVersion>
     <mercuryMp3Version>1.0-alpha-1</mercuryMp3Version>
+    <jettyVersion>6.1.15</jettyVersion>
     <securityDispatcherVersion>1.2</securityDispatcherVersion>
     <woodstoxVersion>3.2.6</woodstoxVersion>
     <modelloVersion>1.0.1</modelloVersion>
@@ -478,6 +479,11 @@ under the License.
         <groupId>org.apache.maven.mercury</groupId>
         <artifactId>mercury-plexus</artifactId>
         <version>${mercuryVersion}</version>
+      </dependency>
+      <dependency>
+         <groupId>org.mortbay.jetty</groupId>
+         <artifactId>jetty</artifactId>
+        <version>${jettyVersion}</version>
       </dependency>
       <dependency>
         <groupId>org.sonatype.plexus</groupId>
