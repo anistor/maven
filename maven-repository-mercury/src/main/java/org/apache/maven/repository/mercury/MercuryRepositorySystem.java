@@ -143,12 +143,19 @@ _logger.debug( "\n\n======> mercury: request for "+request.getArtifact()
 //+", repos="+request.getRemoteRepostories().size()
 //+", map=" + request.getManagedVersionMap() 
 );
+
     if( artifacts != null )
     {
         showList( artifacts, "   --------> " );
     //if( request.getManagedVersionMap() != null && request.getManagedVersionMap().size() > 0 )
     //    logger.debug( "   ########>  VersionMap\n"+request.getManagedVersionMap()+"\n" );
-    } 
+    }
+    
+    if( !Util.isEmpty( repos ) )
+    {
+        for( Repository r : repos )
+            _logger.debug( "repository "+r.getId()+":"+r.getServer().getURL() );
+    }
 }
 
             Map<String, ArtifactMetadata> versionMap = MercuryAdaptor.toMercuryVersionMap( request );
