@@ -89,6 +89,9 @@
                 <relocation>
                   <pattern>org.apache.commons.logging</pattern>
                 </relocation>
+                <relocation>
+                  <pattern>org.apache.log4j</pattern>
+                </relocation>
 
                 <!-- For maven-artifact-manager -->
                 <relocation>
