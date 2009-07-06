@@ -116,9 +116,9 @@ under the License.
   </mailingLists>
 
   <scm>
-    <connection>scm:svn:https://svn.apache.org/repos/asf/maven/components/branches/maven-2.0.11-RC</connection>
+    <connection>scm:svn:https://svn.apache.org/repos/asf/maven/components/tags/maven-2.0.11-RC</connection>
     <developerConnection>scm:svn:https://svn.apache.org/repos/asf/maven/components/branches/maven-2.0.11-RC</developerConnection>
-    <url>https://svn.apache.org/repos/asf/maven/components/branches/maven-2.0.11-RC</url>
+    <url>https://svn.apache.org/repos/asf/maven/components/tags/maven-2.0.11-RC</url>
   </scm>
 
   <build>
