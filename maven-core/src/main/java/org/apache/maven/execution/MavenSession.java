@@ -27,10 +27,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
-import org.apache.maven.artifact.repository.ArtifactRepository;
+import org.apache.maven.artifact.repository.LegacyArtifactRepositoryAdapter;
 import org.apache.maven.plugin.descriptor.PluginDescriptor;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.ProjectBuildingRequest;
+import org.apache.maven.repository.legacy.repository.ArtifactRepository;
 import org.apache.maven.settings.Settings;
 import org.codehaus.plexus.PlexusContainer;
 
@@ -98,10 +99,19 @@ public class MavenSession
     {
         return container;
     }
-
-    public ArtifactRepository getLocalRepository()
+    
+    public ArtifactRepository getLocalArtifactRepository()
     {
         return request.getLocalRepository();
+    }    
+
+    //
+    // This requires an adapter to present the old interface to client code while
+    // using the new implementation code.
+    //
+    public ArtifactRepository getLocalRepository()
+    {
+        return new LegacyArtifactRepositoryAdapter( request.getLocalRepository() );
     }
 
     public List<String> getGoals()

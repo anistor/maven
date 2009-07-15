@@ -19,8 +19,8 @@ package org.apache.maven.execution;
  * under the License.
  */
 
-import org.apache.maven.artifact.versioning.ArtifactVersion;
-import org.apache.maven.artifact.versioning.DefaultArtifactVersion;
+import org.apache.maven.repository.legacy.versioning.ArtifactVersion;
+import org.apache.maven.repository.legacy.versioning.DefaultArtifactVersion;
 import org.codehaus.plexus.component.annotations.Component;
 import org.codehaus.plexus.personality.plexus.lifecycle.phase.Initializable;
 import org.codehaus.plexus.personality.plexus.lifecycle.phase.InitializationException;

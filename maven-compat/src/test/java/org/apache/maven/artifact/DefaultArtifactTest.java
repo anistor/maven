@@ -22,7 +22,7 @@ package org.apache.maven.artifact;
 import junit.framework.TestCase;
 
 import org.apache.maven.artifact.handler.ArtifactHandlerMock;
-import org.apache.maven.artifact.versioning.VersionRange;
+import org.apache.maven.repository.legacy.versioning.VersionRange;
 
 public class DefaultArtifactTest
     extends TestCase

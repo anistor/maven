@@ -18,7 +18,8 @@ package org.apache.maven.artifact.resolver;
 import java.util.List;
 
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.repository.ArtifactRepository;
+import org.apache.maven.repository.legacy.repository.ArtifactRepository;
+import org.apache.maven.repository.legacy.resolver.AbstractArtifactResolutionException;
 import org.apache.maven.wagon.ResourceDoesNotExistException;
 
 /**
@@ -40,7 +41,7 @@ public class ArtifactNotFoundException
             .getDependencyTrail() );
     }
 
-    protected ArtifactNotFoundException( String message, Artifact artifact, List<ArtifactRepository> remoteRepositories, ResourceDoesNotExistException cause )
+    public ArtifactNotFoundException( String message, Artifact artifact, List<ArtifactRepository> remoteRepositories, ResourceDoesNotExistException cause )
     {
         this( message, artifact.getGroupId(), artifact.getArtifactId(), artifact.getVersion(), artifact.getType(), artifact.getClassifier(), remoteRepositories, artifact.getDownloadUrl(), artifact
             .getDependencyTrail(), cause );

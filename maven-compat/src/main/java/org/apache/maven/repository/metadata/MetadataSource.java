@@ -21,7 +21,7 @@ package org.apache.maven.repository.metadata;
 
 import java.util.List;
 
-import org.apache.maven.artifact.repository.ArtifactRepository;
+import org.apache.maven.repository.legacy.repository.ArtifactRepository;
 
 /**
  * Provides some metadata operations, like querying the remote repository for a list of versions available for an

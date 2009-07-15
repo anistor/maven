@@ -19,7 +19,7 @@ package org.apache.maven;
  * under the License.
  */
 
-import org.apache.maven.artifact.resolver.filter.ArtifactFilter;
+import org.apache.maven.repository.legacy.resolver.filter.ArtifactFilter;
 
 public interface ArtifactFilterManager
 {

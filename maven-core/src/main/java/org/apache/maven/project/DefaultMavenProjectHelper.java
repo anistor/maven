@@ -26,13 +26,13 @@ import java.util.List;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.DefaultArtifact;
-import org.apache.maven.artifact.InvalidArtifactRTException;
-import org.apache.maven.artifact.handler.ArtifactHandler;
-import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
-import org.apache.maven.artifact.repository.ArtifactRepository;
-import org.apache.maven.artifact.versioning.VersionRange;
 import org.apache.maven.model.Resource;
+import org.apache.maven.repository.legacy.InvalidArtifactRTException;
+import org.apache.maven.repository.legacy.handler.ArtifactHandler;
+import org.apache.maven.repository.legacy.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.repository.legacy.metadata.ArtifactMetadata;
+import org.apache.maven.repository.legacy.repository.ArtifactRepository;
+import org.apache.maven.repository.legacy.versioning.VersionRange;
 import org.codehaus.plexus.component.annotations.Component;
 import org.codehaus.plexus.component.annotations.Requirement;
 import org.codehaus.plexus.logging.AbstractLogEnabled;

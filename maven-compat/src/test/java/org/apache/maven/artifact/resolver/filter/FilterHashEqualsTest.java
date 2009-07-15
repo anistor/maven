@@ -22,6 +22,8 @@ package org.apache.maven.artifact.resolver.filter;
 import java.util.Arrays;
 import java.util.List;
 
+import org.apache.maven.repository.legacy.resolver.filter.IncludesArtifactFilter;
+
 import junit.framework.TestCase;
 
 /**

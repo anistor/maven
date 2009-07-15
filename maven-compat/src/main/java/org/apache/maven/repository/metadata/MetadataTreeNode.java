@@ -1,7 +1,6 @@
 package org.apache.maven.repository.metadata;
 
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.ArtifactScopeEnum;
 /**
  * metadata [dirty] Tree
  * 

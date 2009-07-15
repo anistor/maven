@@ -24,10 +24,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.Properties;
 
-import org.apache.maven.artifact.repository.ArtifactRepository;
+import org.apache.maven.model.ModelEventListener;
 import org.apache.maven.model.Profile;
-import org.apache.maven.model.building.ModelBuildingRequest;
-import org.apache.maven.model.building.ModelEventListener;
+import org.apache.maven.repository.legacy.repository.ArtifactRepository;
 
 public class DefaultProjectBuildingRequest
     implements ProjectBuildingRequest
@@ -42,7 +41,7 @@ public class DefaultProjectBuildingRequest
 
     private MavenProject topProject;
 
-    private int validationLevel = ModelBuildingRequest.VALIDATION_LEVEL_STRICT;
+    private boolean lenientValidation;
 
     private boolean processPlugins;
 
@@ -168,15 +167,15 @@ public class DefaultProjectBuildingRequest
         return this;
     }
 
-    public ProjectBuildingRequest setValidationLevel( int validationLevel )
+    public ProjectBuildingRequest setLenientValidation( boolean lenientValidation )
     {
-        this.validationLevel = validationLevel;
+        this.lenientValidation = lenientValidation;
         return this;
     }
 
-    public int getValidationLevel()
+    public boolean istLenientValidation()
     {
-        return validationLevel;
+        return lenientValidation;
     }
 
     public List<String> getActiveProfileIds()

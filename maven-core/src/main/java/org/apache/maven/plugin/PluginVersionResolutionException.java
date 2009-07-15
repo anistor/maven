@@ -19,8 +19,8 @@ package org.apache.maven.plugin;
  * under the License.
  */
 
-import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException;
 import org.apache.maven.repository.legacy.metadata.ArtifactMetadataRetrievalException;
+import org.apache.maven.repository.legacy.versioning.InvalidVersionSpecificationException;
 
 public class PluginVersionResolutionException
     extends Exception

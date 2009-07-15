@@ -21,6 +21,8 @@ package org.apache.maven.artifact.versioning;
 
 import java.util.Locale;
 
+import org.apache.maven.repository.legacy.versioning.ComparableVersion;
+
 import junit.framework.TestCase;
 
 /**

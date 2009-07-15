@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
 
-import org.apache.maven.artifact.ArtifactScopeEnum;
 
 /**
  * maven dependency metadata graph

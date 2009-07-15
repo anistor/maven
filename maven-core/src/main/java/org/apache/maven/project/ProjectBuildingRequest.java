@@ -4,9 +4,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Properties;
 
-import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.model.Profile;
-import org.apache.maven.model.building.ModelBuildingRequest;
+import org.apache.maven.repository.legacy.repository.ArtifactRepository;
 
 public interface ProjectBuildingRequest
 {
@@ -37,18 +36,20 @@ public interface ProjectBuildingRequest
     /**
      * Controls the level of validation to perform on processed models. By default, models are validated in strict mode.
      * 
-     * @param validationLevel The level of validation to perform on processed models, e.g.
-     *            {@link ModelBuildingRequest#VALIDATION_LEVEL_STRICT}.
+     * @param lenientValidation A flag whether validation should be lenient instead of strict. For building of projects,
+     *            strict validation should be used to ensure proper building. For the mere retrievel of dependencies
+     *            during artifact resolution, lenient validation should be used to account for models of poor quality.
      * @return This configuration, never {@code null}.
      */
-    ProjectBuildingRequest setValidationLevel( int validationLevel );
+    ProjectBuildingRequest setLenientValidation( boolean lenientValidation );
 
     /**
      * Gets the level of validation to perform on processed models.
      * 
-     * @return The level of validation to perform on processed models.
+     * @return {@code true} if lenient validation is enabled and only the dependency information is to be validated,
+     *         {@code false} if strict validation is enabled and the entire model is validated.
      */
-    int getValidationLevel();
+    boolean istLenientValidation();
 
     // Profiles
     

@@ -6,8 +6,9 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.repository.ArtifactRepository;
-import org.apache.maven.artifact.resolver.filter.ArtifactFilter;
+import org.apache.maven.repository.legacy.repository.ArtifactRepository;
+import org.apache.maven.repository.legacy.resolver.ResolutionListener;
+import org.apache.maven.repository.legacy.resolver.filter.ArtifactFilter;
 import org.apache.maven.wagon.events.TransferListener;
 
 /**

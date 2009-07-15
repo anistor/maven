@@ -19,9 +19,9 @@ package org.apache.maven.repository.legacy.resolver.conflict;
  * under the License.
  */
 
-import org.apache.maven.artifact.resolver.ResolutionNode;
-import org.apache.maven.artifact.versioning.ArtifactVersion;
-import org.apache.maven.artifact.versioning.OverConstrainedVersionException;
+import org.apache.maven.repository.legacy.resolver.ResolutionNode;
+import org.apache.maven.repository.legacy.versioning.ArtifactVersion;
+import org.apache.maven.repository.legacy.versioning.OverConstrainedVersionException;
 import org.codehaus.plexus.component.annotations.Component;
 
 /**

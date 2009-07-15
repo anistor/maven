@@ -3,7 +3,6 @@ package org.apache.maven.repository.metadata;
 import java.util.Collection;
 
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.ArtifactScopeEnum;
 
 /**
  * Artifact Metadata that is resolved independent of Artifact itself.

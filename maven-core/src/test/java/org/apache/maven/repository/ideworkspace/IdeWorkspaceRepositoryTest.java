@@ -4,10 +4,10 @@ import java.io.File;
 import java.util.ArrayList;
 
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.artifact.resolver.ArtifactResolutionRequest;
 import org.apache.maven.repository.DelegatingLocalArtifactRepository;
 import org.apache.maven.repository.RepositorySystem;
+import org.apache.maven.repository.legacy.repository.ArtifactRepository;
 import org.codehaus.plexus.PlexusTestCase;
 
 public class IdeWorkspaceRepositoryTest

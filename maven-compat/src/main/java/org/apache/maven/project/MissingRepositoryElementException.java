@@ -19,7 +19,7 @@ package org.apache.maven.project;
  * under the License.
  */
 
-import org.apache.maven.artifact.InvalidRepositoryException;
+import org.apache.maven.repository.legacy.InvalidRepositoryException;
 
 public class MissingRepositoryElementException
     extends InvalidRepositoryException

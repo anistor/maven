@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import org.apache.maven.artifact.ArtifactScopeEnum;
 
 /**
  * classpath container that is aware of the classpath scope

@@ -24,10 +24,10 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.maven.artifact.versioning.ManagedVersionMap;
 import org.apache.maven.model.DependencyManagement;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.Parent;
+import org.apache.maven.repository.legacy.versioning.ManagedVersionMap;
 
 public class MavenProjectTest
     extends AbstractMavenProjectTestCase

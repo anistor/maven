@@ -1,6 +1,5 @@
 package org.apache.maven.repository.metadata;
 
-import org.apache.maven.artifact.ArtifactScopeEnum;
 
 /**
  * metadata graph vertice - just a wrapper around artifact's metadata

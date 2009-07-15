@@ -19,8 +19,8 @@ package org.apache.maven.repository.legacy.metadata;
  * under the License.
  */
 
-import org.apache.maven.artifact.repository.ArtifactRepository;
-import org.apache.maven.artifact.repository.metadata.RepositoryMetadataStoreException;
+import org.apache.maven.repository.legacy.repository.ArtifactRepository;
+import org.apache.maven.repository.legacy.repository.metadata.RepositoryMetadataStoreException;
 
 /**
  * Contains metadata about an artifact, and methods to retrieve/store it from an artifact repository.

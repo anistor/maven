@@ -1,5 +1,6 @@
 package org.apache.maven.artifact.resolver;
 
+import org.apache.maven.repository.legacy.resolver.ArtifactResolver;
 import org.codehaus.plexus.PlexusTestCase;
 
 public class DefaultArtifactResolverTest

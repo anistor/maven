@@ -20,6 +20,8 @@ package org.apache.maven.artifact.repository;
  */
 
 
+import org.apache.maven.repository.legacy.repository.MavenArtifactRepository;
+
 import junit.framework.TestCase;
 
 public class MavenArtifactRepositoryTest

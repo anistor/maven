@@ -22,9 +22,9 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.repository.ArtifactRepository;
-import org.apache.maven.artifact.versioning.OverConstrainedVersionException;
-import org.apache.maven.repository.legacy.resolver.DefaultLegacyArtifactCollector;
+import org.apache.maven.repository.legacy.repository.ArtifactRepository;
+import org.apache.maven.repository.legacy.resolver.CyclicDependencyException;
+import org.apache.maven.repository.legacy.versioning.OverConstrainedVersionException;
 
 /**
  * Specific problems during resolution that we want to account for:
@@ -33,9 +33,6 @@ import org.apache.maven.repository.legacy.resolver.DefaultLegacyArtifactCollecto
  * - network/transfer errors - file system errors: permissions
  * 
  * @author Jason van Zyl
- * @TODO carlos: all these possible has*Exceptions and get*Exceptions methods make the clients too
- *       complex requiring a long list of checks, need to create a parent/interfact/encapsulation
- *       for the types of exceptions
  */
 public class ArtifactResolutionResult
 {

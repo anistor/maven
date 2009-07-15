@@ -1,6 +1,5 @@
 package org.apache.maven.repository.metadata;
 
-import org.apache.maven.artifact.ArtifactScopeEnum;
 
 
 /**

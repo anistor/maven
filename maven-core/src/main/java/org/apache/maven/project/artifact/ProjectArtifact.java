@@ -22,9 +22,9 @@ package org.apache.maven.project.artifact;
 import java.util.List;
 
 import org.apache.maven.artifact.DefaultArtifact;
-import org.apache.maven.artifact.handler.ArtifactHandler;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.project.MavenProject;
+import org.apache.maven.repository.legacy.handler.ArtifactHandler;
 
 public class ProjectArtifact
     extends DefaultArtifact

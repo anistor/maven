@@ -1,6 +1,5 @@
 package org.apache.maven.repository.metadata;
 
-import org.apache.maven.artifact.ArtifactScopeEnum;
 import org.apache.maven.repository.metadata.ArtifactMetadata;
 import org.apache.maven.repository.metadata.ClasspathContainer;
 import org.apache.maven.repository.metadata.ClasspathTransformation;

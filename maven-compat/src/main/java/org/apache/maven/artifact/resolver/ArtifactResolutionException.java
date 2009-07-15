@@ -19,9 +19,10 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.repository.ArtifactRepository;
-import org.apache.maven.artifact.repository.metadata.RepositoryMetadataResolutionException;
 import org.apache.maven.repository.legacy.metadata.ArtifactMetadataRetrievalException;
+import org.apache.maven.repository.legacy.repository.ArtifactRepository;
+import org.apache.maven.repository.legacy.repository.metadata.RepositoryMetadataResolutionException;
+import org.apache.maven.repository.legacy.resolver.AbstractArtifactResolutionException;
 import org.apache.maven.wagon.TransferFailedException;
 
 /**
@@ -69,7 +70,7 @@ public class ArtifactResolutionException
     }
 
     @Deprecated
-    protected ArtifactResolutionException( String message, Artifact artifact, List<ArtifactRepository> remoteRepositories, Throwable cause )
+    public ArtifactResolutionException( String message, Artifact artifact, List<ArtifactRepository> remoteRepositories, Throwable cause )
     {
         super( message, artifact, remoteRepositories, cause );
     }

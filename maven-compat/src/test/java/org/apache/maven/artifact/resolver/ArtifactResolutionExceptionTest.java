@@ -22,6 +22,8 @@ package org.apache.maven.artifact.resolver;
 import java.util.Arrays;
 import java.util.List;
 
+import org.apache.maven.repository.legacy.resolver.AbstractArtifactResolutionException;
+
 import junit.framework.TestCase;
 
 /**

@@ -19,9 +19,9 @@
 
 package org.apache.maven.toolchain;
 
-import org.apache.maven.artifact.versioning.DefaultArtifactVersion;
-import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException;
-import org.apache.maven.artifact.versioning.VersionRange;
+import org.apache.maven.repository.legacy.versioning.DefaultArtifactVersion;
+import org.apache.maven.repository.legacy.versioning.InvalidVersionSpecificationException;
+import org.apache.maven.repository.legacy.versioning.VersionRange;
 
 /**
  *

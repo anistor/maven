@@ -27,14 +27,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 
-import org.apache.maven.artifact.handler.ArtifactHandler;
 import org.apache.maven.artifact.metadata.ArtifactMetadata;
-import org.apache.maven.artifact.repository.ArtifactRepository;
-import org.apache.maven.artifact.resolver.filter.ArtifactFilter;
-import org.apache.maven.artifact.versioning.ArtifactVersion;
-import org.apache.maven.artifact.versioning.DefaultArtifactVersion;
-import org.apache.maven.artifact.versioning.OverConstrainedVersionException;
-import org.apache.maven.artifact.versioning.VersionRange;
+import org.apache.maven.repository.legacy.InvalidArtifactRTException;
+import org.apache.maven.repository.legacy.handler.ArtifactHandler;
+import org.apache.maven.repository.legacy.repository.ArtifactRepository;
+import org.apache.maven.repository.legacy.resolver.filter.ArtifactFilter;
+import org.apache.maven.repository.legacy.versioning.ArtifactVersion;
+import org.apache.maven.repository.legacy.versioning.DefaultArtifactVersion;
+import org.apache.maven.repository.legacy.versioning.OverConstrainedVersionException;
+import org.apache.maven.repository.legacy.versioning.VersionRange;
 import org.codehaus.plexus.util.StringUtils;
 
 /**

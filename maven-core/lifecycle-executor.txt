@@ -68,7 +68,7 @@ foreach configuration element:
 
       <configuration>
         <attached implementation="boolean" default-value="true"/>
-        <localRepository implementation="org.apache.maven.artifact.repository.ArtifactRepository">${localRepository}</localRepository>
+        <localRepository implementation="org.apache.maven.repository.legacy.repository.ArtifactRepository">${localRepository}</localRepository>
         <resources implementation="java.util.List">${project.resources}</resources>
         <repositories implementation="java.util.List">${project.repositories}</repositories>
         <remoteArtifactRepositories implementation="java.util.List">${project.remoteArtifactRepositories}</remoteArtifactRepositories>
@@ -143,7 +143,7 @@ foreach configuration element:
         </parameter>
         <parameter>
           <name>localRepository</name>
-          <type>org.apache.maven.artifact.repository.ArtifactRepository</type>
+          <type>org.apache.maven.repository.legacy.repository.ArtifactRepository</type>
           <required>true</required>
           <editable>false</editable>
         </parameter>

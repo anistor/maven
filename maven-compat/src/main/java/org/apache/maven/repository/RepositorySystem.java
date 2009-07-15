@@ -1,39 +1,49 @@
 package org.apache.maven.repository;
 
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional information regarding
+ * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 
 import java.io.File;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.InvalidRepositoryException;
-import org.apache.maven.artifact.repository.ArtifactRepository;
-import org.apache.maven.artifact.repository.ArtifactRepositoryPolicy;
-import org.apache.maven.artifact.repository.layout.ArtifactRepositoryLayout;
+import org.apache.maven.artifact.resolver.ArtifactNotFoundException;
+import org.apache.maven.artifact.resolver.ArtifactResolutionException;
 import org.apache.maven.artifact.resolver.ArtifactResolutionRequest;
 import org.apache.maven.artifact.resolver.ArtifactResolutionResult;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.model.Repository;
+import org.apache.maven.repository.legacy.InvalidRepositoryException;
+import org.apache.maven.repository.legacy.WagonConfigurationException;
+import org.apache.maven.repository.legacy.deployer.ArtifactDeploymentException;
+import org.apache.maven.repository.legacy.handler.ArtifactHandler;
+import org.apache.maven.repository.legacy.installer.ArtifactInstallationException;
+import org.apache.maven.repository.legacy.metadata.ArtifactMetadataSource;
+import org.apache.maven.repository.legacy.repository.ArtifactRepository;
+import org.apache.maven.repository.legacy.repository.ArtifactRepositoryPolicy;
+import org.apache.maven.repository.legacy.repository.layout.ArtifactRepositoryLayout;
+import org.apache.maven.repository.legacy.resolver.ResolutionListener;
+import org.apache.maven.repository.legacy.resolver.conflict.ConflictResolver;
+import org.apache.maven.repository.legacy.resolver.filter.ArtifactFilter;
 import org.apache.maven.wagon.ResourceDoesNotExistException;
 import org.apache.maven.wagon.TransferFailedException;
+import org.apache.maven.wagon.UnsupportedProtocolException;
+import org.apache.maven.wagon.Wagon;
 import org.apache.maven.wagon.events.TransferListener;
 
 /**
@@ -42,13 +52,13 @@ import org.apache.maven.wagon.events.TransferListener;
 public interface RepositorySystem
 {
     static final String DEFAULT_LOCAL_REPO_ID = "local";
-    
+
     static final String userHome = System.getProperty( "user.home" );
-    
+
     static final File userMavenConfigurationHome = new File( userHome, ".m2" );
-    
+
     static final File defaultUserLocalRepository = new File( userMavenConfigurationHome, "repository" );
-    
+
     static final String DEFAULT_REMOTE_REPO_ID = "central";
 
     static final String DEFAULT_REMOTE_REPO_URL = "http://repo1.maven.org/maven2";
@@ -60,57 +70,88 @@ public interface RepositorySystem
     Artifact createProjectArtifact( String groupId, String artifactId, String version );
 
     Artifact createArtifactWithClassifier( String groupId, String artifactId, String version, String type, String classifier );
-    
+
     Artifact createPluginArtifact( Plugin plugin );
-    
+
     Artifact createDependencyArtifact( Dependency dependency );
-        
+
     ArtifactRepository buildArtifactRepository( Repository repository )
         throws InvalidRepositoryException;
-        
+
     ArtifactRepository createDefaultRemoteRepository()
-        throws InvalidRepositoryException;    
-    
+        throws InvalidRepositoryException;
+
     ArtifactRepository createDefaultLocalRepository()
         throws InvalidRepositoryException;
-    
+
     ArtifactRepository createLocalRepository( File localRepository )
         throws InvalidRepositoryException;
 
     ArtifactRepository createArtifactRepository( String id, String url, ArtifactRepositoryLayout repositoryLayout, ArtifactRepositoryPolicy snapshots, ArtifactRepositoryPolicy releases );
-    
+
     /**
-     * Calculates the effective repositories for the given input repositories. This process will essentially remove
-     * duplicate repositories by merging them into one equivalent repository. It is worth to point out that merging does
-     * not simply choose one of the input repositories and discards the others but actually combines their possibly
-     * different policies.
+     * Calculates the effective repositories for the given input repositories. This process will
+     * essentially remove duplicate repositories by merging them into one equivalent repository. It
+     * is worth to point out that merging does not simply choose one of the input repositories and
+     * discards the others but actually combines their possibly different policies.
      * 
      * @param repositories The original repositories, may be {@code null}.
      * @return The effective repositories or {@code null} if the input was {@code null}.
      */
-    List<ArtifactRepository> getEffectiveRepositories( List<ArtifactRepository> repositories );    
+    List<ArtifactRepository> getEffectiveRepositories( List<ArtifactRepository> repositories );
 
     ArtifactResolutionResult resolve( ArtifactResolutionRequest request );
 
-    MetadataResolutionResult resolveMetadata( MetadataResolutionRequest request );
-           
+    void resolve( Artifact artifact, List<ArtifactRepository> remoteRepositories, ArtifactRepository localRepository, TransferListener downloadMonitor, boolean force )
+        throws ArtifactResolutionException, ArtifactNotFoundException;
+
     //TODO: remove the request should already be processed to select the mirror for the request instead of the processing happen internally.
     // Mirrors    
-    void addMirror( String id, String mirrorOf, String url );        
-    List<ArtifactRepository> getMirrors( List<ArtifactRepository> repositories );  
-    
+    void addMirror( String id, String mirrorOf, String url );
+
+    List<ArtifactRepository> getMirrors( List<ArtifactRepository> repositories );
+
     // Install
-    
+
     // Deploy
-    
+
     // Map types of artifacts
-    
+
     //
     // Raw file transfers
     //
     void publish( ArtifactRepository repository, File source, String remotePath, TransferListener downloadMonitor )
         throws TransferFailedException;
-    
+
     void retrieve( ArtifactRepository repository, File destination, String remotePath, TransferListener downloadMonitor )
-        throws TransferFailedException, ResourceDoesNotExistException;        
+        throws TransferFailedException, ResourceDoesNotExistException;
+
+    // Metadata / Collector
+
+    ArtifactResolutionResult collect( Set<Artifact> artifacts, Artifact originatingArtifact, Map managedVersions, ArtifactRepository localRepository, List<ArtifactRepository> remoteRepositories,
+                                      ArtifactMetadataSource source, ArtifactFilter filter, List<ResolutionListener> listeners, List<ConflictResolver> conflictResolvers );
+
+    // used by maven-dependency-tree and maven-dependency-plugin
+    @Deprecated
+    ArtifactResolutionResult collect( Set<Artifact> artifacts, Artifact originatingArtifact, Map managedVersions, ArtifactRepository localRepository, List<ArtifactRepository> remoteRepositories,
+                                      ArtifactMetadataSource source, ArtifactFilter filter, List<ResolutionListener> listeners );
+
+    // Deployment
+
+    void deploy( File source, Artifact artifact, ArtifactRepository deploymentRepository, ArtifactRepository localRepository )
+        throws ArtifactDeploymentException;
+
+    // Install
+
+    void install( File source, Artifact artifact, ArtifactRepository localRepository )
+        throws ArtifactInstallationException;
+
+    Wagon getWagon( org.apache.maven.wagon.repository.Repository repository )
+        throws UnsupportedProtocolException, WagonConfigurationException;
+
+    // WagonManager
+    Wagon getWagon( String protocol )
+        throws UnsupportedProtocolException;
+
+    ArtifactHandler getArtifactHandler( String type );
 }

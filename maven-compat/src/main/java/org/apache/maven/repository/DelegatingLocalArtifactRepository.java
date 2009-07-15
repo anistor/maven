@@ -21,10 +21,10 @@ package org.apache.maven.repository;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.metadata.ArtifactMetadata;
-import org.apache.maven.artifact.repository.ArtifactRepository;
-import org.apache.maven.artifact.repository.ArtifactRepositoryPolicy;
-import org.apache.maven.artifact.repository.MavenArtifactRepository;
-import org.apache.maven.artifact.repository.layout.ArtifactRepositoryLayout;
+import org.apache.maven.repository.legacy.repository.ArtifactRepository;
+import org.apache.maven.repository.legacy.repository.ArtifactRepositoryPolicy;
+import org.apache.maven.repository.legacy.repository.MavenArtifactRepository;
+import org.apache.maven.repository.legacy.repository.layout.ArtifactRepositoryLayout;
 
 /**
  * Delegating local artifact repository chains the reactor, IDE workspace

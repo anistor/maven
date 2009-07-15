@@ -20,11 +20,11 @@ package org.apache.maven.repository.legacy.resolver.conflict;
  */
 
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.factory.ArtifactFactory;
-import org.apache.maven.artifact.resolver.ResolutionNode;
-import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException;
-import org.apache.maven.artifact.versioning.VersionRange;
+import org.apache.maven.repository.legacy.factory.ArtifactFactory;
+import org.apache.maven.repository.legacy.resolver.ResolutionNode;
 import org.apache.maven.repository.legacy.resolver.conflict.ConflictResolver;
+import org.apache.maven.repository.legacy.versioning.InvalidVersionSpecificationException;
+import org.apache.maven.repository.legacy.versioning.VersionRange;
 import org.codehaus.plexus.PlexusTestCase;
 
 /**

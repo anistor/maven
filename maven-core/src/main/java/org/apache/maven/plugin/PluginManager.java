@@ -17,11 +17,11 @@ package org.apache.maven.plugin;
 
 import java.util.List;
 
-import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.plugin.descriptor.MojoDescriptor;
 import org.apache.maven.plugin.descriptor.PluginDescriptor;
+import org.apache.maven.repository.legacy.repository.ArtifactRepository;
 import org.codehaus.plexus.classworlds.realm.ClassRealm;
 
 /**

@@ -19,7 +19,7 @@ package org.apache.maven.embedder;
  * under the License.
  */
 
-import org.apache.maven.artifact.factory.DefaultArtifactFactory;
+import org.apache.maven.repository.legacy.factory.DefaultArtifactFactory;
 
 /**
  *

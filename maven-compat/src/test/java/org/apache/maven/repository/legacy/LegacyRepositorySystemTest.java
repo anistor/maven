@@ -21,9 +21,9 @@ package org.apache.maven.repository.legacy;
 
 import java.io.File;
 
-import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.repository.LegacyRepositorySystem;
 import org.apache.maven.repository.RepositorySystem;
+import org.apache.maven.repository.legacy.repository.ArtifactRepository;
 import org.codehaus.plexus.PlexusTestCase;
 
 /**

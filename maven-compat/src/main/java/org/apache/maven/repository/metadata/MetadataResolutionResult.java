@@ -1,6 +1,5 @@
 package org.apache.maven.repository.metadata;
 
-import org.apache.maven.artifact.ArtifactScopeEnum;
 import org.codehaus.plexus.PlexusContainer;
 import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
 

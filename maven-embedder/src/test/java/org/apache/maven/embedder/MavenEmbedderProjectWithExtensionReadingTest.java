@@ -22,13 +22,13 @@ package org.apache.maven.embedder;
 import java.io.File;
 import java.util.Map;
 
-import org.apache.maven.artifact.handler.ArtifactHandler;
 import org.apache.maven.execution.DefaultMavenExecutionRequest;
 import org.apache.maven.execution.MavenExecutionRequest;
 import org.apache.maven.execution.MavenExecutionResult;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.plugin.PluginManagerException;
 import org.apache.maven.project.MavenProject;
+import org.apache.maven.repository.legacy.handler.ArtifactHandler;
 import org.codehaus.plexus.component.repository.ComponentDescriptor;
 import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
 import org.codehaus.plexus.logging.Logger;

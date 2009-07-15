@@ -19,7 +19,7 @@ package org.apache.maven.execution;
  * under the License.
  */
 
-import org.apache.maven.artifact.versioning.ArtifactVersion;
+import org.apache.maven.repository.legacy.versioning.ArtifactVersion;
 
 /**
  * Describes runtime information about the application.

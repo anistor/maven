@@ -24,6 +24,12 @@ import java.util.List;
 import junit.framework.TestCase;
 
 import org.apache.maven.artifact.Artifact;
+import org.apache.maven.repository.legacy.versioning.ArtifactVersion;
+import org.apache.maven.repository.legacy.versioning.DefaultArtifactVersion;
+import org.apache.maven.repository.legacy.versioning.InvalidVersionSpecificationException;
+import org.apache.maven.repository.legacy.versioning.OverConstrainedVersionException;
+import org.apache.maven.repository.legacy.versioning.Restriction;
+import org.apache.maven.repository.legacy.versioning.VersionRange;
 
 /**
  * Tests version range construction.

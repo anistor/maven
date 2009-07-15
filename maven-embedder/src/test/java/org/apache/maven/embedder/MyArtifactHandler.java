@@ -1,6 +1,6 @@
 package org.apache.maven.embedder;
 
-import org.apache.maven.artifact.handler.ArtifactHandler;
+import org.apache.maven.repository.legacy.handler.ArtifactHandler;
 
 /** @author Jason van Zyl */
 public class MyArtifactHandler

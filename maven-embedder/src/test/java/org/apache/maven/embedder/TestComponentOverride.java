@@ -21,7 +21,7 @@ package org.apache.maven.embedder;
 
 import java.io.File;
 
-import org.apache.maven.artifact.factory.ArtifactFactory;
+import org.apache.maven.repository.legacy.factory.ArtifactFactory;
 import org.codehaus.plexus.PlexusContainer;
 import org.codehaus.plexus.PlexusTestCase;
 import org.codehaus.plexus.component.repository.exception.ComponentLookupException;

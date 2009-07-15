@@ -19,7 +19,7 @@ package org.apache.maven.repository.legacy.resolver.conflict;
  * under the License.
  */
 
-import org.apache.maven.artifact.resolver.ResolutionNode;
+import org.apache.maven.repository.legacy.resolver.ResolutionNode;
 import org.codehaus.plexus.component.annotations.Component;
 
 /**

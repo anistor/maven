@@ -20,8 +20,8 @@ package org.apache.maven.repository;
  */
 
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.repository.DefaultArtifactRepository;
-import org.apache.maven.artifact.repository.MavenArtifactRepository;
+import org.apache.maven.repository.legacy.repository.DefaultArtifactRepository;
+import org.apache.maven.repository.legacy.repository.MavenArtifactRepository;
 
 public abstract class LocalArtifactRepository
     extends MavenArtifactRepository

@@ -23,11 +23,11 @@ import java.util.Arrays;
 import java.util.Collections;
 
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.repository.ArtifactRepository;
-import org.apache.maven.artifact.resolver.filter.ExcludesArtifactFilter;
 import org.apache.maven.project.artifact.DefaultMavenMetadataCache.CacheKey;
 import org.apache.maven.repository.DelegatingLocalArtifactRepository;
 import org.apache.maven.repository.RepositorySystem;
+import org.apache.maven.repository.legacy.repository.ArtifactRepository;
+import org.apache.maven.repository.legacy.resolver.filter.ExcludesArtifactFilter;
 import org.codehaus.plexus.PlexusTestCase;
 
 /**

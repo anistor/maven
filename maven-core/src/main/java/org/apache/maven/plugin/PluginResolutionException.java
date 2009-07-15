@@ -19,10 +19,10 @@ package org.apache.maven.plugin;
  * under the License.
  */
 
-import org.apache.maven.artifact.resolver.AbstractArtifactResolutionException;
 import org.apache.maven.artifact.resolver.ArtifactNotFoundException;
 import org.apache.maven.artifact.resolver.ArtifactResolutionException;
 import org.apache.maven.model.Plugin;
+import org.apache.maven.repository.legacy.resolver.AbstractArtifactResolutionException;
 
 /**
  * Exception occurring trying to resolve a plugin.

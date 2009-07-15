@@ -23,6 +23,7 @@ import java.io.File;
 
 import org.apache.maven.artifact.AbstractArtifactComponentTestCase;
 import org.apache.maven.artifact.Artifact;
+import org.apache.maven.repository.legacy.installer.ArtifactInstaller;
 
 /**
  * @author <a href="mailto:jason@maven.org">Jason van Zyl</a>

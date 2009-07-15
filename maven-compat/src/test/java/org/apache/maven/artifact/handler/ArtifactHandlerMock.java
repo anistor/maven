@@ -1,5 +1,7 @@
 package org.apache.maven.artifact.handler;
 
+import org.apache.maven.repository.legacy.handler.ArtifactHandler;
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file

@@ -16,9 +16,9 @@ problem.
      | POM
      |-->
     <component>
-      <role>org.apache.maven.artifact.handler.ArtifactHandler</role>
+      <role>org.apache.maven.repository.legacy.handler.ArtifactHandler</role>
       <role-hint>pom</role-hint>
-      <implementation>org.apache.maven.artifact.handler.DefaultArtifactHandler
+      <implementation>org.apache.maven.repository.legacy.handler.DefaultArtifactHandler
       </implementation>
       <configuration>
         <type>pom</type>
@@ -47,9 +47,9 @@ problem.
      | JAR
      |-->
     <component>
-      <role>org.apache.maven.artifact.handler.ArtifactHandler</role>
+      <role>org.apache.maven.repository.legacy.handler.ArtifactHandler</role>
       <role-hint>jar</role-hint>
-      <implementation>org.apache.maven.artifact.handler.DefaultArtifactHandler
+      <implementation>org.apache.maven.repository.legacy.handler.DefaultArtifactHandler
       </implementation>
       <configuration>
         <type>jar</type>
@@ -86,9 +86,9 @@ problem.
      | EJB 
      |-->
     <component>
-      <role>org.apache.maven.artifact.handler.ArtifactHandler</role>
+      <role>org.apache.maven.repository.legacy.handler.ArtifactHandler</role>
       <role-hint>ejb</role-hint>
-      <implementation>org.apache.maven.artifact.handler.DefaultArtifactHandler
+      <implementation>org.apache.maven.repository.legacy.handler.DefaultArtifactHandler
       </implementation>
       <configuration>
         <type>ejb</type>
@@ -134,9 +134,9 @@ problem.
       </configuration>
     </component>    
     <component>
-      <role>org.apache.maven.artifact.handler.ArtifactHandler</role>
+      <role>org.apache.maven.repository.legacy.handler.ArtifactHandler</role>
       <role-hint>ejb-client</role-hint>
-      <implementation>org.apache.maven.artifact.handler.DefaultArtifactHandler
+      <implementation>org.apache.maven.repository.legacy.handler.DefaultArtifactHandler
       </implementation>
       <configuration>
         <type>ejb-client</type>
@@ -148,9 +148,9 @@ problem.
       </configuration>
     </component>
     <component>
-      <role>org.apache.maven.artifact.handler.ArtifactHandler</role>
+      <role>org.apache.maven.repository.legacy.handler.ArtifactHandler</role>
       <role-hint>ejb3</role-hint>
-      <implementation>org.apache.maven.artifact.handler.DefaultArtifactHandler
+      <implementation>org.apache.maven.repository.legacy.handler.DefaultArtifactHandler
       </implementation>
       <configuration>
         <type>ejb3</type>
@@ -188,9 +188,9 @@ problem.
      | TEST JAR
      |-->
     <component>
-      <role>org.apache.maven.artifact.handler.ArtifactHandler</role>
+      <role>org.apache.maven.repository.legacy.handler.ArtifactHandler</role>
       <role-hint>test-jar</role-hint>
-      <implementation>org.apache.maven.artifact.handler.DefaultArtifactHandler
+      <implementation>org.apache.maven.repository.legacy.handler.DefaultArtifactHandler
       </implementation>
       <configuration>
         <classifier>tests</classifier>
@@ -206,9 +206,9 @@ problem.
      | MAVEN PLUGIN
      |-->
     <component>
-      <role>org.apache.maven.artifact.handler.ArtifactHandler</role>
+      <role>org.apache.maven.repository.legacy.handler.ArtifactHandler</role>
       <role-hint>maven-plugin</role-hint>
-      <implementation>org.apache.maven.artifact.handler.DefaultArtifactHandler
+      <implementation>org.apache.maven.repository.legacy.handler.DefaultArtifactHandler
       </implementation>
       <configuration>
         <type>maven-plugin</type>
@@ -247,9 +247,9 @@ problem.
      | SOURCE JAR
      |-->
     <component>
-      <role>org.apache.maven.artifact.handler.ArtifactHandler</role>
+      <role>org.apache.maven.repository.legacy.handler.ArtifactHandler</role>
       <role-hint>java-source</role-hint>
-      <implementation>org.apache.maven.artifact.handler.DefaultArtifactHandler
+      <implementation>org.apache.maven.repository.legacy.handler.DefaultArtifactHandler
       </implementation>
       <configuration>
         <classifier>sources</classifier>
@@ -264,9 +264,9 @@ problem.
      | JAVADOC JAR 
      |-->
     <component>
-      <role>org.apache.maven.artifact.handler.ArtifactHandler</role>
+      <role>org.apache.maven.repository.legacy.handler.ArtifactHandler</role>
       <role-hint>javadoc</role-hint>
-      <implementation>org.apache.maven.artifact.handler.DefaultArtifactHandler
+      <implementation>org.apache.maven.repository.legacy.handler.DefaultArtifactHandler
       </implementation>
       <configuration>
         <classifier>javadoc</classifier>
@@ -281,9 +281,9 @@ problem.
      | WAR 
      |-->
     <component>
-      <role>org.apache.maven.artifact.handler.ArtifactHandler</role>
+      <role>org.apache.maven.repository.legacy.handler.ArtifactHandler</role>
       <role-hint>war</role-hint>
-      <implementation>org.apache.maven.artifact.handler.DefaultArtifactHandler
+      <implementation>org.apache.maven.repository.legacy.handler.DefaultArtifactHandler
       </implementation>
       <configuration>
         <type>war</type>
@@ -323,9 +323,9 @@ problem.
      | EAR 
      |-->
     <component>
-      <role>org.apache.maven.artifact.handler.ArtifactHandler</role>
+      <role>org.apache.maven.repository.legacy.handler.ArtifactHandler</role>
       <role-hint>ear</role-hint>
-      <implementation>org.apache.maven.artifact.handler.DefaultArtifactHandler
+      <implementation>org.apache.maven.repository.legacy.handler.DefaultArtifactHandler
       </implementation>
       <configuration>
         <type>ear</type>
@@ -362,9 +362,9 @@ problem.
      | RAR
      |-->
     <component>
-      <role>org.apache.maven.artifact.handler.ArtifactHandler</role>
+      <role>org.apache.maven.repository.legacy.handler.ArtifactHandler</role>
       <role-hint>rar</role-hint>
-      <implementation>org.apache.maven.artifact.handler.DefaultArtifactHandler
+      <implementation>org.apache.maven.repository.legacy.handler.DefaultArtifactHandler
       </implementation>
       <configuration>
         <type>rar</type>
@@ -404,9 +404,9 @@ problem.
      | PAR
      |-->
     <component>
-      <role>org.apache.maven.artifact.handler.ArtifactHandler</role>
+      <role>org.apache.maven.repository.legacy.handler.ArtifactHandler</role>
       <role-hint>par</role-hint>
-      <implementation>org.apache.maven.artifact.handler.DefaultArtifactHandler
+      <implementation>org.apache.maven.repository.legacy.handler.DefaultArtifactHandler
       </implementation>
       <configuration>
         <type>par</type>

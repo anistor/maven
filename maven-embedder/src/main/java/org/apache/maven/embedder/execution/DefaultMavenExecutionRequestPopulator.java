@@ -21,13 +21,13 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.maven.Maven;
-import org.apache.maven.artifact.InvalidRepositoryException;
-import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.embedder.Configuration;
 import org.apache.maven.embedder.MavenEmbedder;
 import org.apache.maven.embedder.MavenEmbedderException;
 import org.apache.maven.execution.MavenExecutionRequest;
 import org.apache.maven.repository.RepositorySystem;
+import org.apache.maven.repository.legacy.InvalidRepositoryException;
+import org.apache.maven.repository.legacy.repository.ArtifactRepository;
 import org.apache.maven.settings.MavenSettingsBuilder;
 import org.apache.maven.settings.Mirror;
 import org.apache.maven.settings.Settings;

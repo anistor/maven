@@ -24,13 +24,13 @@ import java.util.Collection;
 import java.util.List;
 import java.util.regex.Pattern;
 
-import org.apache.maven.artifact.handler.ArtifactHandler;
 import org.apache.maven.artifact.metadata.ArtifactMetadata;
-import org.apache.maven.artifact.repository.ArtifactRepository;
-import org.apache.maven.artifact.resolver.filter.ArtifactFilter;
-import org.apache.maven.artifact.versioning.ArtifactVersion;
-import org.apache.maven.artifact.versioning.OverConstrainedVersionException;
-import org.apache.maven.artifact.versioning.VersionRange;
+import org.apache.maven.repository.legacy.handler.ArtifactHandler;
+import org.apache.maven.repository.legacy.repository.ArtifactRepository;
+import org.apache.maven.repository.legacy.resolver.filter.ArtifactFilter;
+import org.apache.maven.repository.legacy.versioning.ArtifactVersion;
+import org.apache.maven.repository.legacy.versioning.OverConstrainedVersionException;
+import org.apache.maven.repository.legacy.versioning.VersionRange;
 
 public interface Artifact
     extends Comparable
@@ -39,25 +39,23 @@ public interface Artifact
 
     String SNAPSHOT_VERSION = "SNAPSHOT";
 
+    String RELEASE_VERSION = "RELEASE";
+    
     Pattern VERSION_FILE_PATTERN = Pattern.compile( "^(.*)-([0-9]{8}.[0-9]{6})-([0-9]+)$" );
 
-    // TODO: into artifactScope handler
+    String SCOPE_COMPILE = "compile";
 
-    String SCOPE_COMPILE = ArtifactScopeEnum.compile.toString();
+    String SCOPE_TEST = "test";
 
-    String SCOPE_TEST = ArtifactScopeEnum.test.toString();
+    String SCOPE_RUNTIME = "runtime";
 
-    String SCOPE_RUNTIME = ArtifactScopeEnum.runtime.toString();
+    String SCOPE_RUNTIME_PLUS_SYSTEM = "runtime_plus_system";
 
-    String SCOPE_RUNTIME_PLUS_SYSTEM = ArtifactScopeEnum.runtime_plus_system.toString();
+    String SCOPE_PROVIDED = "provided";
 
-    String SCOPE_PROVIDED = ArtifactScopeEnum.provided.toString();
-
-    String SCOPE_SYSTEM = ArtifactScopeEnum.system.toString();
+    String SCOPE_SYSTEM = "system";
 
     String SCOPE_IMPORT = "import";   // Used to import dependencyManagement dependencies
-
-    String RELEASE_VERSION = "RELEASE";
 
     String getGroupId();
 

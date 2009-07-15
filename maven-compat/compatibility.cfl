@@ -23,16 +23,16 @@ ensure the compatibility of plugins that use Maven Artifact. There are, however,
 with standard ways of doing resolution and conflict reduction that we can't support them.
 
 h3. Supported Compatibility
-* org.apache.maven.artifact.deployer.ArtifactDeployer
-* org.apache.maven.artifact.factory.ArtifactFactory
-* org.apache.maven.artifact.handler.ArtifactHandler
-* org.apache.maven.artifact.installer.ArtifactInstaller
+* org.apache.maven.repository.legacy.deployer.ArtifactDeployer
+* org.apache.maven.repository.legacy.factory.ArtifactFactory
+* org.apache.maven.repository.legacy.handler.ArtifactHandler
+* org.apache.maven.repository.legacy.installer.ArtifactInstaller
 * org.apache.maven.artifact.manager.WagonManager (1)
-* org.apache.maven.artifact.repository.ArtifactRepository
-* org.apache.maven.artifact.repository.ArtifactRepositoryPolicy
-* org.apache.maven.artifact.repository.ArtifactRepositoryFactory
-* org.apache.maven.artifact.repository.layout.ArtifactRepositoryLayout
-* org.apache.maven.artifact.resolver.ArtifactResolver
+* org.apache.maven.repository.legacy.repository.ArtifactRepository
+* org.apache.maven.repository.legacy.repository.ArtifactRepositoryPolicy
+* org.apache.maven.repository.legacy.repository.ArtifactRepositoryFactory
+* org.apache.maven.repository.legacy.repository.layout.ArtifactRepositoryLayout
+* org.apache.maven.repository.legacy.resolver.ArtifactResolver
 * org.apache.maven.artifact.resolver.filter.ArtifactFilter
 * org.apache.maven.artifact.resolver.filter.Artifact
 
@@ -43,8 +43,8 @@ h3. Unsupported Compatibility
 * org.apache.maven.artifact.metadata.ArtifactMetadataSource
 * org.apache.maven.artifact.metadata.ResolutionGroup
 * org.apache.maven.artifact.repository.metadata.*
-* org.apache.maven.artifact.resolver.ResolutionNode
-* org.apache.maven.artifact.resolver.ResolutionListener
+* org.apache.maven.repository.legacy.resolver.ResolutionNode
+* org.apache.maven.repository.legacy.resolver.ResolutionListener
 * org.apache.maven.artifact.resolver.metadata.*
 * org.apache.maven.artifact.resolver.transform.*
 * org.apache.maven.artifact.resolver.versioning.*

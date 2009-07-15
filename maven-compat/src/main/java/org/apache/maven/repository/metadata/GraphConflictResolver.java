@@ -19,7 +19,6 @@ package org.apache.maven.repository.metadata;
  * under the License.
  */
 
-import org.apache.maven.artifact.ArtifactScopeEnum;
 
 /**
  * Resolves conflicts in the supplied dependency graph. 

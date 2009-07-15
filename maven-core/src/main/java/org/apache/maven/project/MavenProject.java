@@ -34,13 +34,6 @@ import java.util.Set;
 import java.util.Stack;
 
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.ArtifactUtils;
-import org.apache.maven.artifact.DependencyResolutionRequiredException;
-import org.apache.maven.artifact.InvalidRepositoryException;
-import org.apache.maven.artifact.factory.ArtifactFactory;
-import org.apache.maven.artifact.repository.ArtifactRepository;
-import org.apache.maven.artifact.resolver.filter.ArtifactFilter;
-import org.apache.maven.artifact.versioning.ManagedVersionMap;
 import org.apache.maven.model.Build;
 import org.apache.maven.model.CiManagement;
 import org.apache.maven.model.Contributor;
@@ -68,7 +61,13 @@ import org.apache.maven.model.Scm;
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
 import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
 import org.apache.maven.repository.RepositorySystem;
-import org.codehaus.plexus.classworlds.realm.ClassRealm;
+import org.apache.maven.repository.legacy.ArtifactUtils;
+import org.apache.maven.repository.legacy.DependencyResolutionRequiredException;
+import org.apache.maven.repository.legacy.InvalidRepositoryException;
+import org.apache.maven.repository.legacy.factory.ArtifactFactory;
+import org.apache.maven.repository.legacy.repository.ArtifactRepository;
+import org.apache.maven.repository.legacy.resolver.filter.ArtifactFilter;
+import org.apache.maven.repository.legacy.versioning.ManagedVersionMap;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 
@@ -168,8 +167,6 @@ public class MavenProject
 
     private Map<String, Object> context;
 
-    private ClassRealm classRealm;
-
     //
 
     public MavenProject()
@@ -242,6 +239,13 @@ public class MavenProject
         this.projectBuilderConfiguration = projectBuilderConfiguration;
         this.repositorySystem = repositorySystem;
         originalModel = model;
+        
+        remoteArtifactRepositories = projectBuilderConfiguration.getRemoteRepositories();
+        remoteArtifactRepositories = createArtifactRepositories( model.getRepositories(), remoteArtifactRepositories );
+
+        pluginArtifactRepositories = projectBuilderConfiguration.getPluginArtifactRepositories();
+        pluginArtifactRepositories =
+            createArtifactRepositories( model.getPluginRepositories(), pluginArtifactRepositories );
     }
 
     //TODO: need to integrate the effective scope and refactor it out of the MMS
@@ -263,6 +267,35 @@ public class MavenProject
         }
 
         return artifacts;        
+    }
+    
+    private List<ArtifactRepository> createArtifactRepositories( List<Repository> pomRepositories,
+                                                                 List<ArtifactRepository> externalRepositories )
+    {
+        List<ArtifactRepository> artifactRepositories = new ArrayList<ArtifactRepository>();
+
+        for ( Repository repository : pomRepositories )
+        {
+            try
+            {
+                artifactRepositories.add( repositorySystem.buildArtifactRepository( repository ) );
+            }
+            catch ( InvalidRepositoryException e )
+            {
+
+            }
+        }
+
+        artifactRepositories = repositorySystem.getMirrors( artifactRepositories );
+
+        if ( externalRepositories != null )
+        {
+            artifactRepositories.addAll( externalRepositories );
+        }
+
+        artifactRepositories = repositorySystem.getEffectiveRepositories( artifactRepositories );
+
+        return artifactRepositories;
     }
 
     // TODO: Find a way to use <relativePath/> here...it's tricky, because the moduleProject
@@ -382,6 +415,16 @@ public class MavenProject
     public void setParent( MavenProject parent )
     {
         this.parent = parent;
+    }
+
+    public void setRemoteArtifactRepositories( List<ArtifactRepository> remoteArtifactRepositories )
+    {
+        this.remoteArtifactRepositories = remoteArtifactRepositories;
+    }
+
+    public List<ArtifactRepository> getRemoteArtifactRepositories()
+    {
+        return remoteArtifactRepositories;
     }
     
     public boolean hasParent()
@@ -1339,21 +1382,6 @@ public class MavenProject
         return build;
     }
 
-    public void setRemoteArtifactRepositories( List<ArtifactRepository> remoteArtifactRepositories )
-    {
-        this.remoteArtifactRepositories = remoteArtifactRepositories;
-    }
-
-    public List<ArtifactRepository> getRemoteArtifactRepositories()
-    {
-        if ( remoteArtifactRepositories == null )
-        {
-            remoteArtifactRepositories = new ArrayList<ArtifactRepository>();
-        }
-
-        return remoteArtifactRepositories;
-    }
-
     public void setPluginArtifactRepositories( List<ArtifactRepository> pluginArtifactRepositories )
     {
         this.pluginArtifactRepositories = pluginArtifactRepositories;
@@ -1365,11 +1393,6 @@ public class MavenProject
      */
     public List<ArtifactRepository> getPluginArtifactRepositories()
     {
-        if ( pluginArtifactRepositories == null )
-        {
-            pluginArtifactRepositories = new ArrayList<ArtifactRepository>();
-        }
-
         return pluginArtifactRepositories;
     }
 
@@ -1982,25 +2005,4 @@ public class MavenProject
         }
         return context.get( key );
     }
-
-    /**
-     * Sets the project's class realm.
-     * 
-     * @param classRealm The class realm hosting the build extensions of this project, may be {@code null}.
-     */
-    public void setClassRealm( ClassRealm classRealm )
-    {
-        this.classRealm = classRealm;
-    }
-
-    /**
-     * Gets the project's class realm. This class realm hosts the build extensions of the project.
-     * 
-     * @return The project's class realm or {@code null}.
-     */
-    public ClassRealm getClassRealm()
-    {
-        return classRealm;
-    }
-
 }

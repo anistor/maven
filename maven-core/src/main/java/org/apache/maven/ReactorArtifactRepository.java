@@ -4,9 +4,9 @@ import java.util.Collection;
 import java.util.Map;
 
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.ArtifactUtils;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.repository.LocalArtifactRepository;
+import org.apache.maven.repository.legacy.ArtifactUtils;
 
 /**
  * An implementation of a repository that knows how to search the Maven reactor for artifacts.

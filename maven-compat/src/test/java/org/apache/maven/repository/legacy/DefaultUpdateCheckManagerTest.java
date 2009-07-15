@@ -23,11 +23,11 @@ import java.io.File;
 
 import org.apache.maven.artifact.AbstractArtifactComponentTestCase;
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.factory.ArtifactFactory;
-import org.apache.maven.artifact.repository.ArtifactRepository;
-import org.apache.maven.artifact.repository.metadata.ArtifactRepositoryMetadata;
-import org.apache.maven.artifact.repository.metadata.RepositoryMetadata;
 import org.apache.maven.repository.legacy.DefaultUpdateCheckManager;
+import org.apache.maven.repository.legacy.factory.ArtifactFactory;
+import org.apache.maven.repository.legacy.repository.ArtifactRepository;
+import org.apache.maven.repository.legacy.repository.metadata.ArtifactRepositoryMetadata;
+import org.apache.maven.repository.legacy.repository.metadata.RepositoryMetadata;
 import org.codehaus.plexus.logging.Logger;
 import org.codehaus.plexus.logging.console.ConsoleLogger;
 

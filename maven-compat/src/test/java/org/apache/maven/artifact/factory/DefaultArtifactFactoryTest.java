@@ -20,7 +20,8 @@ package org.apache.maven.artifact.factory;
  */
 
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.versioning.VersionRange;
+import org.apache.maven.repository.legacy.factory.ArtifactFactory;
+import org.apache.maven.repository.legacy.versioning.VersionRange;
 import org.codehaus.plexus.PlexusTestCase;
 
 public class DefaultArtifactFactoryTest

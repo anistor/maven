@@ -21,7 +21,7 @@ package org.apache.maven.repository.legacy.resolver.conflict;
 
 import java.util.Collections;
 
-import org.apache.maven.artifact.resolver.ResolutionNode;
+import org.apache.maven.repository.legacy.resolver.ResolutionNode;
 import org.apache.maven.repository.legacy.resolver.conflict.NewestConflictResolver;
 
 /**

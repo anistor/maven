@@ -24,9 +24,9 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import org.apache.maven.artifact.repository.ArtifactRepository;
-import org.apache.maven.artifact.repository.DefaultArtifactRepository;
-import org.apache.maven.artifact.repository.layout.ArtifactRepositoryLayout;
+import org.apache.maven.repository.legacy.repository.ArtifactRepository;
+import org.apache.maven.repository.legacy.repository.DefaultArtifactRepository;
+import org.apache.maven.repository.legacy.repository.layout.ArtifactRepositoryLayout;
 import org.codehaus.plexus.util.FileUtils;
 
 public class DefaultMavenProjectBuilderTest

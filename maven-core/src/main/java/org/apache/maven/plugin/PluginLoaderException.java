@@ -2,9 +2,9 @@ package org.apache.maven.plugin;
 
 import org.apache.maven.artifact.resolver.ArtifactNotFoundException;
 import org.apache.maven.artifact.resolver.ArtifactResolutionException;
-import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.model.ReportPlugin;
+import org.apache.maven.repository.legacy.versioning.InvalidVersionSpecificationException;
 
 /**
  * Signifies a failure to load a plugin. This is used to abstract the specific errors which may be

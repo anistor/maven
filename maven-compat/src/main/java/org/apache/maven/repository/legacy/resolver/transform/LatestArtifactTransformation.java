@@ -22,11 +22,11 @@ package org.apache.maven.repository.legacy.resolver.transform;
 import java.util.List;
 
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.repository.ArtifactRepository;
-import org.apache.maven.artifact.repository.metadata.RepositoryMetadataResolutionException;
 import org.apache.maven.artifact.repository.metadata.Versioning;
 import org.apache.maven.artifact.resolver.ArtifactNotFoundException;
 import org.apache.maven.artifact.resolver.ArtifactResolutionException;
+import org.apache.maven.repository.legacy.repository.ArtifactRepository;
+import org.apache.maven.repository.legacy.repository.metadata.RepositoryMetadataResolutionException;
 import org.codehaus.plexus.component.annotations.Component;
 
 @Component(role=ArtifactTransformation.class, hint="latest")
