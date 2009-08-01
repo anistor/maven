@@ -450,12 +450,16 @@
     </profile>
     <profile>
       <id>m2e</id>
+      <properties>
+        <m2BuildDirectory>target</m2BuildDirectory>
+      </properties>      
       <activation>
         <property>
           <name>m2e.version</name>
         </property>
       </activation>
       <build>
+        <directory>${m2BuildDirectory}</directory>
         <plugins>
           <plugin>
             <groupId>org.maven.ide.eclipse</groupId>

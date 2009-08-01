@@ -491,7 +491,7 @@ public class DefaultPluginManager
         throw new PluginManagerException( plugin, "Could not create ClassRealm for plugin " + baseRealmId, (Throwable) null );
     }
 
-    private Mojo getConfiguredMojo( MavenSession session, MavenProject project, MojoExecution mojoExecution, ClassRealm pluginRealm )
+    public Mojo getConfiguredMojo( MavenSession session, MavenProject project, MojoExecution mojoExecution, ClassRealm pluginRealm )
         throws PluginConfigurationException, PluginManagerException
     {
         MojoDescriptor mojoDescriptor = mojoExecution.getMojoDescriptor();
@@ -564,6 +564,81 @@ public class DefaultPluginManager
         }
 
     }
+    
+    public Object getConfiguredMojo(Class<?> clazz,  MavenSession session, MavenProject project, MojoExecution mojoExecution, ClassRealm pluginRealm )
+    throws PluginConfigurationException, PluginManagerException
+{
+    MojoDescriptor mojoDescriptor = mojoExecution.getMojoDescriptor();
+
+    PluginDescriptor pluginDescriptor = mojoDescriptor.getPluginDescriptor();
+
+    // We are forcing the use of the plugin realm for all lookups that might occur during
+    // the lifecycle that is part of the lookup. Here we are specifically trying to keep
+    // lookups that occur in contextualize calls in line with the right realm.
+    ClassRealm oldLookupRealm = container.setLookupRealm( pluginRealm );
+
+    ClassLoader oldClassLoader = Thread.currentThread().getContextClassLoader();
+    Thread.currentThread().setContextClassLoader( pluginRealm );
+    container.setLookupRealm( pluginRealm );
+
+    try
+    {
+        Object mojo;
+
+        try
+        {
+            mojo = container.lookup( clazz, mojoDescriptor.getRoleHint() );
+        }
+        catch ( ComponentLookupException e )
+        {
+            throw new PluginContainerException( mojoDescriptor, pluginRealm, "Unable to find the mojo '"
+                + mojoDescriptor.getGoal() + "' in the plugin '" + pluginDescriptor.getId() + "'", e );
+        }
+
+        if ( mojo instanceof ContextEnabled )
+        {
+            //TODO: find somewhere better to put the plugin context.
+            Map<String, Object> pluginContext = session.getPluginContext( pluginDescriptor, project );
+
+            if ( pluginContext != null )
+            {
+                pluginContext.put( "project", project );
+
+                pluginContext.put( "pluginDescriptor", pluginDescriptor );
+
+                ( (ContextEnabled) mojo ).setPluginContext( pluginContext );
+            }
+        }
+
+        // FIXME 
+        //mojo.setLog( new DefaultLog( logger ) );
+
+        Xpp3Dom dom = mojoExecution.getConfiguration();
+
+        PlexusConfiguration pomConfiguration;
+
+        if ( dom == null )
+        {
+            pomConfiguration = new XmlPlexusConfiguration( "configuration" );
+        }
+        else
+        {
+            pomConfiguration = new XmlPlexusConfiguration( dom );
+        }
+
+        ExpressionEvaluator expressionEvaluator = new PluginParameterExpressionEvaluator( session, mojoExecution );
+
+        populatePluginFields( (Mojo) mojo, mojoDescriptor, pluginRealm, pomConfiguration, expressionEvaluator );
+
+        return mojo;
+    }
+    finally
+    {
+        Thread.currentThread().setContextClassLoader( oldClassLoader );
+        container.setLookupRealm( oldLookupRealm );
+    }
+
+}    
 
     // ----------------------------------------------------------------------
     // Mojo Parameter Handling
