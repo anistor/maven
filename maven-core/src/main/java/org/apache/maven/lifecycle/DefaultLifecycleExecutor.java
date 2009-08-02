@@ -651,7 +651,7 @@ public class DefaultLifecycleExecutor
         return sb.toString();
     }
         
-    private void populateMojoExecutionConfiguration( MavenProject project, MojoExecution mojoExecution, boolean directInvocation )
+    public void populateMojoExecutionConfiguration( MavenProject project, MojoExecution mojoExecution, boolean directInvocation )
     {
         String g = mojoExecution.getGroupId();
 

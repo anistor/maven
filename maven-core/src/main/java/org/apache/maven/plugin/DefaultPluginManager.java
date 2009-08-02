@@ -40,7 +40,9 @@ import org.apache.maven.artifact.resolver.ArtifactResolutionRequest;
 import org.apache.maven.artifact.resolver.ArtifactResolutionResult;
 import org.apache.maven.artifact.resolver.ResolutionErrorHandler;
 import org.apache.maven.artifact.resolver.filter.AndArtifactFilter;
+import org.apache.maven.artifact.resolver.filter.ArtifactFilter;
 import org.apache.maven.artifact.resolver.filter.ScopeArtifactFilter;
+import org.apache.maven.classrealm.ClassRealmManager;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Plugin;
@@ -51,12 +53,8 @@ import org.apache.maven.plugin.descriptor.PluginDescriptorBuilder;
 import org.apache.maven.project.DuplicateArtifactAttachmentException;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.repository.RepositorySystem;
-import org.codehaus.plexus.MutablePlexusContainer;
 import org.codehaus.plexus.PlexusContainer;
-import org.codehaus.plexus.classworlds.ClassWorld;
 import org.codehaus.plexus.classworlds.realm.ClassRealm;
-import org.codehaus.plexus.classworlds.realm.DuplicateRealmException;
-import org.codehaus.plexus.classworlds.realm.NoSuchRealmException;
 import org.codehaus.plexus.component.annotations.Component;
 import org.codehaus.plexus.component.annotations.Requirement;
 import org.codehaus.plexus.component.composition.CycleDetectedInComponentGraphException;
@@ -90,6 +88,9 @@ public class DefaultPluginManager
 
     @Requirement
     protected PlexusContainer container;
+
+    @Requirement
+    private ClassRealmManager classRealmManager;
 
     @Requirement
     protected ArtifactFilterManager coreArtifactFilterManager;
@@ -235,15 +236,16 @@ public class DefaultPluginManager
         return pluginDescriptor;
     }
 
-    // TODO: Turn this into a component so it can be tested.
-    //
-    List<Artifact> getPluginArtifacts( Artifact pluginArtifact, Plugin pluginAsSpecifiedInPom, ArtifactRepository localRepository, List<ArtifactRepository> remoteRepositories )
-        throws ArtifactNotFoundException, ArtifactResolutionException
+    List<Artifact> getPluginArtifacts( Artifact pluginArtifact, Plugin pluginAsSpecifiedInPom, ArtifactRepository localRepository, List<ArtifactRepository> remoteRepositories, List<ArtifactFilter> artifactFilters )
+    throws ArtifactNotFoundException, ArtifactResolutionException
     {
-        AndArtifactFilter filter = new AndArtifactFilter();
-        filter.add( coreArtifactFilterManager.getCoreArtifactFilter() );
-        filter.add( new ScopeArtifactFilter( Artifact.SCOPE_RUNTIME_PLUS_SYSTEM ) );
+		AndArtifactFilter filter = new AndArtifactFilter();
+		if (artifactFilters != null) {
+			for (ArtifactFilter artifactFilter : artifactFilters) {
+				filter.add(artifactFilter);
+			}
 
+		}
         Set<Artifact> dependenciesToResolveForPlugin = new LinkedHashSet<Artifact>();
 
         // The case where we have a plugin that can host multiple versions of a particular tool. Say the 
@@ -284,6 +286,23 @@ public class DefaultPluginManager
 
         return new ArrayList<Artifact>( result.getArtifacts() );
     }
+    
+    // TODO: Turn this into a component so it can be tested.
+    //
+	List<Artifact> getPluginArtifacts(Artifact pluginArtifact,
+			Plugin pluginAsSpecifiedInPom, ArtifactRepository localRepository,
+			List<ArtifactRepository> remoteRepositories)
+			throws ArtifactNotFoundException, ArtifactResolutionException {
+		List<ArtifactFilter> artifactFilters = new ArrayList<ArtifactFilter>(2);
+
+		artifactFilters.add(coreArtifactFilterManager.getCoreArtifactFilter());
+		artifactFilters.add(new ScopeArtifactFilter(
+				Artifact.SCOPE_RUNTIME_PLUS_SYSTEM));
+
+		return getPluginArtifacts(pluginArtifact, pluginAsSpecifiedInPom,
+				localRepository, remoteRepositories, artifactFilters);
+
+	}
 
     // ----------------------------------------------------------------------
     // Mojo execution
@@ -361,11 +380,8 @@ public class DefaultPluginManager
         }
     }
 
-    /**
-     * TODO pluginDescriptor classRealm and artifacts are set as a side effect of this
-     *      call, which is not nice.
-     */
-    public synchronized ClassRealm getPluginRealm( MavenSession session, PluginDescriptor pluginDescriptor ) 
+    public synchronized ClassRealm getPluginRealm( MavenSession session, PluginDescriptor pluginDescriptor,
+                                                   ClassRealm importedRealm, List<String> importedPackages )
         throws PluginManagerException
     {
         ClassRealm pluginRealm = pluginDescriptor.getClassRealm();
@@ -388,7 +404,7 @@ public class DefaultPluginManager
             return pluginRealm;
         }
 
-        pluginRealm = createPluginRealm( plugin );
+        pluginRealm = createPluginRealm( plugin, importedRealm, importedPackages );
 
         Artifact pluginArtifact = pluginDescriptor.getPluginArtifact();
 
@@ -421,10 +437,98 @@ public class DefaultPluginManager
 
         pluginDescriptor.setClassRealm( pluginRealm );
         pluginDescriptor.setArtifacts( pluginArtifacts );
+
+        try
+        {
+            for ( ComponentDescriptor<?> componentDescriptor : pluginDescriptor.getComponents() )
+            {
+                componentDescriptor.setRealm( pluginRealm );
+                container.addComponentDescriptor( componentDescriptor );
+            }
+
+            container.discoverComponents( pluginRealm );
+        }
+        catch ( PlexusConfigurationException e )
+        {
+            throw new PluginManagerException( plugin, e.getMessage(), e );
+        }
+        catch ( CycleDetectedInComponentGraphException e )
+        {
+            throw new PluginManagerException( plugin, e.getMessage(), e );
+        }
+
+        pluginCache.put( plugin, localRepository, remoteRepositories, pluginRealm, pluginArtifacts );
+
+        return pluginRealm;
+    }
+
+    public synchronized ClassRealm getPluginRealm( MavenSession session, PluginDescriptor pluginDescriptor, List<ArtifactFilter> artifactFilters ) 
+    throws PluginManagerException
+    {
+        ClassRealm pluginRealm = pluginDescriptor.getClassRealm();
+        if ( pluginRealm != null )
+        {
+            return pluginRealm;
+        }
+
+        Plugin plugin = pluginDescriptor.getPlugin();
+        ArtifactRepository localRepository = session.getLocalRepository();
+        List<ArtifactRepository> remoteRepositories = session.getCurrentProject().getPluginArtifactRepositories();
+
+        PluginCache.CacheRecord cacheRecord = pluginCache.get( plugin, localRepository, remoteRepositories );
+
+        if ( cacheRecord != null )
+        {
+            pluginDescriptor.setClassRealm( cacheRecord.realm );
+            pluginDescriptor.setArtifacts( new ArrayList<Artifact>( cacheRecord.artifacts ) );
+
+            return pluginRealm;
+        }
+
+        pluginRealm = createPluginRealm( plugin );
+
+        Artifact pluginArtifact = pluginDescriptor.getPluginArtifact();
+
+        List<Artifact> pluginArtifacts;
+
+        try
+        {
+            if (artifactFilters == null)
+            {
+                pluginArtifacts = getPluginArtifacts( pluginArtifact, plugin, localRepository, remoteRepositories );    
+            }
+            else
+            {
+            pluginArtifacts = getPluginArtifacts( pluginArtifact, plugin, localRepository, remoteRepositories,  artifactFilters);
+            }
+        }
+        catch ( ArtifactNotFoundException e )
+        {
+            throw new IllegalStateException( e ); // XXX
+        }
+        catch ( ArtifactResolutionException e )
+        {
+            throw new IllegalStateException( e ); // XXX
+        }
+
+        for ( Artifact a : pluginArtifacts )
+        {
+            try
+            {
+                pluginRealm.addURL( a.getFile().toURI().toURL() );
+            }
+            catch ( MalformedURLException e )
+            {
+                // Not going to happen
+            }
+        }
+
+        pluginDescriptor.setClassRealm( pluginRealm );
+        pluginDescriptor.setArtifacts( pluginArtifacts );
         
         try
         {
-            for ( ComponentDescriptor componentDescriptor : pluginDescriptor.getComponents() )
+            for ( ComponentDescriptor<?> componentDescriptor : pluginDescriptor.getComponents() )
             {
                 componentDescriptor.setRealm( pluginRealm );
                 container.addComponentDescriptor( componentDescriptor );
@@ -445,51 +549,30 @@ public class DefaultPluginManager
         
         return pluginRealm;
     }
+    
+    /**
+     * TODO pluginDescriptor classRealm and artifacts are set as a side effect of this
+     *      call, which is not nice.
+     */
+    public synchronized ClassRealm getPluginRealm( MavenSession session, PluginDescriptor pluginDescriptor ) 
+        throws PluginManagerException
+    {
+        return getPluginRealm(session, pluginDescriptor, null);
+    }
 
     /**
      * Creates ClassRealm with unique id for the given plugin
      */
     private ClassRealm createPluginRealm( Plugin plugin ) 
-        throws PluginManagerException
     {
-        ClassWorld world = ((MutablePlexusContainer) container).getClassWorld();
-
-        String baseRealmId = constructPluginKey( plugin );
-        String realmId = baseRealmId;
-
-        synchronized ( world )
-        {
-            for ( int i = 0; i < 100; i++ )
-            {
-                try
-                {
-                    ClassRealm pluginRealm = world.newRealm( realmId );
-                    pluginRealm.setParentRealm( container.getContainerRealm() );
-
-                    String coreRealmId = container.getContainerRealm().getId();
-                    try
-                    {
-                        pluginRealm.importFrom( coreRealmId, "org.codehaus.plexus.util.xml.Xpp3Dom" );
-                        pluginRealm.importFrom( coreRealmId, "org.codehaus.plexus.util.xml.pull.XmlPullParser" );
-                        pluginRealm.importFrom( coreRealmId, "org.codehaus.plexus.util.xml.pull.XmlPullParserException" );
-                        pluginRealm.importFrom( coreRealmId, "org.codehaus.plexus.util.xml.pull.XmlSerializer" );
-                    }
-                    catch ( NoSuchRealmException e )
-                    {
-                        throw new IllegalStateException( e );
-                    }
-
-                    return pluginRealm;
-                }
-                catch ( DuplicateRealmException e )
-                {
-                    realmId = baseRealmId + "-" + i;
-                }
-            }
-        }
-
-        throw new PluginManagerException( plugin, "Could not create ClassRealm for plugin " + baseRealmId, (Throwable) null );
+        return classRealmManager.createPluginRealm( plugin );
     }
+    
+    
+    private ClassRealm createPluginRealm( Plugin plugin, ClassRealm importedRealm, List<String> importedPackages ) 
+    {
+        return classRealmManager.createPluginRealm( plugin, importedRealm, importedPackages );
+    }    
 
     public Mojo getConfiguredMojo( MavenSession session, MavenProject project, MojoExecution mojoExecution, ClassRealm pluginRealm )
         throws PluginConfigurationException, PluginManagerException
@@ -565,80 +648,84 @@ public class DefaultPluginManager
 
     }
     
-    public Object getConfiguredMojo(Class<?> clazz,  MavenSession session, MavenProject project, MojoExecution mojoExecution, ClassRealm pluginRealm )
-    throws PluginConfigurationException, PluginManagerException
-{
-    MojoDescriptor mojoDescriptor = mojoExecution.getMojoDescriptor();
-
-    PluginDescriptor pluginDescriptor = mojoDescriptor.getPluginDescriptor();
-
-    // We are forcing the use of the plugin realm for all lookups that might occur during
-    // the lifecycle that is part of the lookup. Here we are specifically trying to keep
-    // lookups that occur in contextualize calls in line with the right realm.
-    ClassRealm oldLookupRealm = container.setLookupRealm( pluginRealm );
-
-    ClassLoader oldClassLoader = Thread.currentThread().getContextClassLoader();
-    Thread.currentThread().setContextClassLoader( pluginRealm );
-    container.setLookupRealm( pluginRealm );
-
-    try
+    public Object getConfiguredMojo( Class<?> clazz, MavenSession session, MavenProject project,
+                                     MojoExecution mojoExecution, ClassRealm pluginRealm )
+        throws PluginConfigurationException, PluginManagerException
     {
-        Object mojo;
+        MojoDescriptor mojoDescriptor = mojoExecution.getMojoDescriptor();
+
+        PluginDescriptor pluginDescriptor = mojoDescriptor.getPluginDescriptor();
+
+        // We are forcing the use of the plugin realm for all lookups that might
+        // occur during
+        // the lifecycle that is part of the lookup. Here we are specifically
+        // trying to keep
+        // lookups that occur in contextualize calls in line with the right
+        // realm.
+        ClassRealm oldLookupRealm = container.setLookupRealm( pluginRealm );
+
+        ClassLoader oldClassLoader = Thread.currentThread().getContextClassLoader();
+        Thread.currentThread().setContextClassLoader( pluginRealm );
+        container.setLookupRealm( pluginRealm );
 
         try
         {
-            mojo = container.lookup( clazz, mojoDescriptor.getRoleHint() );
-        }
-        catch ( ComponentLookupException e )
-        {
-            throw new PluginContainerException( mojoDescriptor, pluginRealm, "Unable to find the mojo '"
-                + mojoDescriptor.getGoal() + "' in the plugin '" + pluginDescriptor.getId() + "'", e );
-        }
+            Object mojo;
 
-        if ( mojo instanceof ContextEnabled )
-        {
-            //TODO: find somewhere better to put the plugin context.
-            Map<String, Object> pluginContext = session.getPluginContext( pluginDescriptor, project );
-
-            if ( pluginContext != null )
+            try
             {
-                pluginContext.put( "project", project );
-
-                pluginContext.put( "pluginDescriptor", pluginDescriptor );
-
-                ( (ContextEnabled) mojo ).setPluginContext( pluginContext );
+                mojo = container.lookup( clazz, mojoDescriptor.getRoleHint() );
             }
+            catch ( ComponentLookupException e )
+            {
+                throw new PluginContainerException( mojoDescriptor, pluginRealm, "Unable to find the mojo '"
+                    + mojoDescriptor.getGoal() + "' in the plugin '" + pluginDescriptor.getId() + "'", e );
+            }
+
+            if ( mojo instanceof ContextEnabled )
+            {
+                // TODO: find somewhere better to put the plugin context.
+                Map<String, Object> pluginContext = session.getPluginContext( pluginDescriptor, project );
+
+                if ( pluginContext != null )
+                {
+                    pluginContext.put( "project", project );
+
+                    pluginContext.put( "pluginDescriptor", pluginDescriptor );
+
+                    ( (ContextEnabled) mojo ).setPluginContext( pluginContext );
+                }
+            }
+
+            // FIXME
+            // mojo.setLog( new DefaultLog( logger ) );
+
+            Xpp3Dom dom = mojoExecution.getConfiguration();
+
+            PlexusConfiguration pomConfiguration;
+
+            if ( dom == null )
+            {
+                pomConfiguration = new XmlPlexusConfiguration( "configuration" );
+            }
+            else
+            {
+                pomConfiguration = new XmlPlexusConfiguration( dom );
+            }
+
+            ExpressionEvaluator expressionEvaluator = new PluginParameterExpressionEvaluator( session, mojoExecution );
+
+            populatePluginFields( (Mojo) mojo, mojoDescriptor, pluginRealm, pomConfiguration, expressionEvaluator );
+
+            return mojo;
         }
-
-        // FIXME 
-        //mojo.setLog( new DefaultLog( logger ) );
-
-        Xpp3Dom dom = mojoExecution.getConfiguration();
-
-        PlexusConfiguration pomConfiguration;
-
-        if ( dom == null )
+        finally
         {
-            pomConfiguration = new XmlPlexusConfiguration( "configuration" );
-        }
-        else
-        {
-            pomConfiguration = new XmlPlexusConfiguration( dom );
+            Thread.currentThread().setContextClassLoader( oldClassLoader );
+            container.setLookupRealm( oldLookupRealm );
         }
 
-        ExpressionEvaluator expressionEvaluator = new PluginParameterExpressionEvaluator( session, mojoExecution );
-
-        populatePluginFields( (Mojo) mojo, mojoDescriptor, pluginRealm, pomConfiguration, expressionEvaluator );
-
-        return mojo;
     }
-    finally
-    {
-        Thread.currentThread().setContextClassLoader( oldClassLoader );
-        container.setLookupRealm( oldLookupRealm );
-    }
-
-}    
 
     // ----------------------------------------------------------------------
     // Mojo Parameter Handling
