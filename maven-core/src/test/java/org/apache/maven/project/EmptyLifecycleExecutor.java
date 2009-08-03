@@ -79,4 +79,10 @@ public class EmptyLifecycleExecutor
         throws LifecycleExecutionException
     {
     }
+
+    public void populateMojoExecutionConfiguration( MavenProject project, MojoExecution mojoExecution,
+                                                    boolean directInvocation )
+    {
+        // nothing here
+    }
 }

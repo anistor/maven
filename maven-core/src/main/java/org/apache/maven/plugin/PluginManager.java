@@ -18,7 +18,6 @@ package org.apache.maven.plugin;
 import java.util.List;
 
 import org.apache.maven.artifact.repository.ArtifactRepository;
-import org.apache.maven.artifact.resolver.filter.ArtifactFilter;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.plugin.descriptor.MojoDescriptor;
@@ -59,7 +58,8 @@ public interface PluginManager
                                      MojoExecution mojoExecution, ClassRealm pluginRealm )
         throws PluginConfigurationException, PluginManagerException;  
 
-	ClassRealm getPluginRealm(MavenSession session,
-			PluginDescriptor pluginDescriptor, List<ArtifactFilter> artifactFilter)
-			throws PluginManagerException;
+    ClassRealm getPluginRealm( MavenSession session, PluginDescriptor pluginDescriptor, ClassRealm importedRealm,
+                               List<String> importedPackages )
+        throws PluginManagerException;    
+
 }

@@ -380,6 +380,7 @@ public class DefaultPluginManager
         }
     }
 
+    // FIXME factorisation with the other getPluginRealm
     public synchronized ClassRealm getPluginRealm( MavenSession session, PluginDescriptor pluginDescriptor,
                                                    ClassRealm importedRealm, List<String> importedPackages )
         throws PluginManagerException
@@ -461,9 +462,13 @@ public class DefaultPluginManager
 
         return pluginRealm;
     }
-
-    public synchronized ClassRealm getPluginRealm( MavenSession session, PluginDescriptor pluginDescriptor, List<ArtifactFilter> artifactFilters ) 
-    throws PluginManagerException
+    
+    /**
+     * TODO pluginDescriptor classRealm and artifacts are set as a side effect of this
+     *      call, which is not nice.
+     */
+    public synchronized ClassRealm getPluginRealm( MavenSession session, PluginDescriptor pluginDescriptor )
+        throws PluginManagerException
     {
         ClassRealm pluginRealm = pluginDescriptor.getClassRealm();
         if ( pluginRealm != null )
@@ -493,14 +498,7 @@ public class DefaultPluginManager
 
         try
         {
-            if (artifactFilters == null)
-            {
-                pluginArtifacts = getPluginArtifacts( pluginArtifact, plugin, localRepository, remoteRepositories );    
-            }
-            else
-            {
-            pluginArtifacts = getPluginArtifacts( pluginArtifact, plugin, localRepository, remoteRepositories,  artifactFilters);
-            }
+            pluginArtifacts = getPluginArtifacts( pluginArtifact, plugin, localRepository, remoteRepositories );
         }
         catch ( ArtifactNotFoundException e )
         {
@@ -525,7 +523,7 @@ public class DefaultPluginManager
 
         pluginDescriptor.setClassRealm( pluginRealm );
         pluginDescriptor.setArtifacts( pluginArtifacts );
-        
+
         try
         {
             for ( ComponentDescriptor<?> componentDescriptor : pluginDescriptor.getComponents() )
@@ -546,18 +544,8 @@ public class DefaultPluginManager
         }
 
         pluginCache.put( plugin, localRepository, remoteRepositories, pluginRealm, pluginArtifacts );
-        
+
         return pluginRealm;
-    }
-    
-    /**
-     * TODO pluginDescriptor classRealm and artifacts are set as a side effect of this
-     *      call, which is not nice.
-     */
-    public synchronized ClassRealm getPluginRealm( MavenSession session, PluginDescriptor pluginDescriptor ) 
-        throws PluginManagerException
-    {
-        return getPluginRealm(session, pluginDescriptor, null);
     }
 
     /**
