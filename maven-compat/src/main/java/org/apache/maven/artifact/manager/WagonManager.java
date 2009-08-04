@@ -1,5 +1,7 @@
 package org.apache.maven.artifact.manager;
 
+import org.apache.maven.wagon.authentication.AuthenticationInfo;
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -30,5 +32,5 @@ package org.apache.maven.artifact.manager;
 public interface WagonManager
     extends org.apache.maven.repository.legacy.WagonManager
 {
-    // nothing to do 
+    AuthenticationInfo getAuthenticationInfo( String id );
 }

@@ -64,4 +64,6 @@ public interface ArtifactRepository
     
     void setProxy( Proxy proxy );
     Proxy getProxy();
+    
+    boolean isBlacklisted();
 }

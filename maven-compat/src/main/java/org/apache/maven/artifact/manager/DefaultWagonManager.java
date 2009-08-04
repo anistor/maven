@@ -19,6 +19,7 @@ package org.apache.maven.artifact.manager;
  * under the License.
  */
 
+import org.apache.maven.wagon.authentication.AuthenticationInfo;
 import org.codehaus.plexus.component.annotations.Component;
 
 @Component(role=WagonManager.class) 
@@ -26,5 +27,11 @@ public class DefaultWagonManager
     extends org.apache.maven.repository.legacy.DefaultWagonManager
     implements WagonManager
 {
-    // nothing to do 
+
+    public AuthenticationInfo getAuthenticationInfo( String id )
+    {
+       // empty one to prevent NPE
+       return new AuthenticationInfo();
+    }
+    
 }
