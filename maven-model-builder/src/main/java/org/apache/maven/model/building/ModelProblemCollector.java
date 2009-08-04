@@ -19,35 +19,42 @@ package org.apache.maven.model.building;
  * under the License.
  */
 
-import org.apache.maven.model.Model;
-
 /**
- * Holds data relevant for a model building event.
+ * Collects problems that are encountered during model building.
  * 
  * @author Benjamin Bentmann
  */
-public interface ModelBuildingEvent
+public interface ModelProblemCollector
 {
 
     /**
-     * Gets the model being built. The precise state of this model depends on the event being fired.
+     * Adds the specified error.
      * 
-     * @return The model being built, never {@code null}.
+     * @param message The detail message of the error, may be {@code null}.
      */
-    Model getModel();
+    void addError( String message );
 
     /**
-     * Gets the model building request being processed.
+     * Adds the specified error.
      * 
-     * @return The model building request being processed, never {@code null}.
+     * @param message The detail message of the error, may be {@code null}.
+     * @param cause The cause of the error, may be {@code null}.
      */
-    ModelBuildingRequest getRequest();
+    void addError( String message, Exception cause );
 
     /**
-     * Gets the container used to collect problems that were encountered while processing the event.
+     * Adds the specified warning.
      * 
-     * @return The container used to collect problems that were encountered, never {@code null}.
+     * @param message The detail message of the warning, may be {@code null}.
      */
-    ModelProblemCollector getProblems();
+    void addWarning( String message );
+
+    /**
+     * Adds the specified warning.
+     * 
+     * @param message The detail message of the warning, may be {@code null}.
+     * @param cause The cause of the warning, may be {@code null}.
+     */
+    void addWarning( String message, Exception cause );
 
 }

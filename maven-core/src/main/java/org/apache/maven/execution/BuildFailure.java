@@ -1,4 +1,4 @@
-package org.apache.maven.model.building;
+package org.apache.maven.execution;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -19,35 +19,43 @@ package org.apache.maven.model.building;
  * under the License.
  */
 
-import org.apache.maven.model.Model;
+import org.apache.maven.project.MavenProject;
 
 /**
- * Holds data relevant for a model building event.
+ * Summarizes the result of a failed project build in the reactor.
  * 
  * @author Benjamin Bentmann
  */
-public interface ModelBuildingEvent
+public class BuildFailure
+    extends BuildSummary
 {
 
     /**
-     * Gets the model being built. The precise state of this model depends on the event being fired.
-     * 
-     * @return The model being built, never {@code null}.
+     * The cause of the build failure.
      */
-    Model getModel();
+    private final Throwable cause;
 
     /**
-     * Gets the model building request being processed.
+     * Creates a new build summary for the specified project.
      * 
-     * @return The model building request being processed, never {@code null}.
+     * @param project The project being summarized, must not be {@code null}.
+     * @param time The build time of the project in milliseconds.
+     * @param cause The cause of the build failure, may be {@code null}.
      */
-    ModelBuildingRequest getRequest();
+    public BuildFailure( MavenProject project, long time, Throwable cause )
+    {
+        super( project, time );
+        this.cause = cause;
+    }
 
     /**
-     * Gets the container used to collect problems that were encountered while processing the event.
+     * Gets the cause of the build failure.
      * 
-     * @return The container used to collect problems that were encountered, never {@code null}.
+     * @return The cause of the build failure or {@code null} if unknown.
      */
-    ModelProblemCollector getProblems();
+    public Throwable getCause()
+    {
+        return cause;
+    }
 
 }

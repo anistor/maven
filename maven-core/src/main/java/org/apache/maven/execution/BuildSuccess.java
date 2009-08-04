@@ -1,4 +1,4 @@
-package org.apache.maven.model.interpolation;
+package org.apache.maven.execution;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -9,7 +9,7 @@ package org.apache.maven.model.interpolation;
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -19,24 +19,26 @@ package org.apache.maven.model.interpolation;
  * under the License.
  */
 
+import org.apache.maven.project.MavenProject;
+
 /**
- * @author jdcasey
- *         <p/>
- *         Created on Feb 2, 2005
+ * Summarizes the result of a successful project build in the reactor.
+ * 
+ * @author Benjamin Bentmann
  */
-@SuppressWarnings("serial")
-public class ModelInterpolationException
-    extends Exception
+public class BuildSuccess
+    extends BuildSummary
 {
 
-    public ModelInterpolationException( String message )
+    /**
+     * Creates a new build summary for the specified project.
+     * 
+     * @param project The project being summarized, must not be {@code null}.
+     * @param time The build time of the project in milliseconds.
+     */
+    public BuildSuccess( MavenProject project, long time )
     {
-        super( message );
-    }
-
-    public ModelInterpolationException( String message, Throwable cause )
-    {
-        super( message, cause );
+        super( project, time );
     }
 
 }

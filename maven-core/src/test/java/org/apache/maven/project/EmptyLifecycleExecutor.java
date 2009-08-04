@@ -85,4 +85,10 @@ public class EmptyLifecycleExecutor
     {
         // nothing here
     }
+
+    public void extractMojoConfiguration( MojoExecution mojoExecution )
+    {
+        // TODO Auto-generated method stub
+        
+    }
 }

@@ -35,7 +35,10 @@ import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.artifact.repository.metadata.Metadata;
 import org.apache.maven.artifact.repository.metadata.RepositoryMetadataReadException;
 import org.apache.maven.artifact.repository.metadata.io.xpp3.MetadataXpp3Reader;
+import org.apache.maven.execution.BuildFailure;
+import org.apache.maven.execution.BuildSuccess;
 import org.apache.maven.execution.MavenExecutionRequest;
+import org.apache.maven.execution.MavenExecutionResult;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.lifecycle.mapping.LifecycleMapping;
 import org.apache.maven.model.Dependency;
@@ -122,7 +125,7 @@ public class DefaultLifecycleExecutor
     {
         // TODO: Use a listener here instead of loggers
         
-        logger.info(  "Build Order:" );
+        logger.info( "Build Order:" );
         
         logger.info( "" );
         
@@ -148,7 +151,9 @@ public class DefaultLifecycleExecutor
         }
 
         ClassLoader oldContextClassLoader = Thread.currentThread().getContextClassLoader();
-                
+
+        MavenExecutionResult result = session.getResult();
+
         for ( MavenProject currentProject : session.getProjects() )
         {
             if ( session.isBlackListed( currentProject ) )
@@ -161,6 +166,8 @@ public class DefaultLifecycleExecutor
 
             logger.info( "Building " + currentProject.getName() );
 
+            long buildStartTime = System.currentTimeMillis();
+
             try
             {
                 session.setCurrentProject( currentProject );
@@ -171,7 +178,8 @@ public class DefaultLifecycleExecutor
                     Thread.currentThread().setContextClassLoader( projectRealm );
                 }
 
-                MavenExecutionPlan executionPlan = calculateExecutionPlan( session, goals.toArray( new String[] {} ) );
+                MavenExecutionPlan executionPlan =
+                    calculateExecutionPlan( session, goals.toArray( new String[goals.size()] ) );
 
                 //TODO: once we have calculated the build plan then we should accurately be able to download
                 // the project dependencies. Having it happen in the plugin manager is a tangled mess. We can optimize this
@@ -199,11 +207,18 @@ public class DefaultLifecycleExecutor
                 {
                     execute( currentProject, session, mojoExecution );
                 }
-                
+
+                long buildEndTime = System.currentTimeMillis();
+
+                result.addBuildSummary( new BuildSuccess( currentProject, buildEndTime - buildStartTime ) );
             }
             catch ( Exception e )
             {
-                session.getResult().addException( e );
+                result.addException( e );
+
+                long buildEndTime = System.currentTimeMillis();
+
+                result.addBuildSummary( new BuildFailure( currentProject, buildEndTime - buildStartTime, e ) );
 
                 if ( MavenExecutionRequest.REACTOR_FAIL_NEVER.equals( session.getReactorFailureBehavior() ) )
                 {
@@ -243,6 +258,11 @@ public class DefaultLifecycleExecutor
 
         if ( !forkedExecutions.isEmpty() )
         {
+            if ( logger.isDebugEnabled() )
+            {
+                logger.debug( "Forking execution for " + mojoExecution.getMojoDescriptor().getId() );
+            }
+
             executionProject = project.clone();
 
             session.setCurrentProject( executionProject );
@@ -256,6 +276,11 @@ public class DefaultLifecycleExecutor
             finally
             {
                 session.setCurrentProject( project );
+            }
+
+            if ( logger.isDebugEnabled() )
+            {
+                logger.debug( "Completed forked execution for " + mojoExecution.getMojoDescriptor().getId() );
             }
         }
 
@@ -298,8 +323,18 @@ public class DefaultLifecycleExecutor
             //
             // org.apache.maven.plugins:maven-remote-resources-plugin:1.0:process
             //                        
-            MojoDescriptor mojoDescriptor = pluginManager.getMojoDescriptor( mojoExecution.getPlugin(), mojoExecution.getGoal(), session
-                .getLocalRepository(), project.getPluginArtifactRepositories() );
+
+            MojoDescriptor mojoDescriptor = mojoExecution.getMojoDescriptor();
+
+            if ( mojoDescriptor == null )
+            {
+                mojoDescriptor =
+                    pluginManager.getMojoDescriptor( mojoExecution.getPlugin(), mojoExecution.getGoal(),
+                                                     session.getLocalRepository(),
+                                                     project.getPluginArtifactRepositories() );
+
+                mojoExecution.setMojoDescriptor( mojoDescriptor );
+            }
 
             PluginDescriptor pluginDescriptor = mojoDescriptor.getPluginDescriptor();
             if ( pluginDescriptor.getPlugin().isExtensions() )
@@ -307,9 +342,10 @@ public class DefaultLifecycleExecutor
                 pluginDescriptor.setClassRealm( pluginManager.getPluginRealm( session, pluginDescriptor ) );
             }
 
-            mojoExecution.setMojoDescriptor( mojoDescriptor );
+            populateMojoExecutionConfiguration( project, mojoExecution,
+                                                MojoExecution.Source.CLI.equals( mojoExecution.getSource() ) );
 
-            populateMojoExecutionConfiguration( project, mojoExecution, false );
+            extractMojoConfiguration( mojoExecution );
 
             calculateForkedExecutions( mojoExecution, session, project, new HashSet<MojoDescriptor>() );
 
@@ -338,8 +374,6 @@ public class DefaultLifecycleExecutor
     private void calculateExecutionForIndividualGoal( MavenSession session, List<MojoExecution> lifecyclePlan, String goal ) 
         throws PluginNotFoundException, PluginResolutionException, PluginDescriptorParsingException, CycleDetectedInPluginGraphException, MojoNotFoundException, NoPluginFoundForPrefixException, InvalidPluginDescriptorException
     {
-        MavenProject project = session.getCurrentProject();
-        
         // If this is a goal like "mvn modello:java" and the POM looks like the following:
         //
         // <project>
@@ -372,9 +406,7 @@ public class DefaultLifecycleExecutor
         
         MojoDescriptor mojoDescriptor = getMojoDescriptor( goal, session );
 
-        MojoExecution mojoExecution = new MojoExecution( mojoDescriptor, "default-cli" );
-        
-        populateMojoExecutionConfiguration( project, mojoExecution, true );
+        MojoExecution mojoExecution = new MojoExecution( mojoDescriptor, "default-cli", MojoExecution.Source.CLI );
 
         lifecyclePlan.add( mojoExecution );        
     }
@@ -601,12 +633,11 @@ public class DefaultLifecycleExecutor
                         {
                             for ( MojoExecution forkedExecution : forkedExecutions )
                             {
-                                Xpp3Dom executionConfiguration = forkedExecution.getConfiguration();
+                                Xpp3Dom forkedConfiguration = forkedExecution.getConfiguration();
 
-                                Xpp3Dom mergedConfiguration =
-                                    Xpp3Dom.mergeXpp3Dom( phaseConfiguration, executionConfiguration );
+                                forkedConfiguration = Xpp3Dom.mergeXpp3Dom( phaseConfiguration, forkedConfiguration );
 
-                                forkedExecution.setConfiguration( mergedConfiguration );
+                                forkedExecution.setConfiguration( forkedConfiguration );
                             }
                         }
                     }
@@ -617,6 +648,8 @@ public class DefaultLifecycleExecutor
             {
                 for ( MojoExecution forkedExecution : forkedExecutions )
                 {
+                    extractMojoConfiguration( forkedExecution );
+
                     calculateForkedExecutions( forkedExecution, session, project, alreadyForkedExecutions );
 
                     mojoExecution.addForkedExecution( forkedExecution );
@@ -637,6 +670,8 @@ public class DefaultLifecycleExecutor
 
             populateMojoExecutionConfiguration( project, forkedExecution, true );
 
+            extractMojoConfiguration( forkedExecution );
+
             calculateForkedExecutions( forkedExecution, session, project, alreadyForkedExecutions );
 
             mojoExecution.addForkedExecution( forkedExecution );
@@ -651,13 +686,16 @@ public class DefaultLifecycleExecutor
         return sb.toString();
     }
         
-    public void populateMojoExecutionConfiguration( MavenProject project, MojoExecution mojoExecution, boolean directInvocation )
+    public void populateMojoExecutionConfiguration( MavenProject project, MojoExecution mojoExecution,
+                                                     boolean allowPluginLevelConfig )
     {
         String g = mojoExecution.getGroupId();
 
         String a = mojoExecution.getArtifactId();
 
         Plugin plugin = project.getPlugin( g + ":" + a );
+
+        MojoDescriptor mojoDescriptor = mojoExecution.getMojoDescriptor();
 
         if ( plugin != null && StringUtils.isNotEmpty( mojoExecution.getExecutionId() ) )
         {
@@ -667,35 +705,55 @@ public class DefaultLifecycleExecutor
                 {
                     Xpp3Dom executionConfiguration = (Xpp3Dom) e.getConfiguration();
 
-                    Xpp3Dom mojoConfiguration = extractMojoConfiguration( executionConfiguration, mojoExecution.getMojoDescriptor() );
+                    Xpp3Dom mojoConfiguration = new Xpp3Dom( executionConfiguration );
 
-                    Xpp3Dom mergedConfiguration =
-                        Xpp3Dom.mergeXpp3Dom( mojoExecution.getConfiguration(), mojoConfiguration );
+                    mojoConfiguration = Xpp3Dom.mergeXpp3Dom( mojoExecution.getConfiguration(), mojoConfiguration );
 
-                    mojoExecution.setConfiguration( mergedConfiguration );
+                    /*
+                     * The model only contains the default configuration for those goals that are present in the plugin
+                     * execution. For goals invoked from the CLI or a forked execution, we need to grab the default
+                     * parameter values explicitly.
+                     */
+                    if ( !e.getGoals().contains( mojoExecution.getGoal() ) )
+                    {
+                        Xpp3Dom defaultConfiguration = getMojoConfiguration( mojoDescriptor );
+
+                        mojoConfiguration = Xpp3Dom.mergeXpp3Dom( mojoConfiguration, defaultConfiguration );
+                    }
+
+                    mojoExecution.setConfiguration( mojoConfiguration );
 
                     return;
                 }
             }
         }
 
-        if ( directInvocation )
+        if ( allowPluginLevelConfig )
         {
-            Xpp3Dom defaultDom = convert( mojoExecution.getMojoDescriptor() );
+            Xpp3Dom defaultConfiguration = getMojoConfiguration( mojoDescriptor );
 
-            Xpp3Dom mojoDom = defaultDom;
+            Xpp3Dom mojoConfiguration = defaultConfiguration;
 
             if ( plugin != null && plugin.getConfiguration() != null )
             {
-                Xpp3Dom projectDom = (Xpp3Dom) plugin.getConfiguration();
-                projectDom = extractMojoConfiguration( projectDom, mojoExecution.getMojoDescriptor() );
-                mojoDom = Xpp3Dom.mergeXpp3Dom( projectDom, defaultDom, Boolean.TRUE );
+                Xpp3Dom pluginConfiguration = (Xpp3Dom) plugin.getConfiguration();
+                pluginConfiguration = new Xpp3Dom( pluginConfiguration );
+                mojoConfiguration = Xpp3Dom.mergeXpp3Dom( pluginConfiguration, defaultConfiguration, Boolean.TRUE );
             }
 
-            mojoDom = Xpp3Dom.mergeXpp3Dom( mojoExecution.getConfiguration(), mojoDom );
+            mojoConfiguration = Xpp3Dom.mergeXpp3Dom( mojoExecution.getConfiguration(), mojoConfiguration );
 
-            mojoExecution.setConfiguration( mojoDom );
+            mojoExecution.setConfiguration( mojoConfiguration );
         }
+    }
+
+    public void extractMojoConfiguration( MojoExecution mojoExecution )
+    {
+        Xpp3Dom configuration = mojoExecution.getConfiguration();
+
+        configuration = extractMojoConfiguration( configuration, mojoExecution.getMojoDescriptor() );
+
+        mojoExecution.setConfiguration( configuration );
     }
 
     /**
@@ -705,56 +763,42 @@ public class DefaultLifecycleExecutor
      * underlying configurator will error out when trying to configure a mojo parameter that is specified in the
      * configuration but not present in the mojo instance.
      * 
-     * @param executionConfiguration The configuration from the plugin execution, must not be {@code null}.
+     * @param executionConfiguration The configuration from the plugin execution, may be {@code null}.
      * @param mojoDescriptor The descriptor for the mojo being configured, must not be {@code null}.
      * @return The configuration for the mojo, never {@code null}.
      */
     private Xpp3Dom extractMojoConfiguration( Xpp3Dom executionConfiguration, MojoDescriptor mojoDescriptor )
     {
-        Xpp3Dom mojoConfiguration = new Xpp3Dom( executionConfiguration.getName() );
+        Xpp3Dom mojoConfiguration = null;
 
-        Map<String, Parameter> mojoParameters = mojoDescriptor.getParameterMap();
-
-        Map<String, String> aliases = new HashMap<String, String>();
-        if ( mojoDescriptor.getParameters() != null )
+        if ( executionConfiguration != null )
         {
-            for ( Parameter parameter : mojoDescriptor.getParameters() )
+            mojoConfiguration = new Xpp3Dom( executionConfiguration.getName() );
+
+            if ( mojoDescriptor.getParameters() != null )
             {
-                String alias = parameter.getAlias();
-                if ( StringUtils.isNotEmpty( alias ) )
+                for ( Parameter parameter : mojoDescriptor.getParameters() )
                 {
-                    aliases.put( alias, parameter.getName() );
+                    Xpp3Dom parameterConfiguration = executionConfiguration.getChild( parameter.getName() );
+
+                    if ( parameterConfiguration == null )
+                    {
+                        parameterConfiguration = executionConfiguration.getChild( parameter.getAlias() );
+                    }
+
+                    if ( parameterConfiguration != null )
+                    {
+                        parameterConfiguration = new Xpp3Dom( parameterConfiguration, parameter.getName() );
+
+                        if ( StringUtils.isNotEmpty( parameter.getImplementation() ) )
+                        {
+                            parameterConfiguration.setAttribute( "implementation", parameter.getImplementation() );
+                        }
+
+                        mojoConfiguration.addChild( parameterConfiguration );
+                    }
                 }
             }
-        }
-
-        for ( int i = 0; i < executionConfiguration.getChildCount(); i++ )
-        {
-            Xpp3Dom executionDom = executionConfiguration.getChild( i );
-            String paramName = executionDom.getName();
-
-            Xpp3Dom mojoDom;
-
-            if ( mojoParameters.containsKey( paramName ) )
-            {
-                mojoDom = new Xpp3Dom( executionDom );
-            }
-            else if ( aliases.containsKey( paramName ) )
-            {
-                mojoDom = new Xpp3Dom( executionDom, aliases.get( paramName ) );
-            }
-            else
-            {
-                continue;
-            }
-
-            String implementation = mojoParameters.get( mojoDom.getName() ).getImplementation();
-            if ( StringUtils.isNotEmpty( implementation ) )
-            {
-                mojoDom.setAttribute( "implementation", implementation );
-            }
-
-            mojoConfiguration.addChild( mojoDom );
         }
 
         return mojoConfiguration;
@@ -1002,17 +1046,19 @@ public class DefaultLifecycleExecutor
     //
     public Set<Plugin> getPluginsBoundByDefaultToAllLifecycles( String packaging )
     {
+        LifecycleMapping lifecycleMappingForPackaging = lifecycleMappings.get( packaging );
+
+        if ( lifecycleMappingForPackaging == null )
+        {
+            return null;
+        }
+
         Map<Plugin, Plugin> plugins = new LinkedHashMap<Plugin, Plugin>();
-        
+
         for ( Lifecycle lifecycle : lifecycles )
         {
-            LifecycleMapping lifecycleMappingForPackaging = lifecycleMappings.get( packaging );
-
-            org.apache.maven.lifecycle.mapping.Lifecycle lifecycleConfiguration = null;
-            if ( lifecycleMappingForPackaging != null )
-            {
-                lifecycleConfiguration = lifecycleMappingForPackaging.getLifecycles().get( lifecycle.getId() );
-            }
+            org.apache.maven.lifecycle.mapping.Lifecycle lifecycleConfiguration =
+                lifecycleMappingForPackaging.getLifecycles().get( lifecycle.getId() );
 
             if ( lifecycleConfiguration != null )
             {
@@ -1090,7 +1136,7 @@ public class DefaultLifecycleExecutor
             }
             catch ( PluginNotFoundException e )
             {
-                throw new LifecycleExecutionException( "Error resolving version for plugin " + plugin, e );
+                throw new LifecycleExecutionException( "Error resolving version for plugin " + plugin.getKey(), e );
             }
         }
 
@@ -1147,7 +1193,7 @@ public class DefaultLifecycleExecutor
             throw new LifecycleExecutionException( "Error getting default plugin information: ", e );
         } 
         
-        return convert( mojoDescriptor );
+        return getMojoConfiguration( mojoDescriptor );
     }
     
     public Xpp3Dom getMojoConfiguration( MojoDescriptor mojoDescriptor )

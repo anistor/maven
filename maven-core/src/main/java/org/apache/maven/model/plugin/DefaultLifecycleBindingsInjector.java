@@ -32,6 +32,7 @@ import org.apache.maven.model.Build;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.model.PluginContainer;
+import org.apache.maven.model.building.ModelProblemCollector;
 import org.apache.maven.model.merge.MavenModelMerger;
 import org.codehaus.plexus.component.annotations.Component;
 import org.codehaus.plexus.component.annotations.Requirement;
@@ -51,13 +52,17 @@ public class DefaultLifecycleBindingsInjector
     @Requirement
     private LifecycleExecutor lifecycle;
 
-    public void injectLifecycleBindings( Model model )
+    public void injectLifecycleBindings( Model model, ModelProblemCollector problems )
     {
         String packaging = model.getPackaging();
 
         Collection<Plugin> defaultPlugins = lifecycle.getPluginsBoundByDefaultToAllLifecycles( packaging );
 
-        if ( !defaultPlugins.isEmpty() )
+        if ( defaultPlugins == null )
+        {
+            problems.addError( "Unknown packaging: " + packaging );
+        }
+        else if ( !defaultPlugins.isEmpty() )
         {
             Model lifecycleModel = new Model();
             lifecycleModel.setBuild( new Build() );

@@ -20,6 +20,7 @@ package org.apache.maven.model.plugin;
  */
 
 import org.apache.maven.model.Model;
+import org.apache.maven.model.building.ModelProblemCollector;
 
 /**
  * Handles injection of plugin executions induced by the lifecycle bindings for a packaging.
@@ -34,7 +35,8 @@ public interface LifecycleBindingsInjector
      * 
      * @param model The model into which to inject the default plugin executions for its packaging, must not be
      *            <code>null</code>.
+     * @param problems The container used to collect problems that were encountered, must not be {@code null}.
      */
-    void injectLifecycleBindings( Model model );
+    void injectLifecycleBindings( Model model, ModelProblemCollector problems );
 
 }

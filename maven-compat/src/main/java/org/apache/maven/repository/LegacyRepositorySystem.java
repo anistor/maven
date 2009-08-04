@@ -57,6 +57,7 @@ import org.codehaus.plexus.PlexusContainer;
 import org.codehaus.plexus.component.annotations.Component;
 import org.codehaus.plexus.component.annotations.Requirement;
 import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
+import org.codehaus.plexus.util.StringUtils;
 
 /**
  * @author Jason van Zyl
@@ -258,6 +259,57 @@ public class LegacyRepositorySystem
         }
 
         return url;
+    }
+
+    public ArtifactResolutionResult collect( ArtifactResolutionRequest request )
+    {
+        /*
+         * Probably is not worth it, but here I make sure I restore request
+         * to its original state. 
+         */
+        try
+        {
+            LocalArtifactRepository ideWorkspace = plexus.lookup( LocalArtifactRepository.class, LocalArtifactRepository.IDE_WORKSPACE );
+
+            if ( request.getLocalRepository() instanceof DelegatingLocalArtifactRepository )
+            {
+                DelegatingLocalArtifactRepository delegatingLocalRepository = (DelegatingLocalArtifactRepository) request.getLocalRepository();
+
+                LocalArtifactRepository orig = delegatingLocalRepository.getIdeWorspace();
+
+                delegatingLocalRepository.setIdeWorkspace( ideWorkspace );
+
+                try
+                {
+                    return artifactResolver.collect( request );
+                }
+                finally
+                {
+                    delegatingLocalRepository.setIdeWorkspace( orig );
+                }
+            }
+            else
+            {
+                ArtifactRepository localRepository = request.getLocalRepository();
+                DelegatingLocalArtifactRepository delegatingLocalRepository = new DelegatingLocalArtifactRepository( localRepository );
+                delegatingLocalRepository.setIdeWorkspace( ideWorkspace );
+                request.setLocalRepository( delegatingLocalRepository );
+                try
+                {
+                    return artifactResolver.collect( request );
+                }
+                finally
+                {
+                    request.setLocalRepository( localRepository );
+                }
+            }
+        }
+        catch ( ComponentLookupException e )
+        {
+            // no ide workspace artifact resolution
+        }
+
+        return artifactResolver.collect( request );
     }
 
     public ArtifactResolutionResult resolve( ArtifactResolutionRequest request )
@@ -513,7 +565,17 @@ public class LegacyRepositorySystem
         {
             String id = repo.getId();
 
+            if ( StringUtils.isEmpty( id ) )
+            {
+                throw new InvalidRepositoryException( "Repository identifier missing", "" );
+            }
+
             String url = repo.getUrl();
+
+            if ( StringUtils.isEmpty( url ) )
+            {
+                throw new InvalidRepositoryException( "URL missing for repository " + id, id );
+            }
 
             ArtifactRepositoryPolicy snapshots = buildArtifactRepositoryPolicy( repo.getSnapshots() );
 

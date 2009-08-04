@@ -35,7 +35,6 @@ import org.apache.maven.model.Profile;
 import org.apache.maven.model.Repository;
 import org.apache.maven.model.composition.DependencyManagementImporter;
 import org.apache.maven.model.inheritance.InheritanceAssembler;
-import org.apache.maven.model.interpolation.ModelInterpolationException;
 import org.apache.maven.model.interpolation.ModelInterpolator;
 import org.apache.maven.model.io.ModelParseException;
 import org.apache.maven.model.io.ModelReader;
@@ -47,15 +46,12 @@ import org.apache.maven.model.plugin.LifecycleBindingsInjector;
 import org.apache.maven.model.plugin.PluginConfigurationExpander;
 import org.apache.maven.model.profile.DefaultProfileActivationContext;
 import org.apache.maven.model.profile.ProfileActivationContext;
-import org.apache.maven.model.profile.ProfileActivationException;
 import org.apache.maven.model.profile.ProfileInjector;
-import org.apache.maven.model.profile.ProfileSelectionResult;
 import org.apache.maven.model.profile.ProfileSelector;
 import org.apache.maven.model.resolution.InvalidRepositoryException;
 import org.apache.maven.model.resolution.ModelResolver;
 import org.apache.maven.model.resolution.UnresolvableModelException;
 import org.apache.maven.model.superpom.SuperPomProvider;
-import org.apache.maven.model.validation.ModelValidationResult;
 import org.apache.maven.model.validation.ModelValidator;
 import org.codehaus.plexus.component.annotations.Component;
 import org.codehaus.plexus.component.annotations.Requirement;
@@ -115,11 +111,13 @@ public class DefaultModelBuilder
     {
         DefaultModelBuildingResult result = new DefaultModelBuildingResult();
 
-        List<ModelProblem> problems = new ArrayList<ModelProblem>();
+        DefaultModelProblemCollector problems = new DefaultModelProblemCollector( null );
 
         ProfileActivationContext profileActivationContext = getProfileActivationContext( request );
 
-        List<Profile> activeExternalProfiles = getActiveExternalProfiles( request, profileActivationContext, problems );
+        problems.setSourceHint( "(external profiles)" );
+        List<Profile> activeExternalProfiles =
+            profileSelector.getActiveProfiles( request.getProfiles(), profileActivationContext, problems );
 
         Model inputModel = readModel( request.getModelSource(), request.getPomFile(), request, problems );
 
@@ -136,21 +134,24 @@ public class DefaultModelBuilder
             Model rawModel = ModelUtils.cloneModel( tmpModel );
             currentData.setRawModel( rawModel );
 
-            modelNormalizer.mergeDuplicates( tmpModel, request );
+            problems.setSourceHint( tmpModel );
 
-            List<Profile> activePomProfiles = getActivePomProfiles( rawModel, profileActivationContext, problems );
+            modelNormalizer.mergeDuplicates( tmpModel, request, problems );
+
+            List<Profile> activePomProfiles =
+                profileSelector.getActiveProfiles( rawModel.getProfiles(), profileActivationContext, problems );
             currentData.setActiveProfiles( activePomProfiles );
 
             for ( Profile activeProfile : activePomProfiles )
             {
-                profileInjector.injectProfile( tmpModel, activeProfile, request );
+                profileInjector.injectProfile( tmpModel, activeProfile, request, problems );
             }
 
             if ( currentData == resultData )
             {
                 for ( Profile activeProfile : activeExternalProfiles )
                 {
-                    profileInjector.injectProfile( tmpModel, activeProfile, request );
+                    profileInjector.injectProfile( tmpModel, activeProfile, request, problems );
                 }
             }
 
@@ -164,9 +165,11 @@ public class DefaultModelBuilder
         superData.setActiveProfiles( Collections.<Profile> emptyList() );
         lineage.add( superData );
 
-        assembleInheritance( lineage, request );
+        assembleInheritance( lineage, request, problems );
 
         Model resultModel = resultData.getModel();
+
+        problems.setSourceHint( resultModel );
 
         resultModel = interpolateModel( resultModel, request, problems );
         resultData.setModel( resultModel );
@@ -175,7 +178,7 @@ public class DefaultModelBuilder
         resultData.setArtifactId( resultModel.getArtifactId() );
         resultData.setVersion( resultModel.getVersion() );
 
-        result.setProblems( problems );
+        result.setProblems( problems.getProblems() );
 
         result.setEffectiveModel( resultModel );
 
@@ -203,45 +206,45 @@ public class DefaultModelBuilder
     {
         Model resultModel = result.getEffectiveModel();
 
-        List<ModelProblem> problems = result.getProblems();
+        DefaultModelProblemCollector problems = new DefaultModelProblemCollector( result.getProblems() );
+        problems.setSourceHint( resultModel );
 
         modelPathTranslator.alignToBaseDirectory( resultModel, resultModel.getProjectDirectory(), request );
 
-        pluginManagementInjector.injectBasicManagement( resultModel, request );
+        pluginManagementInjector.injectBasicManagement( resultModel, request, problems );
 
         fireBuildExtensionsAssembled( resultModel, request, problems );
 
         if ( request.isProcessPlugins() )
         {
-            lifecycleBindingsInjector.injectLifecycleBindings( resultModel );
+            lifecycleBindingsInjector.injectLifecycleBindings( resultModel, problems );
         }
 
-        pluginManagementInjector.injectManagement( resultModel, request );
+        pluginManagementInjector.injectManagement( resultModel, request, problems );
 
         importDependencyManagement( resultModel, request, problems );
 
-        dependencyManagementInjector.injectManagement( resultModel, request );
+        dependencyManagementInjector.injectManagement( resultModel, request, problems );
 
-        modelNormalizer.injectDefaultValues( resultModel, request );
+        modelNormalizer.injectDefaultValues( resultModel, request, problems );
 
         if ( request.isProcessPlugins() )
         {
-            pluginConfigurationExpander.expandPluginConfiguration( resultModel, request );
+            pluginConfigurationExpander.expandPluginConfiguration( resultModel, request, problems );
         }
 
-        ModelValidationResult validationResult = modelValidator.validateEffectiveModel( resultModel, request );
-        addProblems( resultModel, validationResult, problems );
+        modelValidator.validateEffectiveModel( resultModel, request, problems );
 
-        if ( hasErrors( problems ) )
+        if ( hasErrors( problems.getProblems() ) )
         {
-            throw new ModelBuildingException( problems );
+            throw new ModelBuildingException( problems.getProblems() );
         }
 
         return result;
     }
 
     private Model readModel( ModelSource modelSource, File pomFile, ModelBuildingRequest request,
-                             List<ModelProblem> problems )
+                             DefaultModelProblemCollector problems )
         throws ModelBuildingException
     {
         Model model;
@@ -271,19 +274,18 @@ public class DefaultModelBuilder
         {
             problems.add( new ModelProblem( "Non-parseable POM " + modelSource.getLocation() + ": " + e.getMessage(),
                                             ModelProblem.Severity.FATAL, modelSource.getLocation(), e ) );
-            throw new ModelBuildingException( problems );
+            throw new ModelBuildingException( problems.getProblems() );
         }
         catch ( IOException e )
         {
             problems.add( new ModelProblem( "Non-readable POM " + modelSource.getLocation() + ": " + e.getMessage(),
                                             ModelProblem.Severity.FATAL, modelSource.getLocation(), e ) );
-            throw new ModelBuildingException( problems );
+            throw new ModelBuildingException( problems.getProblems() );
         }
 
         model.setPomFile( pomFile );
 
-        ModelValidationResult validationResult = modelValidator.validateRawModel( model, request );
-        addProblems( model, validationResult, problems );
+        modelValidator.validateRawModel( model, request, problems );
 
         return model;
     }
@@ -304,26 +306,6 @@ public class DefaultModelBuilder
         return false;
     }
 
-    private void addProblems( Model model, ModelValidationResult result, List<ModelProblem> problems )
-    {
-        if ( !result.getWarnings().isEmpty() || !result.getErrors().isEmpty() )
-        {
-            String source = toSourceHint( model );
-
-            for ( String message : result.getWarnings() )
-            {
-                problems.add( new ModelProblem( "Invalid POM " + source + ": " + message,
-                                                ModelProblem.Severity.WARNING, source ) );
-            }
-
-            for ( String message : result.getErrors() )
-            {
-                problems.add( new ModelProblem( "Invalid POM " + source + ": " + message, ModelProblem.Severity.ERROR,
-                                                source ) );
-            }
-        }
-    }
-
     private ProfileActivationContext getProfileActivationContext( ModelBuildingRequest request )
     {
         ProfileActivationContext context = new DefaultProfileActivationContext();
@@ -337,41 +319,14 @@ public class DefaultModelBuilder
         return context;
     }
 
-    private List<Profile> getActiveExternalProfiles( ModelBuildingRequest request, ProfileActivationContext context,
-                                                     List<ModelProblem> problems )
-    {
-        ProfileSelectionResult result = profileSelector.getActiveProfiles( request.getProfiles(), context );
-
-        for ( ProfileActivationException e : result.getActivationExceptions() )
-        {
-            problems.add( new ModelProblem( "Invalid activation condition for external profile "
-                + e.getProfile().getId() + ": " + e.getMessage(), ModelProblem.Severity.ERROR, "(external profiles)", e ) );
-        }
-
-        return result.getActiveProfiles();
-    }
-
-    private List<Profile> getActivePomProfiles( Model model, ProfileActivationContext context,
-                                                List<ModelProblem> problems )
-    {
-        ProfileSelectionResult result = profileSelector.getActiveProfiles( model.getProfiles(), context );
-
-        for ( ProfileActivationException e : result.getActivationExceptions() )
-        {
-            problems.add( new ModelProblem( "Invalid activation condition for project profile "
-                + e.getProfile().getId() + " in POM " + toSourceHint( model ) + ": " + e.getMessage(),
-                                            ModelProblem.Severity.ERROR, toSourceHint( model ), e ) );
-        }
-
-        return result.getActiveProfiles();
-    }
-
-    private void configureResolver( ModelResolver modelResolver, Model model, List<ModelProblem> problems )
+    private void configureResolver( ModelResolver modelResolver, Model model, DefaultModelProblemCollector problems )
     {
         if ( modelResolver == null )
         {
             return;
         }
+
+        problems.setSourceHint( model );
 
         List<Repository> repositories = model.getRepositories();
         Collections.reverse( repositories );
@@ -384,41 +339,30 @@ public class DefaultModelBuilder
             }
             catch ( InvalidRepositoryException e )
             {
-                problems.add( new ModelProblem( "Invalid repository " + repository.getId() + " in POM "
-                    + toSourceHint( model ) + ": " + e.getMessage(), ModelProblem.Severity.ERROR,
-                                                toSourceHint( model ), e ) );
+                problems.addError( "Invalid repository " + repository.getId() + ": " + e.getMessage(), e );
             }
         }
     }
 
-    private void assembleInheritance( List<ModelData> lineage, ModelBuildingRequest request )
+    private void assembleInheritance( List<ModelData> lineage, ModelBuildingRequest request,
+                                      ModelProblemCollector problems )
     {
         for ( int i = lineage.size() - 2; i >= 0; i-- )
         {
             Model parent = lineage.get( i + 1 ).getModel();
             Model child = lineage.get( i ).getModel();
-            inheritanceAssembler.assembleModelInheritance( child, parent, request );
+            inheritanceAssembler.assembleModelInheritance( child, parent, request, problems );
         }
     }
 
-    private Model interpolateModel( Model model, ModelBuildingRequest request, List<ModelProblem> problems )
+    private Model interpolateModel( Model model, ModelBuildingRequest request, ModelProblemCollector problems )
     {
-        try
-        {
-            Model result = modelInterpolator.interpolateModel( model, model.getProjectDirectory(), request );
-            result.setPomFile( model.getPomFile() );
-            return result;
-        }
-        catch ( ModelInterpolationException e )
-        {
-            problems.add( new ModelProblem( "Invalid expression in POM " + toSourceHint( model ) + ": "
-                + e.getMessage(), ModelProblem.Severity.ERROR, toSourceHint( model ), e ) );
-
-            return model;
-        }
+        Model result = modelInterpolator.interpolateModel( model, model.getProjectDirectory(), request, problems );
+        result.setPomFile( model.getPomFile() );
+        return result;
     }
 
-    private ModelData readParent( Model childModel, ModelBuildingRequest request, List<ModelProblem> problems )
+    private ModelData readParent( Model childModel, ModelBuildingRequest request, DefaultModelProblemCollector problems )
         throws ModelBuildingException
     {
         ModelData parentData;
@@ -473,7 +417,8 @@ public class DefaultModelBuilder
         return parentData;
     }
 
-    private ModelData readParentLocally( Model childModel, ModelBuildingRequest request, List<ModelProblem> problems )
+    private ModelData readParentLocally( Model childModel, ModelBuildingRequest request,
+                                         DefaultModelProblemCollector problems )
         throws ModelBuildingException
     {
         File pomFile = getParentPomFile( childModel );
@@ -538,7 +483,8 @@ public class DefaultModelBuilder
         return pomFile;
     }
 
-    private ModelData readParentExternally( Model childModel, ModelBuildingRequest request, List<ModelProblem> problems )
+    private ModelData readParentExternally( Model childModel, ModelBuildingRequest request,
+                                            DefaultModelProblemCollector problems )
         throws ModelBuildingException
     {
         Parent parent = childModel.getParent();
@@ -552,7 +498,8 @@ public class DefaultModelBuilder
         if ( modelResolver == null )
         {
             throw new IllegalArgumentException( "no model resolver provided, cannot resolve parent POM "
-                + toId( groupId, artifactId, version ) + " for POM " + toSourceHint( childModel ) );
+                + ModelProblemUtils.toId( groupId, artifactId, version ) + " for POM "
+                + ModelProblemUtils.toSourceHint( childModel ) );
         }
 
         ModelSource modelSource;
@@ -562,10 +509,11 @@ public class DefaultModelBuilder
         }
         catch ( UnresolvableModelException e )
         {
-            problems.add( new ModelProblem( "Non-resolvable parent POM " + toId( groupId, artifactId, version )
-                + " for POM " + toSourceHint( childModel ) + ": " + e.getMessage(), ModelProblem.Severity.FATAL,
-                                            toSourceHint( childModel ), e ) );
-            throw new ModelBuildingException( problems );
+            problems.add( new ModelProblem( "Non-resolvable parent POM "
+                + ModelProblemUtils.toId( groupId, artifactId, version ) + ": " + e.getMessage(),
+                                            ModelProblem.Severity.FATAL, ModelProblemUtils.toSourceHint( childModel ),
+                                            e ) );
+            throw new ModelBuildingException( problems.getProblems() );
         }
 
         Model parentModel = readModel( modelSource, null, request, problems );
@@ -581,7 +529,8 @@ public class DefaultModelBuilder
         return ModelUtils.cloneModel( superPomProvider.getSuperModel( "4.0.0" ) );
     }
 
-    private void importDependencyManagement( Model model, ModelBuildingRequest request, List<ModelProblem> problems )
+    private void importDependencyManagement( Model model, ModelBuildingRequest request,
+                                             DefaultModelProblemCollector problems )
     {
         DependencyManagement depMngt = model.getDependencyManagement();
 
@@ -619,7 +568,8 @@ public class DefaultModelBuilder
                 if ( modelResolver == null )
                 {
                     throw new IllegalArgumentException( "no model resolver provided, cannot resolve import POM "
-                        + toId( groupId, artifactId, version ) + " for POM " + toSourceHint( model ) );
+                        + ModelProblemUtils.toId( groupId, artifactId, version ) + " for POM "
+                        + ModelProblemUtils.toSourceHint( model ) );
                 }
 
                 ModelSource importSource;
@@ -629,9 +579,8 @@ public class DefaultModelBuilder
                 }
                 catch ( UnresolvableModelException e )
                 {
-                    problems.add( new ModelProblem( "Non-resolvable import POM " + toId( groupId, artifactId, version )
-                        + " for POM " + toSourceHint( model ) + ": " + e.getMessage(), ModelProblem.Severity.ERROR,
-                                                    toSourceHint( model ), e ) );
+                    problems.addError( "Non-resolvable import POM "
+                        + ModelProblemUtils.toId( groupId, artifactId, version ) + ": " + e.getMessage(), e );
                     continue;
                 }
 
@@ -651,11 +600,11 @@ public class DefaultModelBuilder
                 }
                 catch ( ModelBuildingException e )
                 {
-                    problems.addAll( e.getProblems() );
+                    problems.getProblems().addAll( e.getProblems() );
                     continue;
                 }
 
-                problems.addAll( importResult.getProblems() );
+                problems.getProblems().addAll( importResult.getProblems() );
 
                 Model importModel = importResult.getEffectiveModel();
 
@@ -677,7 +626,7 @@ public class DefaultModelBuilder
             importMngts.add( importMngt );
         }
 
-        dependencyManagementImporter.importManagement( model, importMngts, request );
+        dependencyManagementImporter.importManagement( model, importMngts, request, problems );
     }
 
     private <T> void putCache( ModelCache modelCache, String groupId, String artifactId, String version,
@@ -703,7 +652,7 @@ public class DefaultModelBuilder
         return null;
     }
 
-    private void fireBuildExtensionsAssembled( Model model, ModelBuildingRequest request, List<ModelProblem> problems )
+    private void fireBuildExtensionsAssembled( Model model, ModelBuildingRequest request, ModelProblemCollector problems )
         throws ModelBuildingException
     {
         if ( request.getModelBuildingListeners().isEmpty() )
@@ -711,67 +660,12 @@ public class DefaultModelBuilder
             return;
         }
 
-        ModelBuildingEvent event = new DefaultModelBuildingEvent( model, request );
+        ModelBuildingEvent event = new DefaultModelBuildingEvent( model, request, problems );
 
         for ( ModelBuildingListener listener : request.getModelBuildingListeners() )
         {
-            try
-            {
-                listener.buildExtensionsAssembled( event );
-            }
-            catch ( Exception e )
-            {
-                problems.add( new ModelProblem( "Invalid build extensions: " + e.getMessage(),
-                                                ModelProblem.Severity.ERROR, toSourceHint( model ), e ) );
-            }
+            listener.buildExtensionsAssembled( event );
         }
-    }
-
-    private String toSourceHint( Model model )
-    {
-        StringBuilder buffer = new StringBuilder( 192 );
-
-        buffer.append( toId( model ) );
-
-        File pomFile = model.getPomFile();
-        if ( pomFile != null )
-        {
-            buffer.append( " (" ).append( pomFile ).append( ")" );
-        }
-
-        return buffer.toString();
-    }
-
-    private String toId( Model model )
-    {
-        String groupId = model.getGroupId();
-        if ( groupId == null && model.getParent() != null )
-        {
-            groupId = model.getParent().getGroupId();
-        }
-
-        String artifactId = model.getArtifactId();
-
-        String version = model.getVersion();
-        if ( version == null && model.getParent() != null )
-        {
-            version = model.getParent().getVersion();
-        }
-
-        return toId( groupId, artifactId, version );
-    }
-
-    private String toId( String groupId, String artifactId, String version )
-    {
-        StringBuilder buffer = new StringBuilder( 96 );
-
-        buffer.append( ( groupId != null ) ? groupId : "[unknown-group-id]" );
-        buffer.append( ':' );
-        buffer.append( ( artifactId != null ) ? artifactId : "[unknown-artifact-id]" );
-        buffer.append( ':' );
-        buffer.append( ( version != null ) ? version : "[unknown-version]" );
-
-        return buffer.toString();
     }
 
 }
