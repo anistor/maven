@@ -139,6 +139,7 @@ under the License.
           <configuration>
             <goals>clean deploy site-deploy</goals>
             <arguments>-Preporting-aggregate,apache-release</arguments>
+            <autoVersionSubmodules>true</autoVersionSubmodules>
           </configuration>
         </plugin>
         <plugin>
