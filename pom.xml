@@ -523,9 +523,6 @@ under the License.
            mvn site -Preporting-aggregate
            mvn -N site:deploy
       -->
-      <modules>
-        <module>maven-docs</module>
-      </modules>
       <reporting>
         <plugins>
           <plugin>
