@@ -137,8 +137,6 @@ under the License.
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-release-plugin</artifactId>
           <configuration>
-            <goals>clean deploy site-deploy</goals>
-            <arguments>-Preporting-aggregate,apache-release</arguments>
             <autoVersionSubmodules>true</autoVersionSubmodules>
           </configuration>
         </plugin>
