@@ -22,7 +22,7 @@ under the License.
   <parent>
     <groupId>org.apache.maven</groupId>
     <artifactId>maven-parent</artifactId>
-    <version>12</version>
+    <version>15</version>
     <relativePath>../pom/maven/pom.xml</relativePath>
   </parent>
 
@@ -125,11 +125,6 @@ under the License.
       <plugins>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-assembly-plugin</artifactId>
-          <version>2.2-beta-1</version>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-shade-plugin</artifactId>
           <version>1.0</version>
         </plugin>
@@ -166,7 +161,6 @@ under the License.
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>clirr-maven-plugin</artifactId>
-          <version>2.2.1</version>
           <configuration>
             <!-- needed for release: default value "(,${project.version})" for 2.0.10 is 2.0.10-SNAPSHOT -->
             <comparisonVersion>2.0.9</comparisonVersion>
@@ -459,26 +453,6 @@ under the License.
             </executions>
           </plugin>
 -->
-          <plugin>
-            <artifactId>maven-assembly-plugin</artifactId>
-            <inherited>false</inherited>
-            <configuration>
-              <descriptors>
-                <descriptor>src/main/assembly/src.xml</descriptor>
-              </descriptors>
-              <tarLongFileMode>gnu</tarLongFileMode>
-              <finalName>maven-${project.version}-src</finalName>
-            </configuration>
-            <executions>
-              <execution>
-                <id>make-assembly</id>
-                <phase>package</phase>
-                <goals>
-                  <goal>single</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
           <!-- This is here until it is enabled in the parent -->
           <plugin>
             <groupId>org.codehaus.mojo</groupId>
